@@ -22,12 +22,17 @@ var stripeDef = {
    scope: { type: String }
 };
 
+var tosDef = {
+    "date": { type: String },
+    "ip": { type: String }
+}
 var UserSchema = new mongoose.Schema({
   username: { type: String, lowercase: true, trim: true, unique : true, required : true, dropDups: true },
   fullname: { type: String, trim: true },
   firstname: { type: String, trim: true },
   lastname: { type: String, trim: true },
   country: { type: String },
+  tos_acceptance: tosDef,
   role: { type: Array },
   orgId: { type: String },
   apiKey: { type: String },

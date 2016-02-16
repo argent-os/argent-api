@@ -58,13 +58,24 @@ UserController.prototype.register = function (req, res, next) {
           var livemode = 'true';    
           // console.log('the users fburl', firebaseUrl);
           // take out roles for now // role: req.body.role,    
-          // change country from us to req.body.country      
+          // change country from us to req.body.country    
+          console.log(req.body.tos_acceptance.data.ip);
+          console.log(req.body.tos_acceptance.data.date);
+          var _date = req.body.tos_acceptance.data.date;
+          if( _date.indexOf('.') != -1 ) {
+              var parsedDate = _date.substring(0, _date.indexOf('.'));
+              console.log("parsing date, " + parsedDate);
+          }
           var user = new User({
             username: req.body.username,
             role: req.body.role,
             email: req.body.email,
             password: req.body.password,
             country: "US",
+            tos_acceptance: {
+              "ip":req.body.tos_acceptance.data.ip,
+              "date":parsedDate
+            },
             env: process.env.ENVIRONMENT,
             firebaseUrl: userFirebase,
             theme: "1",
