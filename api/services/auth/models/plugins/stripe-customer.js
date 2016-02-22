@@ -54,6 +54,8 @@ module.exports = exports = function stripeCustomer (schema, options) {
     // console.log(user.country);
     stripe.accounts.create(
       {
+        first_name: user.first_name,
+        last_name: user.last_name,
         managed: true,
         tos_acceptance: {
           "date": user.tos_acceptance.date,

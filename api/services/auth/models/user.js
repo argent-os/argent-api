@@ -28,9 +28,10 @@ var tosDef = {
 }
 var UserSchema = new mongoose.Schema({
   username: { type: String, lowercase: true, trim: true, unique : true, required : true, dropDups: true },
-  fullname: { type: String, trim: true },
-  firstname: { type: String, trim: true },
-  lastname: { type: String, trim: true },
+  full_name: { type: String, trim: true },
+  first_name: { type: String, trim: true },
+  last_name: { type: String, trim: true },
+  phone_number: { type: String, trim: true },
   country: { type: String },
   tos_acceptance: tosDef,
   role: { type: Array },
