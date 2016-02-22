@@ -74,7 +74,7 @@ UserController.prototype.register = function (req, res, next) {
             email: req.body.email,
             phone_number: req.body.phone_number,
             password: req.body.password,
-            country: "US",
+            country: req.body.country,
             tos_acceptance: {
               "ip":req.body.tos_acceptance.data.ip,
               "date":parsedDate
