@@ -54,9 +54,11 @@ module.exports = exports = function stripeCustomer (schema, options) {
     // console.log(user.country);
     stripe.accounts.create(
       {
-        first_name: user.first_name,
-        last_name: user.last_name,
         managed: true,
+        legal_entity: {
+          first_name: user.first_name,
+          last_name: user.last_name
+        },        
         tos_acceptance: {
           "date": user.tos_acceptance.date,
           "ip": user.tos_acceptance.ip
@@ -65,7 +67,7 @@ module.exports = exports = function stripeCustomer (schema, options) {
         email: user.email
       }, function(err, account){
       if (err) return cb(err);
-      // console.log(account)
+      console.log('account creation success')
       // console.log(user.stripe);
       return cb();
     });      

@@ -27,10 +27,10 @@ var tosDef = {
     "ip": { type: String }
 }
 var UserSchema = new mongoose.Schema({
+  first_name: { type: String },
+  last_name: { type: String },
   username: { type: String, lowercase: true, trim: true, unique : true, required : true, dropDups: true },
   full_name: { type: String, trim: true },
-  first_name: { type: String, trim: true },
-  last_name: { type: String, trim: true },
   phone_number: { type: String, trim: true },
   country: { type: String },
   tos_acceptance: tosDef,
@@ -40,8 +40,7 @@ var UserSchema = new mongoose.Schema({
   picture: pictureDef,
   notificationsEnabled: { type: Boolean },  
   email: { type: String, lowercase: true, trim: true, unique : true, required : true, dropDups: true },
-  timekloud: { type: String },
-  displayName: { type: String },
+  display_name: { type: String },
   password: { type: String },
   resetToken: { type: String, dropDups: true },
   verifyToken: { type: String },

@@ -56,21 +56,15 @@ UserController.prototype.register = function (req, res, next) {
           var scope = 'read_write';    
           var tokenType = 'bearer';    
           var livemode = 'true';    
-          // console.log('the users fburl', firebaseUrl);
-          // take out roles for now // role: req.body.role,    
-          // change country from us to req.body.country    
           var _date = req.body.tos_acceptance.data.date;
           if( _date.indexOf('.') != -1 ) {
               var parsedDate = _date.substring(0, _date.indexOf('.'));
               console.log("parsing date, " + parsedDate);
           }
-          console.log("showing req body")
-          console.log(req.body);
-          console.log('registering')
           var user = new User({
-            username: req.body.username,
             first_name: req.body.first_name,
             last_name: req.body.last_name,
+            username: req.body.username,
             email: req.body.email,
             phone_number: req.body.phone_number,
             password: req.body.password,
