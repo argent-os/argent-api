@@ -57,7 +57,13 @@ module.exports = exports = function stripeCustomer (schema, options) {
         managed: true,
         legal_entity: {
           first_name: user.first_name,
-          last_name: user.last_name
+          last_name: user.last_name,
+          type: user.legal_entity_type,
+          dob: {
+            day: user.dob.day,
+            month: user.dob.month,
+            year: user.dob.year
+          }
         },        
         tos_acceptance: {
           "date": user.tos_acceptance.date,

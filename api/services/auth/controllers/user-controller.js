@@ -69,9 +69,15 @@ UserController.prototype.register = function (req, res, next) {
             phone_number: req.body.phone_number,
             password: req.body.password,
             country: req.body.country,
+            legal_entity_type: req.body.legal_entity_type,
             tos_acceptance: {
               "ip":req.body.tos_acceptance.data.ip,
               "date":parsedDate
+            },
+            dob: {
+              "day": req.body.dob.data.day,
+              "month": req.body.dob.data.month,
+              "year": req.body.dob.data.year
             },
             env: process.env.ENVIRONMENT,
             firebaseUrl: userFirebase,

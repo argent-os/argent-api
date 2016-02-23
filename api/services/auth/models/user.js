@@ -26,6 +26,12 @@ var tosDef = {
     "date": { type: String },
     "ip": { type: String }
 }
+var dobDef = {
+    "day": { type: Number },
+    "month": { type: Number },
+    "year": { type: Number }
+}
+
 var UserSchema = new mongoose.Schema({
   first_name: { type: String },
   last_name: { type: String },
@@ -34,6 +40,8 @@ var UserSchema = new mongoose.Schema({
   phone_number: { type: String, trim: true },
   country: { type: String },
   tos_acceptance: tosDef,
+  dob: dobDef,
+  legal_entity_type: { type: String },
   role: { type: Array },
   orgId: { type: String },
   apiKey: { type: String },

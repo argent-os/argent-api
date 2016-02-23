@@ -1,4 +1,4 @@
-var stripeApiKey ;
+var stripeApiKey;
 var stripePublishableKey;
 
 // Production/Dev Stripe Handlers
