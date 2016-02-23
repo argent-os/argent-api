@@ -441,23 +441,28 @@ UserController.prototype.generateApiKey = function (req, res, next) {
 };
 
 UserController.prototype.remindPassword = function(req, res) {
-  var email = req.body.email;
-  var url = req.body.url;
-  // console.log('reminding');
-  if (email === '' || !email) {
-    res.status(400).json([{msg: 'Email cannot be empty', param: 'email'}]);
-    return;
-  }
-  if (url === '' || !url) {
-    res.status(400).json([{msg: 'Url for reset password link is not specified', param: 'url'}]);
-    return;
-  }
-  User.findOne({email: email}, function(err, user) {
+
+  var url;
+  process.env.ENV == "DEV" ? url = "http://localhost:5001" : "";
+  process.env.ENV == "PROD" ? url = "https://www.paykloud.com" : "";
+
+  console.log('reminding');
+  // if (email === '' || !email) {
+  //   res.status(400).json([{msg: 'Email cannot be empty', param: 'email'}]);
+  //   return;
+  // }
+  // if (url === '' || !url) {
+  //   res.status(400).json([{msg: 'Url for reset password link is not specified', param: 'url'}]);
+  //   return;
+  // }
+  User.findOne({ $or: [ { email: req.body.email }, { username: req.body.username } ] }, function(err, user) {
     if (!user) {
+      console.log("user not found");
       //logger.info('User not found based on email for password reset. Email requested: ' + email);
       res.status(400).json([{msg: 'Email not found', param: 'email'}]);
     }
     else {
+      console.log('user found, about to generate reset token');
       // Generate random password
       var resetToken = utils.randomString(16);
       user.resetToken = resetToken;
@@ -484,7 +489,7 @@ UserController.prototype.remindPassword = function(req, res) {
               //logger.info('Remind password message sent to email : ' + user.email);
               var resp = {};
               resp.msg = 'new_password_sent';
-              res.status(200).json(resp);
+              res.json({message: 'Password reset link sent'});
             }
           });
         }
