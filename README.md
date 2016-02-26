@@ -206,6 +206,11 @@ To correctly provision the SSL it is recommended to use a service such as Expedi
 - Once the third-party SSL Service has been installed, edit your www CNAME to point to the SSL endpoint (e.g. ```https://floatingbreeze8293.herokuapp.com```)
 
 ------------------------------
+###Push Notifications
+Follow this: http://stackoverflow.com/questions/21250510/generate-pem-file-used-to-setup-apple-push-notification
+And this: https://github.com/argon/node-apn/wiki/Preparing-Certificates
+
+------------------------------
 ###QUESTIONS?
 
 For any questions please email [support](mailto:support@timekloud.com)
