@@ -69,22 +69,22 @@ var options = {
   //mongoconnection: localMongo || mongooseUri,
   mongoconnection: mongooseUri,
   logFile: path.join(__dirname, 'authlogger.log'),
-  corsDomains: ['*', 'http://localhost:5000', 'http://timekloud.herokuapp.com', 'https://timekloud.herokuapp.com', 'https://www.timekloud.com'],
+  corsDomains: ['*', 'http://localhost:5000', 'http://paykloud.herokuapp.com', 'https://paykloud.herokuapp.com', 'https://www.paykloud.com'],
   // Nodemailer settings, used for resetting password
   mailer: {
     mailerFrom    : process.env.SUPPORT_EMAIL,
     passwordResetTitle   : 'Password Reset',
-    verifyEmailTitle   : 'Verify Account for TimeKloud',
-    verifyEmailLinkText   : 'Welcome to TimeKloud!  Please verify your email using the following link: ',
+    verifyEmailTitle   : 'Verify Account for PayKloud',
+    verifyEmailLinkText   : 'Welcome to PayKloud!  Please verify your email using the following link: ',
     quoteEmailTitle: 'Quote created',  
     quoteEmailTextLink: 'Please use the following link to accept or reject proposal ',
     mailerInfo    : 'Hello! ',
-    resetPasswordText    : 'Hello from TimeKloud! Please use the following link to reset your password: ',
+    resetPasswordText    : 'Hello from PayKloud! Please use the following link to reset your password: ',
     transporter   : {
       service: 'Gmail',
       auth: {
-        user: process.env.TIMEKLOUD_GMAIL,
-        pass: process.env.TIMEKLOUD_GMAIL_PW
+        user: process.env.PAYKLOUD_GMAIL,
+        pass: process.env.PAYKLOUD_GMAIL_PW
       }
     }
   }

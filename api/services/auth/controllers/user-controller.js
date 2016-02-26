@@ -443,8 +443,8 @@ UserController.prototype.generateApiKey = function (req, res, next) {
 UserController.prototype.remindPassword = function(req, res) {
 
   var url;
-  process.env.ENV == "DEV" ? url = "http://localhost:5001" : "";
-  process.env.ENV == "PROD" ? url = "https://www.paykloud.com" : "";
+  process.env.ENVIRONMENT == "DEV" ? url = "http://localhost:5000/reset" : "";
+  process.env.ENVIRONMENT == "PROD" ? url = "https://www.paykloud.com/reset" : "";
 
   console.log('reminding');
   // if (email === '' || !email) {
