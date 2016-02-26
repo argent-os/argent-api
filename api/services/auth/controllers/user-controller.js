@@ -444,8 +444,9 @@ UserController.prototype.remindPassword = function(req, res) {
 
   var url;
   process.env.ENVIRONMENT == "DEV" ? url = "http://localhost:5000/reset" : "";
-  process.env.ENVIRONMENT == "PROD" ? url = "https://www.paykloud.com/reset" : "";
-
+  // process.env.ENVIRONMENT == "PROD" ? url = "https://www.paykloud.com/reset" : "";
+  process.env.ENVIRONMENT == "PROD" ? url = "http://paykloud-www-dev.us-east-1.elasticbeanstalk.com/reset" : "";
+  
   console.log('reminding');
   // if (email === '' || !email) {
   //   res.status(400).json([{msg: 'Email cannot be empty', param: 'email'}]);
