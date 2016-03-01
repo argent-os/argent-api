@@ -49,6 +49,8 @@ var UserSchema = new mongoose.Schema({
   notificationsEnabled: { type: Boolean },  
   email: { type: String, lowercase: true, trim: true, unique : true, required : true, dropDups: true },
   display_name: { type: String },
+  device_token_ios: { type: String },
+  device_token_android: { type: String },
   password: { type: String },
   resetToken: { type: String, dropDups: true },
   verifyToken: { type: String },

@@ -16,6 +16,9 @@ var tokenSecret = process.env.JWT_SECRET;
 var facebookSecret   = process.env.FACEBOOK_SECRET;
 var timekloudSecret = 'B21F3EFCE39FDC5BDE7EEE987D7C8';
 
+var log4js = require('log4js');
+var logger = log4js.getLogger();
+
 // Set up Firebase Dev and Production URLs
 var firebaseUrl;
 var firebaseSecret;
@@ -40,7 +43,7 @@ UserController.prototype.register = function (req, res, next) {
   var userFirebase = firebaseUrl;  
   var userApiUrl = apiUrl; 
   var link;   
-  console.log('registering');
+  logger.info('registering');
   User.findOne({ email: req.body.email }, function(err, existingUser) {
         if (existingUser) {
           return res.status(409).send({ message: 'Email is already taken' });
@@ -59,7 +62,7 @@ UserController.prototype.register = function (req, res, next) {
           var _date = req.body.tos_acceptance.data.date;
           if( _date.indexOf('.') != -1 ) {
               var parsedDate = _date.substring(0, _date.indexOf('.'));
-              console.log("parsing date, " + parsedDate);
+              logger.info("parsing date, " + parsedDate);
           }
           var user = new User({
             first_name: req.body.first_name,
@@ -91,26 +94,26 @@ UserController.prototype.register = function (req, res, next) {
             tk_livemode: livemode,
             tk_token_type: tokenType
           }); 
-          console.log('about to save');
+          logger.info('about to save');
           user.save().then(function() {
-            console.log('inside save');
+            logger.info('inside save');
             // change to req.body.country      
             var _firebaseToken = tokenGenerator.createToken({ uid: (user._id).toString(), username: user.username, hasTCAccess: true });   
-            // console.log(_firebaseToken);   
+            // logger.info(_firebaseToken);   
               ref.authWithCustomToken(_firebaseToken, function(error, authData) {
                 if (error) {
-                  // console.log(error);
-                  ////console.log("Login Failed!", error);
+                  logger.error(error);
+                  ////logger.info("Login Failed!", error);
                   res.send(500);                    
                 } else {
-                  // console.log(authData);
-                  ////console.log("Login Succeeded!", authData);
+                  // logger.info(authData);
+                  ////logger.info("Login Succeeded!", authData);
                   // change routing on registration for prod ui and make https
                   process.env.ENVIRONMENT == 'DEV' || process.env.ENVIRONMENT == undefined ? link = 'http://localhost:5000/verify' + '?token=' + verifyToken : '';
-                  process.env.ENVIRONMENT == 'PROD' ? link = 'http://ui-dev.timekloud.io/verify' + '?token=' + verifyToken : '';                  
+                  process.env.ENVIRONMENT == 'PROD' ? link = 'https://www.paykloud.com/verify' + '?token=' + verifyToken : '';                  
                   mailer.verifyEmail(user, link, function (err, info) {
                     if (err) {
-                      // console.log(err);
+                      // logger.info(err);
                       //logger.error('Sending message error : ' + err);
                       res.send(504);
                     }
@@ -131,28 +134,29 @@ UserController.prototype.register = function (req, res, next) {
 UserController.prototype.login = function (req, res, next) {
   var self = this;
   // Login with either username or email
-  if(req.body.email || req.body.username) {
-    User.findOne({ $or: [ { email: req.body.email }, { username: req.body.username } ] }, function(err, user) {
-      if (!user) {
+  logger.info('req received');
+  User.findOne({ $or: [ { email: req.body.email }, { username: req.body.username } ] }, function(err, user) {
+    if (!user) {
+      return res.status(401).send({ message: 'Wrong username/email and/or password' });
+    }
+    logger.info('found user, comparing password');
+    user.comparePassword(req.body.password, function(err, isMatch) {
+      if (!isMatch) {
         return res.status(401).send({ message: 'Wrong username/email and/or password' });
       }
-      user.comparePassword(req.body.password, function(err, isMatch) {
-        if (!isMatch) {
-          return res.status(401).send({ message: 'Wrong username/email and/or password' });
+      logger.info('password match');
+      var _firebaseToken = tokenGenerator.createToken({ uid: (user._id).toString(), username: user.username, hasTCAccess: true });
+      ref.authWithCustomToken(_firebaseToken, function(error, authData) {
+        if (error) {
+          logger.info("Login Failed!", error);
+          res.send(500);                    
+        } else {
+          ////logger.info("Login Succeeded!", authData);
+          res.send({ token: createJWT(user), auth: authData,  user: user });          
         }
-        var _firebaseToken = tokenGenerator.createToken({ uid: (user._id).toString(), username: user.username, hasTCAccess: true });
-        ref.authWithCustomToken(_firebaseToken, function(error, authData) {
-          if (error) {
-            console.log("Login Failed!", error);
-            res.send(500);                    
-          } else {
-            ////console.log("Login Succeeded!", authData);
-            res.send({ token: createJWT(user), auth: authData,  user: user });          
-          }
-        });      
-      });
+      });      
     });
-  }
+  });
 };
 
 UserController.prototype.loginTimekloud = function(req, res, next) {
@@ -221,15 +225,15 @@ UserController.prototype.removeAccount = function (req, res, next) {
   var email = req.body.email;
   var password = req.body.password; 
 
-  // console.log(req);
-  // console.log(req.body.user.orgId);
+  // logger.info(req);
+  // logger.info(req.body.user.orgId);
   //remove organization at same time
   if(req.body.user.orgId) {
     Organization.remove({_id: req.body.user.orgId}, function(err) {
       if (!err) {
-        // console.log(req.body.email);
-        // console.log(req.body.password);       
-        // console.log('org removed');
+        // logger.info(req.body.email);
+        // logger.info(req.body.password);       
+        // logger.info('org removed');
         // res.status(200).send({msg: 'organization_removed'});
       }
       else {
@@ -240,8 +244,8 @@ UserController.prototype.removeAccount = function (req, res, next) {
 
   User.remove({_id: req.user._id}, function(err) {
     if (!err) {
-      // console.log(req.body.email);
-      // console.log(req.body.password);       
+      // logger.info(req.body.email);
+      // logger.info(req.body.password);       
       ref.removeUser({
         email: email,
         password: password
@@ -249,16 +253,16 @@ UserController.prototype.removeAccount = function (req, res, next) {
         if (error) {
           switch (error.code) {
             case "INVALID_USER":
-              // console.log("The specified user account does not exist.");
+              // logger.info("The specified user account does not exist.");
               break;
             case "INVALID_PASSWORD":
-              // console.log("The specified user account password is incorrect.");
+              // logger.info("The specified user account password is incorrect.");
               break;
             default:
-              // console.log("Error removing user:", error);
+              // logger.info("Error removing user:", error);
           }
         } else {
-          // console.log("User account deleted successfully!");
+          // logger.info("User account deleted successfully!");
         }
       });
       res.status(200).send({msg: 'account_removed'});
@@ -271,7 +275,7 @@ UserController.prototype.removeAccount = function (req, res, next) {
 
 UserController.prototype.editProfile = function (req, res, next) {
   var data = req.body;
-  // console.log(data.stripeData);
+  // logger.info(data.stripeData);
   // req.assert('username', 'Username must be at least 4 characters long').len(4);
   // req.assert('email', 'Email is not valid').isEmail();
   var errors = req.validationErrors();
@@ -317,13 +321,13 @@ UserController.prototype.editProfile = function (req, res, next) {
               updated.push('fullname');
               user.fullname = data.user.fullname;
             }    
-            if (user.firstname !== data.user.firstname) {
-              updated.push('firstname');
-              user.firstname = data.user.firstname;
+            if (user.first_name !== data.user.first_name) {
+              updated.push('first_name');
+              user.first_name = data.user.first_name;
             }     
-            if (user.lastname !== data.user.lastname) {
-              updated.push('lastname');
-              user.lastname = data.user.lastname;
+            if (user.last_name !== data.user.last_name) {
+              updated.push('last_name');
+              user.last_name = data.user.last_name;
             }                                                                           
             if (user.username !== data.user.username && data.stripeToken !== null) {
               updated.push('username');
@@ -363,8 +367,8 @@ UserController.prototype.editProfile = function (req, res, next) {
                 email: user.email,
                 password: user.password,
                 fullname: user.fullname,
-                firstname: user.firstname,
-                lastname: user.lastname,
+                first_name: user.first_name,
+                last_name: user.last_name,
                 username: user.username,
                 stripeToken: user.stripeToken,
                 stripeEnabled: user.stripeEnabled,
@@ -386,7 +390,7 @@ UserController.prototype.editProfile = function (req, res, next) {
 
             user.save(function(err) {
               if (err) {
-                // console.log(err);
+                // logger.info(err);
                 //logger.error('Error updating user account. User id: ' + req.user._id + ' Err: ' + err);
                 res.status(401).json({msg: 'update_error'});
               }
@@ -447,7 +451,7 @@ UserController.prototype.remindPassword = function(req, res) {
   // process.env.ENVIRONMENT == "PROD" ? url = "https://www.paykloud.com/reset" : "";
   process.env.ENVIRONMENT == "PROD" ? url = "http://paykloud-www-dev.us-east-1.elasticbeanstalk.com/reset" : "";
   
-  console.log('reminding');
+  logger.info('reminding');
   // if (email === '' || !email) {
   //   res.status(400).json([{msg: 'Email cannot be empty', param: 'email'}]);
   //   return;
@@ -458,12 +462,12 @@ UserController.prototype.remindPassword = function(req, res) {
   // }
   User.findOne({ $or: [ { email: req.body.email }, { username: req.body.username } ] }, function(err, user) {
     if (!user) {
-      console.log("user not found");
+      logger.info("user not found");
       //logger.info('User not found based on email for password reset. Email requested: ' + email);
       res.status(400).json([{msg: 'Email not found', param: 'email'}]);
     }
     else {
-      console.log('user found, about to generate reset token');
+      logger.info('user found, about to generate reset token');
       // Generate random password
       var resetToken = utils.randomString(16);
       user.resetToken = resetToken;
@@ -472,13 +476,13 @@ UserController.prototype.remindPassword = function(req, res) {
       user.save(function(err) {
         if (err) {
           //logger.error('Error saving user new password');
-          // console.log('error saving new user password');
+          // logger.info('error saving new user password');
         }
         else {
           //logger.info('New password generated for user id: ' + user._id);
           mailer.sendMessage(user, link, function (err, info) {
             if (err) {
-              // console.log(err);
+              // logger.info(err);
               //logger.error('Sending message error : ' + err);
               res.status(401).json({msg: 'error_sending_password', error: err});
             }
@@ -584,7 +588,7 @@ UserController.prototype.postBilling = function(req, res, next){
 
   if(!stripeToken){
     // req.flash('errors', { msg: 'Please provide a valid card.' });
-    // ////console.log('no stripe token')
+    // ////logger.info('no stripe token')
     return res.json(405);      
   }
 
@@ -595,17 +599,17 @@ UserController.prototype.postBilling = function(req, res, next){
       if (err) {
         if(err.code && err.code == 'card_declined'){
           // req.flash('errors', { msg: 'Your card was declined. Please provide a valid card.' });
-          // ////console.log('card declined');
+          // ////logger.info('card declined');
           res.json(400);                
           return;
         }
         // req.flash('errors', { msg: 'An unexpected error occurred.' });
-        // ////console.log('error occured');
+        // ////logger.info('error occured');
         res.json(403);      
         return;
       }
       // req.flash('success', { msg: 'Billing has been updated.' });
-      // ////console.log('card updated');
+      // ////logger.info('card updated');
       res.json(200);      
       return;
     });
@@ -622,7 +626,7 @@ UserController.prototype.postPlan = function(req, res, next){
   if(req.body.user.stripe.plan == _plan){
     // req.flash('info', {msg: 'The selected plan is the same as the current plan.'});
     // return res.redirect(req.redirect.success);
-    // ////console.log('plan is the same as current');
+    // ////logger.info('plan is the same as current');
     res.json({status:400, msg:'Same plan'});    
     return;
   }
@@ -634,7 +638,7 @@ UserController.prototype.postPlan = function(req, res, next){
   // if(!req.body.user.stripe.last4 && !req.body.stripeToken){
   //   // req.flash('errors', {msg: 'Please add a card to your account before choosing a plan.'});
   //   // return res.redirect(req.redirect.failure);
-  //   ////console.log('please add card to account before choosing plan');
+  //   ////logger.info('please add card to account before choosing plan');
   // }
 
   User.findById(req.body.user._id, function (err, user) {
@@ -649,14 +653,14 @@ UserController.prototype.postPlan = function(req, res, next){
         } else {
           msg = 'An unexpected error occurred.';
         }
-        // ////console.log('fail');
+        // ////logger.info('fail');
         res.json({status:400});    
         return;
       }
-      // console.log(response);
+      // logger.info(response);
       // req.flash('success', { msg: 'Plan has been updated.' });
       // res.redirect(req.redirect.success);
-      // ////console.log('plan updated');
+      // ////logger.info('plan updated');
       res.json({status:200, msg:response});    
       return;
     });

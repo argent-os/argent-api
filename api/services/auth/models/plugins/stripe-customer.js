@@ -1,5 +1,7 @@
 'use strict';
 
+var log4js = require('log4js');
+var logger = log4js.getLogger();
 var Stripe = require('stripe'),
 stripe;
 
@@ -8,6 +10,9 @@ module.exports = exports = function stripeCustomer (schema, options) {
 
   schema.add({
     stripe: {
+      account_id: String,
+      secret_key: String,
+      publishable_key: String, 
       customerId: String,
       subscriptionId: String,
       last4: String,
@@ -27,8 +32,13 @@ module.exports = exports = function stripeCustomer (schema, options) {
     });
     user.createStripeAccount(function(err) {
       if (err) return next(err);
+      logger.trace('creating user stripe account');          
       next();
     })
+  });
+
+  schema.post('save', function (next) {
+    logger.info('user stripe account created');
   });
 
   schema.statics.getPlans = function () {
@@ -50,8 +60,9 @@ module.exports = exports = function stripeCustomer (schema, options) {
 
   schema.methods.createStripeAccount = function(cb) {
     var user = this;
-    // console.log(user.email);
-    // console.log(user.country);
+    // logger.debug(user.email);
+    // logger.debug(user.country);
+    logger.trace('inside create stripe account');
     stripe.accounts.create(
       {
         managed: true,
@@ -72,20 +83,28 @@ module.exports = exports = function stripeCustomer (schema, options) {
         country: user.country,        
         email: user.email
       }, function(err, account){
-      if (err) return cb(err);
-      console.log('account creation success')
-      // console.log(user.stripe);
-      return cb();
+        if (err) return cb(err);
+        logger.info('stripe account creation success');
+        // Need to save account info
+        user.stripe.account_id = account.id
+        user.stripe.secret_key = account.keys.secret
+        user.stripe.publishable_key = account.keys.publishable
+        user.save(function(err){
+          if (err) return cb(err);
+          logger.info('saving stripe data to mongo');          
+          logger.debug(user.stripe);
+          return cb(null);
+        });
+        return cb();
     });      
 
-    // stripe.customers.create({
-    //   email: user.email
-    // }, function(err, customer){
-    //   if (err) return cb(err);
-
-    //   user.stripe.customerId = customer.id;
-    //   return cb();
-    // });
+    stripe.customers.create({
+      email: user.email
+    }, function(err, customer){
+      if (err) return cb(err);
+      user.stripe.customerId = customer.id;
+      return cb();
+    });
   };
 
   schema.methods.setCard = function(stripe_token, cb) {
@@ -116,6 +135,7 @@ module.exports = exports = function stripeCustomer (schema, options) {
     }
   };
 
+  // Example create charge
   schema.methods.createCharge = function(amount, currency) {
     stripe.charges.create({
       amount: amount,
@@ -126,6 +146,7 @@ module.exports = exports = function stripeCustomer (schema, options) {
       // asynchronously called
     });    
   }
+
   schema.methods.setPlan = function(plan, cb) {
     var user = this;
     var _plan = plan;
@@ -133,18 +154,18 @@ module.exports = exports = function stripeCustomer (schema, options) {
     var subscriptionHandler = function(err, subscription) {
       // if(err) return cb(err);
       if(err)  {
-        console.log(err);
+        logger.debug(err);
       }
       if(subscription) {
         user.stripe.plan = _plan;
         user.stripe.subscriptionId = subscription.id;
         user.save(function(err, res){
-          // console.log('saving');
+          // logger.debug('saving');
           if(err) {
-            console.log(err);
+            logger.debug(err);
             return cb(err);
           } else {
-            // console.log(res);
+            // logger.debug(res);
             return cb(null, res);
           }
           // if (err) return cb(err);

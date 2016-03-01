@@ -210,6 +210,10 @@ To correctly provision the SSL it is recommended to use a service such as Expedi
 Follow this: http://stackoverflow.com/questions/21250510/generate-pem-file-used-to-setup-apple-push-notification
 And this: https://github.com/argon/node-apn/wiki/Preparing-Certificates
 
+Useful commands
+openssl x509 -in aps.cer -inform DER -outform PEM -out cert.pem
+openssl pkcs12 -in key.p12 -out key.pem -nodes
+
 ------------------------------
 ###QUESTIONS?
 
