@@ -59,6 +59,7 @@ UserController.prototype.register = function (req, res, next) {
           var scope = 'read_write';    
           var tokenType = 'bearer';    
           var livemode = 'true';    
+          var deviceTokenIOS = req.body.device_token_ios;
           var _date = req.body.tos_acceptance.data.date;
           if( _date.indexOf('.') != -1 ) {
               var parsedDate = _date.substring(0, _date.indexOf('.'));
@@ -73,6 +74,7 @@ UserController.prototype.register = function (req, res, next) {
             password: req.body.password,
             country: req.body.country,
             legal_entity_type: req.body.legal_entity_type,
+            device_token_ios: deviceTokenIOS,
             tos_acceptance: {
               "ip":req.body.tos_acceptance.data.ip,
               "date":parsedDate

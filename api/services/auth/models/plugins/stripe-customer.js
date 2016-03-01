@@ -91,8 +91,8 @@ module.exports = exports = function stripeCustomer (schema, options) {
         user.stripe.publishable_key = account.keys.publishable
         user.save(function(err){
           if (err) return cb(err);
-          logger.info('saving stripe data to mongo');          
-          logger.debug(user.stripe);
+          logger.info('saving stripe data to database');          
+          // logger.debug(user.stripe);
           return cb(null);
         });
         return cb();
