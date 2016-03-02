@@ -29,7 +29,7 @@ var h5bp           = require('h5bp');
 var compress       = require('compression');    
 
 // *****************************************************************************
-// ***  Server startup in api/services/auth/lib/express-jwt-auth  *****
+// ***  Server startup in api/endpoints/auth/lib/express-jwt-auth  *****
 // *****************************************************************************
 
 var app = express();
@@ -91,13 +91,15 @@ var options = {
 };
 
 // Setup API routes
+// Send the current and and options into the endpoints
 var home         = require('./api/routes/home');
-var timeauth     = require('./api/services/auth')(app, options);
-var timepost     = require('./api/services/post')(app, options);
-var timeorg      = require('./api/services/organization')(app, options);
-var timecompany  = require('./api/services/company')(app, options);
-var timesheet    = require('./api/services/timesheet')(app, options);
-var quote        = require('./api/services/quote')(app, options);
+var timeauth     = require('./api/endpoints/auth')(app, options);
+var timepost     = require('./api/endpoints/post')(app, options);
+var timeorg      = require('./api/endpoints/organization')(app, options);
+var timecompany  = require('./api/endpoints/company')(app, options);
+var timesheet    = require('./api/endpoints/timesheet')(app, options);
+var stripe       = require('./api/endpoints/stripe/stripe.endpoint')(app, options);
+var quote        = require('./api/endpoints/quote')(app, options);
 
 app.use(express.static(path.join(__dirname, 'api/web')));
 app.use(express.static('src'));
