@@ -1,6 +1,10 @@
 // Set your secret key: remember to change this to your live secret key in production
 // See your keys here https://dashboard.stripe.com/account/apikeys
-var stripe = require("stripe")("sk_test_jqQvmd0K1WbTSgP25zIgIWyp");
+var secrets = require('../auth/config/secrets');
+var options = secrets.stripeOptions;
+var stripe = require("stripe")(options.apiKey);
+var log4js = require('log4js');
+var logger = log4js.getLogger();
 
 module.exports = function (app, options) {
   app.all('/v1/create-charge', function(req, res) {
@@ -22,24 +26,25 @@ module.exports = function (app, options) {
     });
   });
 
-  // EXAMPLE
-  // curl -X POST \
+  //   EXAMPLE REQUEST
+  //   curl -X POST \
   //   -H "Content-Type: application/json" \
   //   -u sk_test_jqQvmd0K1WbTSgP25zIgIWyp: \
-  //   -d '{"customer":"cus_80JM7yd0HXslf6"}' \
-  //      http://localhost:5001/v1/charge-existing-customer 
-  app.all('/v1/charge-existing-customer', function(req,res) {
+  //   -d '{"customer":"cus_80JM7yd0HXslf6", "amount": 54322, "currency": "usd"}' \
+  //      http://localhost:5001/v1/charge
+  app.all('/v1/charge', function(req,res) {
     var stripeToken = req.body.stripeToken;
-    console.log(req.body);
-    console.log(req.is('json'))
+    logger.debug(req.body);
+    logger.debug("Request is", req.is('json'))
     stripe.charges.create({
-        amount: 6543, // amount in cents, again
-        currency: "usd",
+        amount: req.body.amount, // amount in cents, again
+        currency: req.body.currency,
         customer: req.body.customer
       }).then(function(charge) {
-        console.log(charge);
+        logger.info("charge success");
         res.json({msg: "success"})
     }, function(err) {
+        logger.error(err);
         res.json({msg: err})
     });
   })
@@ -56,7 +61,7 @@ module.exports = function (app, options) {
   //       customer: customer.id
   //     });
   //   }).then(function(charge) {
-  //     console.log(charge);
+  //     logger.info(charge);
   //     // YOUR CODE: Save the customer ID and other info in a database for later!
   //   });
   // })

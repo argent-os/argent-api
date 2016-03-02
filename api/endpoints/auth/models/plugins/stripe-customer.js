@@ -10,9 +10,9 @@ module.exports = exports = function stripeCustomer (schema, options) {
 
   schema.add({
     stripe: {
-      account_id: String,
-      secret_key: String,
-      publishable_key: String, 
+      accountId: String,
+      secretKey: String,
+      publishableKey: String, 
       customerId: String,
       subscriptionId: String,
       last4: String,
@@ -86,9 +86,9 @@ module.exports = exports = function stripeCustomer (schema, options) {
         if (err) return cb(err);
         logger.info('stripe account creation success');
         // Need to save account info
-        user.stripe.account_id = account.id
-        user.stripe.secret_key = account.keys.secret
-        user.stripe.publishable_key = account.keys.publishable
+        user.stripe.accountId = account.id
+        user.stripe.secretKey = account.keys.secret
+        user.stripe.publishableKey = account.keys.publishable
         user.save(function(err){
           if (err) return cb(err);
           logger.info('saving stripe data to database');          
