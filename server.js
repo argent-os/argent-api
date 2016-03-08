@@ -2,7 +2,8 @@
 var express        = require('express');
 var path           = require('path');
 var favicon        = require('serve-favicon');
-var logger         = require('morgan');
+var log4js         = require('log4js');
+var logger         = log4js.getLogger();
 var cookieParser   = require('cookie-parser');
 var bodyParser     = require('body-parser');
 var expressSession = require('express-session');
@@ -180,11 +181,15 @@ var expressSession = require('express-session')
 //
 // Create an HTTP server.
 //
-var server = http.createServer(app).listen(port);
 
-server.on("close", function() {
+require('dns').lookup(require('os').hostname(), function (err, address, fam) {
+  var server = http.createServer(app).listen(port, address);
+  logger.info("Running app on port " + port + " address: " + address)
+  server.on("close", function() {
     process.exit();
-});
+  });
+})
+
 
 module.exports = app;
 

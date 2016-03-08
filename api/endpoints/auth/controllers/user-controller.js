@@ -136,7 +136,7 @@ UserController.prototype.register = function (req, res, next) {
 UserController.prototype.login = function (req, res, next) {
   var self = this;
   // Login with either username or email
-  logger.info('req received');
+  logger.trace('login req received');
   User.findOne({ $or: [ { email: req.body.email }, { username: req.body.username } ] }, function(err, user) {
     if (!user) {
       return res.status(401).send({ message: 'Wrong username/email and/or password' });
@@ -145,18 +145,21 @@ UserController.prototype.login = function (req, res, next) {
     user.comparePassword(req.body.password, function(err, isMatch) {
       if (!isMatch) {
         return res.status(401).send({ message: 'Wrong username/email and/or password' });
+      } else if(err) {
+        logger.error(err);
       }
-      logger.info('password match');
-      var _firebaseToken = tokenGenerator.createToken({ uid: (user._id).toString(), username: user.username, hasTCAccess: true });
-      ref.authWithCustomToken(_firebaseToken, function(error, authData) {
-        if (error) {
-          logger.info("Login Failed!", error);
-          res.send(500);                    
-        } else {
-          ////logger.info("Login Succeeded!", authData);
-          res.send({ token: createJWT(user), auth: authData,  user: user });          
-        }
-      });      
+      logger.info('password match for user', user.username);      
+      res.send({ token: createJWT(user), user: user });          
+      // var _firebaseToken = tokenGenerator.createToken({ uid: (user._id).toString(), username: user.username, hasTCAccess: true });
+      // ref.authWithCustomToken(_firebaseToken, function(error, authData) {
+      //   if (error) {
+      //     // logger.info("Login Failed!", error);
+      //     res.send(500);                    
+      //   } else {
+      //     ////logger.info("Login Succeeded!", authData);
+      //     // res.send({ token: createJWT(user), auth: authData,  user: user });          
+      //   }
+      // });      
     });
   });
 };
