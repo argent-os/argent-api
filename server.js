@@ -57,8 +57,6 @@ process.env.ENVIRONMENT == 'PROD' ? firebaseUrl = process.env.FIREBASE_URL : '';
 process.env.ENVIRONMENT == 'DEV' || process.env.ENVIRONMENT == undefined ? firebaseSecret = process.env.FIREBASE_DEV_SECRET : '';
 process.env.ENVIRONMENT == 'PROD' ? firebaseSecret = process.env.FIREBASE_SECRET : '';
 
-console.log('Firebase URL ' + firebaseUrl + ' with proper secrets in ' + process.env.ENVIRONMENT + ' mode');
-
 var apiUrl;
 process.env.ENVIRONMENT == 'DEV' || process.env.ENVIRONMENT == undefined ? apiUrl = process.env.API_DEV_URL : '';
 process.env.ENVIRONMENT == 'PROD' ? apiUrl = process.env.API_URL : apiUrl = process.env.API_DEV_URL;

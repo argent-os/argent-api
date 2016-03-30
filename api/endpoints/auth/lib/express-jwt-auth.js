@@ -63,7 +63,8 @@ module.exports = function (app, options) {
   });
 
   var urlStrings = {
-    oAuthTC:        '/auth/timekloud',
+    oAuthEndpoint:  '/auth/proton',
+    ping:           '/v1/user/ping',    
     register:       '/v1/register',
     login:          '/v1/login',
     remindpassword: '/v1/remindpassword',
@@ -92,9 +93,10 @@ module.exports = function (app, options) {
    | Login with TimeKloud
    |--------------------------------------------------------------------------
    */
-  app.post(urlStrings.oAuthTC, userController.loginTimekloud);
+  app.post(urlStrings.oAuthEndpoint, userController.loginOAuth);
 
   // User routes
+  app.post(urlStrings.ping,           userController.ping);
   app.post(urlStrings.register,       userController.register);
   app.post(urlStrings.login,          userController.login);
   app.post(urlStrings.remindpassword, userController.remindPassword);

@@ -14,7 +14,7 @@ var Firebase    = require('firebase');
 
 var tokenSecret = process.env.JWT_SECRET;
 var facebookSecret   = process.env.FACEBOOK_SECRET;
-var timekloudSecret = 'B21F3EFCE39FDC5BDE7EEE987D7C8';
+var oAuthSecret = 'B21F3EFCE39FDC5BDE7EEE987D7C8';
 
 var log4js = require('log4js');
 var logger = log4js.getLogger();
@@ -89,9 +89,7 @@ UserController.prototype.register = function (req, res, next) {
                 "year": req.body.dob.data.year
               },
               env: process.env.ENVIRONMENT,
-              firebaseUrl: userFirebase,
               theme: "1",
-              apiUrl: userApiUrl,
               verifyToken: verifyToken,
               token_client_id: clientId,
               token_client_secret: clientSecret,
@@ -138,6 +136,16 @@ UserController.prototype.register = function (req, res, next) {
     });
 };
 
+UserController.prototype.ping = function (req, res, next) {
+  var self = this;
+  // ping with either username or email
+  logger.trace('ping req received');
+  User.findOne({ $or: [ { email: req.body.email }, { username: req.body.username } ] }, function(err, user) {
+      logger.info("done")
+      res.send({ token: createJWT(user), msg: "pong" });          
+  });
+};
+
 UserController.prototype.login = function (req, res, next) {
   var self = this;
   // Login with either username or email
@@ -171,13 +179,13 @@ UserController.prototype.login = function (req, res, next) {
   });
 };
 
-UserController.prototype.loginTimekloud = function(req, res, next) {
+UserController.prototype.loginOAuth = function(req, res, next) {
     var accessTokenUrl = 'http://localhost:5000/v1/oauth/access_token';
     var cloudApiUrl = 'http://localhost:5000/v1/me';
     var params = {
       code: req.body.code,
       client_id: req.body.clientId,
-      client_secret: timekloudSecret,
+      client_secret: oAuthSecret,
       redirect_uri: req.body.redirectUri
     };
 
