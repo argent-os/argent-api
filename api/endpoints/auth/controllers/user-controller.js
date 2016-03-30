@@ -153,6 +153,7 @@ UserController.prototype.login = function (req, res, next) {
         return res.status(401).send({ message: 'Wrong username/email and/or password' });
       } else if(err) {
         logger.error(err);
+        return res.status(401).send({ message: 'Error logging in' });        
       }
       logger.info('password match for user', user.username);      
       res.send({ token: createJWT(user), user: user });          

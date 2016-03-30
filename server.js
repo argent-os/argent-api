@@ -102,10 +102,10 @@ var notification = require('./api/endpoints/notification')(app, options);
 var stripe       = require('./api/endpoints/stripe/stripe.endpoint')(app, options);
 var quote        = require('./api/endpoints/quote')(app, options);
 
-app.use(express.static(path.join(__dirname, 'api/web')));
-app.use(express.static('src'));
-app.use('/bower_components',  express.static('bower_components'));
-app.use('/', home);
+// app.use(express.static(path.join(__dirname, 'api/web')));
+// app.use(express.static('src'));
+// app.use('/bower_components',  express.static('bower_components'));
+// app.use('/', home);
 
 app.use(h5bp({ root: __dirname + '/src' }));
 app.use(compress());
@@ -122,7 +122,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 app.all('*', function(req, res, next) {  
     // Send the index.html for other files to support HTML5Mode
-    res.sendFile('src/index.html', { root: __dirname });
+    // res.sendFile('src/index.html', { root: __dirname });
     // req.session.timestamp = Date.now();    
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
@@ -132,11 +132,11 @@ app.all('*', function(req, res, next) {
 });
 
 // catch 404 and forward to error handler
-app.use(function(req, res, next) {
-    var err = new Error('Not Found');
-    err.status = 404;
-    next(err);
-});
+// app.use(function(req, res, next) {
+//     var err = new Error('Not swag');
+//     err.status = 404;
+//     next(err);
+// });
 
 app.use(function(req, res, next) {
   res.header("Access-Control-Allow-Origin", "*");
@@ -171,6 +171,14 @@ app.use(function(err, req, res, next) {
     //     message: err.message,
     //     error: {}
     // });
+});
+
+app.get('/', function(req, res, next) {
+  res.json({message: "Welcome to the Proton Payments API!", info: "To download our app please visit www.protonpayments.com"})
+})
+
+app.get('/ping', function(req, res) {
+   res.status(200).send({msg: "pong"});
 });
 
 // Sessions
