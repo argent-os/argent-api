@@ -140,10 +140,11 @@ UserController.prototype.ping = function (req, res, next) {
   var self = this;
   // ping with either username or email
   logger.trace('ping req received');
-  User.findOne({ $or: [ { email: req.body.email }, { username: req.body.username } ] }, function(err, user) {
-      logger.info("done")
-      res.send({ token: createJWT(user), msg: "pong" });          
-  });
+  res.json({msg:"pong"});
+  // User.findOne({ $or: [ { email: req.body.email }, { username: req.body.username } ] }, function(err, user) {
+  //     logger.info("done")
+  //     res.send({ token: createJWT(user), msg: "pong" });          
+  // });
 };
 
 UserController.prototype.login = function (req, res, next) {
