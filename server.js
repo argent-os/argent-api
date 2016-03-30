@@ -37,12 +37,11 @@ var app = express();
 
 
 // Key Stripe and Firebase Handlers for DEV vs PROD
-process.env.ENVIRONMENT == 'DEV' ? mongooseUri = 'mongodb://localhost:27017/praxicorp' : '';
+process.env.ENVIRONMENT == 'DEV' ? mongooseUri = process.env.MONGOLAB_URI_DEV : '';
 process.env.ENVIRONMENT == 'PROD' ? mongooseUri =process.env.MONGOLAB_URI : '';
 
 
 console.log('Running in ' + process.env.ENVIRONMENT + ' mode');
-console.log('Database ' + mongooseUri);
 
 process.env.ENVIRONMENT == 'DEV' || process.env.ENVIRONMENT == undefined ? stripeApiKey = process.env.STRIPE_TEST_KEY : '';
 process.env.ENVIRONMENT == 'DEV' || process.env.ENVIRONMENT == undefined ? stripePublishableKey = process.env.STRIPE_TEST_PUB_KEY : '';
@@ -93,12 +92,13 @@ var options = {
 
 // Setup API routes
 // Send the current and and options into the endpoints
+// Be sure name in package.json matches lib -> endpoint file name
 var home         = require('./api/routes/home');
-var timeauth     = require('./api/endpoints/auth')(app, options);
-var timepost     = require('./api/endpoints/post')(app, options);
-var timeorg      = require('./api/endpoints/organization')(app, options);
-var timecompany  = require('./api/endpoints/company')(app, options);
-var timesheet    = require('./api/endpoints/timesheet')(app, options);
+var prot_auth    = require('./api/endpoints/auth')(app, options);
+var prot_post    = require('./api/endpoints/post')(app, options);
+var prot_org     = require('./api/endpoints/organization')(app, options);
+var prot_company = require('./api/endpoints/company')(app, options);
+var notification = require('./api/endpoints/notification')(app, options);
 var stripe       = require('./api/endpoints/stripe/stripe.endpoint')(app, options);
 var quote        = require('./api/endpoints/quote')(app, options);
 
@@ -118,7 +118,7 @@ app.set('view engine', 'ejs');
 app.use(favicon(__dirname + '/public/favicon.ico'));
 // app.use(logger('dev'));
 app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.urlencoded({ extended: true }));
 
 app.all('*', function(req, res, next) {  
     // Send the index.html for other files to support HTML5Mode
@@ -181,14 +181,21 @@ var expressSession = require('express-session')
 //
 // Create an HTTP server.
 //
-
-require('dns').lookup(require('os').hostname(), function (err, address, fam) {
-  var server = http.createServer(app).listen(port, address);
-  logger.info("Running app on port " + port + " address: " + address)
-  server.on("close", function() {
-    process.exit();
-  });
-})
+if(process.env.ENVIRONMENT === 'DEV') {
+  require('dns').lookup(require('os').hostname(), function (err, address, fam) {
+    var server = http.createServer(app).listen(port, address);
+    logger.info("Running app on port " + port + " address: " + address)
+    server.on("close", function() {
+      process.exit();
+    });
+  })
+} else if(process.env.ENVIRONMENT === 'PROD') {
+    var server = http.createServer(app).listen(port);
+    logger.info("Running app on port " + port)
+    server.on("close", function() {
+      process.exit();
+    });
+}
 
 
 module.exports = app;

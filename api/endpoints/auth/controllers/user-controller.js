@@ -43,93 +43,98 @@ UserController.prototype.register = function (req, res, next) {
   var userFirebase = firebaseUrl;  
   var userApiUrl = apiUrl; 
   var link;   
-  logger.info('registering');
+  logger.trace('registering');
+  logger.info('user email is', req.body.email)
+  logger.info('username is', req.body.username)
   User.findOne({ email: req.body.email }, function(err, existingUser) {
         if (existingUser) {
+          logger.error('email is taken')
           return res.status(409).send({ message: 'Email is already taken' });
-        }    
-        User.findOne({ username: req.body.username }, function(err, existingUser) {
-          if(existingUser) {
-            return res.status(409).send({ message: 'Username is already taken' });
-          }    
-          var verifyToken = utils.randomString(16);  
-          var clientId = 'tk_'+utils.randomString(64);
-          var clientSecret = 'tk_'+utils.randomString(64);
-          var accessToken = 'tk_'+utils.randomString(64);    
-          var scope = 'read_write';    
-          var tokenType = 'bearer';    
-          var livemode = 'true';    
-          var deviceTokenIOS = req.body.device_token_ios;
-          var _date = req.body.tos_acceptance.data.date;
-          if( _date.indexOf('.') != -1 ) {
-              var parsedDate = _date.substring(0, _date.indexOf('.'));
-              logger.info("parsing date, " + parsedDate);
-          }
-          var user = new User({
-            first_name: req.body.first_name,
-            last_name: req.body.last_name,
-            username: req.body.username,
-            email: req.body.email,
-            phone_number: req.body.phone_number,
-            password: req.body.password,
-            country: req.body.country,
-            legal_entity_type: req.body.legal_entity_type,
-            device_token_ios: deviceTokenIOS,
-            tos_acceptance: {
-              "ip":req.body.tos_acceptance.data.ip,
-              "date":parsedDate
-            },
-            dob: {
-              "day": req.body.dob.data.day,
-              "month": req.body.dob.data.month,
-              "year": req.body.dob.data.year
-            },
-            env: process.env.ENVIRONMENT,
-            firebaseUrl: userFirebase,
-            theme: "1",
-            apiUrl: userApiUrl,
-            verifyToken: verifyToken,
-            tk_client_id: clientId,
-            tk_client_secret: clientSecret,
-            tk_access_token: accessToken,
-            tk_scope: scope,
-            tk_livemode: livemode,
-            tk_token_type: tokenType
-          }); 
-          logger.info('about to save');
-          user.save().then(function() {
-            logger.info('inside save');
-            // change to req.body.country      
-            var _firebaseToken = tokenGenerator.createToken({ uid: (user._id).toString(), username: user.username, hasTCAccess: true });   
-            // logger.info(_firebaseToken);   
-              ref.authWithCustomToken(_firebaseToken, function(error, authData) {
-                if (error) {
-                  logger.error(error);
-                  ////logger.info("Login Failed!", error);
-                  res.send(500);                    
-                } else {
-                  // logger.info(authData);
-                  ////logger.info("Login Succeeded!", authData);
-                  // change routing on registration for prod ui and make https
-                  process.env.ENVIRONMENT == 'DEV' || process.env.ENVIRONMENT == undefined ? link = 'http://localhost:5000/verify' + '?token=' + verifyToken : '';
-                  process.env.ENVIRONMENT == 'PROD' ? link = 'https://www.paykloud.com/verify' + '?token=' + verifyToken : '';                  
-                  mailer.verifyEmail(user, link, function (err, info) {
-                    if (err) {
-                      // logger.info(err);
-                      //logger.error('Sending message error : ' + err);
-                      res.send(504);
-                    }
-                    else {
-                      // var resp = {};
-                      // resp.msg = 'verify_link_sent';
-                      // res.status(200).json(resp);
-                      res.send({ token: createJWT(user), auth: authData,  user: user });                                
-                    }
-                  });                  
-                }
-              });         
-          });                
-       });
+        } else {
+          User.findOne({ username: req.body.username }, function(err, existingUser) {
+            if(existingUser) {
+              logger.error('username is taken')
+              return res.status(409).send({ message: 'Username is already taken' });
+            }    
+            var verifyToken = utils.randomString(16);  
+            var clientId = 'tok_'+utils.randomString(64);
+            var clientSecret = 'tok_'+utils.randomString(64);
+            var accessToken = 'tok_'+utils.randomString(64);    
+            var scope = 'read_write';    
+            var tokenType = 'bearer';    
+            var livemode = 'true';    
+            var deviceTokenIOS = req.body.device_token_ios;
+            var _date = req.body.tos_acceptance.data.date;
+            if( _date.indexOf('.') != -1 ) {
+                var parsedDate = _date.substring(0, _date.indexOf('.'));
+                logger.info("parsing date, " + parsedDate);
+            }
+            var user = new User({
+              first_name: req.body.first_name,
+              last_name: req.body.last_name,
+              username: req.body.username,
+              email: req.body.email,
+              phone_number: req.body.phone_number,
+              password: req.body.password,
+              country: req.body.country,
+              legal_entity_type: req.body.legal_entity_type,
+              device_token_ios: deviceTokenIOS,
+              tos_acceptance: {
+                "ip":req.body.tos_acceptance.data.ip,
+                "date":parsedDate
+              },
+              dob: {
+                "day": req.body.dob.data.day,
+                "month": req.body.dob.data.month,
+                "year": req.body.dob.data.year
+              },
+              env: process.env.ENVIRONMENT,
+              firebaseUrl: userFirebase,
+              theme: "1",
+              apiUrl: userApiUrl,
+              verifyToken: verifyToken,
+              token_client_id: clientId,
+              token_client_secret: clientSecret,
+              tok_access_token: accessToken,
+              token_scope: scope,
+              token_livemode: livemode,
+              token_type: tokenType
+            }); 
+            logger.trace('about to save');
+            user.save().then(function() {
+              logger.trace('inside save');
+              // change to req.body.country      
+              var _firebaseToken = tokenGenerator.createToken({ uid: (user._id).toString(), username: user.username, hasTCAccess: true });   
+              // logger.info(_firebaseToken);   
+                ref.authWithCustomToken(_firebaseToken, function(error, authData) {
+                  if (error) {
+                    logger.error(error);
+                    //logger.info("Login Failed!", error);
+                    res.send(500);                    
+                  } else {
+                    // logger.info(authData);
+                    ////logger.info("Login Succeeded!", authData);
+                    // change routing on registration for prod ui and make https
+                    process.env.ENVIRONMENT == 'DEV' || process.env.ENVIRONMENT == undefined ? link = 'http://localhost:5000/verify' + '?token=' + verifyToken : '';
+                    process.env.ENVIRONMENT == 'PROD' ? link = 'https://www.paykloud.com/verify' + '?token=' + verifyToken : '';                  
+                    mailer.verifyEmail(user, link, function (err, info) {
+                      if (err) {
+                        // logger.info(err);
+                        //logger.error('Sending message error : ' + err);
+                        res.send(504);
+                      }
+                      else {
+                        // var resp = {};
+                        // resp.msg = 'verify_link_sent';
+                        // res.status(200).json(resp);
+                        res.send({ token: createJWT(user), auth: authData,  user: user });                                
+                      }
+                    });                  
+                  }
+                });         
+            });                
+         });
+        }
     });
 };
 
@@ -144,6 +149,7 @@ UserController.prototype.login = function (req, res, next) {
     logger.info('found user, comparing password');
     user.comparePassword(req.body.password, function(err, isMatch) {
       if (!isMatch) {
+        logger.error("password mismatch");        
         return res.status(401).send({ message: 'Wrong username/email and/or password' });
       } else if(err) {
         logger.error(err);
@@ -518,7 +524,7 @@ UserController.prototype.resetPassword = function (req, res, next) {
   }
   User.findOne({resetToken: token}, function(err, user) {
     if (!user) {
-     // logger.error('User not found resetToken: ' + token);
+      logger.error('User not found resetToken: ' + token);
       res.status(400).send('User not found');
     }
     else {
@@ -526,10 +532,10 @@ UserController.prototype.resetPassword = function (req, res, next) {
       user.password = password;
       user.save(function(err) {
         if (err) {
-         // logger.error('Error saving reset password');
+          logger.error('Error saving reset password');
         }
         else {
-         // logger.info('Reset password by user with id: ' + user._id);
+          logger.info('Reset password by user with id: ' + user._id);
           res.json({msg: 'new_password_success'});
         }
       });

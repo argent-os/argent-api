@@ -1,5 +1,5 @@
 var nodemailer = require('nodemailer');
-var nconf = require('nconf');
+var nconf      = require('nconf');
 var config;
 
 if (nconf.get('mailerSettings')) {

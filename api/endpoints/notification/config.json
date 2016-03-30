@@ -1,5 +1,5 @@
 {
-  "dbname" : "timesheet-api",
+  "dbname" : "post-api",
   "tokenExpire": "6000",
   "serviceUrl": "",
   "serviceUrlSeparator": "",

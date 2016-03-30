@@ -38,7 +38,7 @@ module.exports = exports = function stripeCustomer (schema, options) {
   });
 
   schema.post('save', function (next) {
-    logger.info('user stripe account created');
+    logger.info('user info saved');
   });
 
   schema.statics.getPlans = function () {

@@ -1,15 +1,14 @@
 var expressValidator = require('express-validator');
-var mongoose         = require('mongoose');
-var path             = require('path');
-var cors             = require('cors');
-var bodyParser       = require('body-parser');
-var nconf            = require('nconf');
-var extend           = require('util')._extend;
+var mongoose    = require('mongoose');
+var path        = require('path');
+var cors        = require('cors');
+var bodyParser  = require('body-parser');
+var nconf       = require('nconf');
+var extend      = require('util')._extend;
 
-var configFile       = path.join(__dirname, '..', 'config.json');
-var corsOptions      = {};
-var tokenSecret      = process.env.JWT_SECRET;
-
+var configFile  = path.join(__dirname, '..', 'config.json');
+var corsOptions = {};
+var tokenSecret = process.env.JWT_SECRET;
 nconf.file({ file: configFile});
 
 module.exports = function (app, options) {
@@ -38,8 +37,8 @@ module.exports = function (app, options) {
   if (options.removeCallback && typeof options.removeCallback === 'function') {
     nconf.set('removeCallback', options.removeCallback);
   }
-  // Including timesheetController after options setting is done
-  var timesheetController = require('../controllers/timesheet-controller');
+  // Including notificationController after options setting is done
+  var notificationController = require('../controllers/notification-controller');
 
   if (options.corsDomains) {
     var whitelist = options.corsDomains;
@@ -52,8 +51,8 @@ module.exports = function (app, options) {
   }
 
   var urlStrings = {
-    timesheet:    '/v1/timesheet',
-    onetimesheet: '/v1/timesheet/:id',    
+    notification: '/v1/notification',
+    onenotification: '/v1/notification/:id',
   };
 
   if (options.urlStrings) {
@@ -64,20 +63,18 @@ module.exports = function (app, options) {
   app.use(bodyParser.json());
   app.use(expressValidator());
 
-  var auth = timesheetController.authorize;
-  var createTimesheet = timesheetController.createTimesheet;
-  var getOneTimesheet = timesheetController.getOneTimesheet;
-  var getAllTimesheets = timesheetController.getAllTimesheets;
-  var editTimesheet = timesheetController.editTimesheet;
-  var deleteTimesheet = timesheetController.deleteTimesheet;
+  var auth = notificationController.authorize;
+  var createNotification = notificationController.createNotification;
+  var getNotification = notificationController.getNotification;
+  var getAllNotifications = notificationController.getAllNotifications;
+  var deleteNotification = notificationController.deleteNotification;
 
-  // Timesheet routes
-  app.post(urlStrings.timesheet,   auth, createTimesheet);
-  app.get(urlStrings.onetimesheet, auth, getOneTimesheet);
-  app.get(urlStrings.timesheet,    auth, getAllTimesheets);
-  app.put(urlStrings.timesheet,    auth, editTimesheet);
-  app.delete(urlStrings.timesheet, auth, deleteTimesheet);
-  app.post(urlStrings.timesheet,   auth, function (req, res) {res.send('');});
+  // Notification routes
+  app.post(urlStrings.notification,    createNotification);
+  app.get(urlStrings.onenotification,  getNotification);
+  app.get(urlStrings.notification,     getAllNotifications);
+  app.delete(urlStrings.notification,  deleteNotification);
+  app.post(urlStrings.notification,    function (req, res) {res.send('');});
 
   return auth;
 };

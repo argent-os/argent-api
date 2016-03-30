@@ -1,6 +1,6 @@
 var log4js = require('log4js');
-var path = require('path');
-var nconf = require('nconf');
+var path   = require('path');
+var nconf  = require('nconf');
 
 module.exports = function () {
 

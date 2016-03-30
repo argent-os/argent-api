@@ -62,13 +62,13 @@ var UserSchema = new mongoose.Schema({
   env: { type: String },
   firebaseUrl: { type: String },
   apiUrl: { type: String },
-  tk_client_id: { type: String, dropDups: true },
-  tk_client_secret: { type: String, dropDups: true },
-  tk_access_token: { type: String, dropDups: true },
-  tk_token_type: { type: String },
-  tk_scope: { type: String },
-  tk_livemode: { type: Boolean },
-  tk_expires: { type: Date },
+  token_client_id: { type: String, dropDups: true },
+  token_client_secret: { type: String, dropDups: true },
+  token_access_token: { type: String, dropDups: true },
+  token_type: { type: String },
+  token_scope: { type: String },
+  token_livemode: { type: Boolean },
+  token_expires: { type: Date },
   redirectUri: { type: String }    
 });
 

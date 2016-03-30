@@ -2,10 +2,10 @@
   "appenders": [
     {
       "type": "file",
-      "filename": "auth.log",
+      "filename": "notification.log",
       "maxLogSize": 20480,
       "backups": 5,
-      "category": "auth"
+      "category": "notification"
     }
   ]
 }
