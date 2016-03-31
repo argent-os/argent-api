@@ -140,11 +140,14 @@ UserController.prototype.ping = function (req, res, next) {
   var self = this;
   // ping with either username or email
   logger.trace('ping req received');
-  res.json({msg:"pong"});
-  // User.findOne({ $or: [ { email: req.body.email }, { username: req.body.username } ] }, function(err, user) {
-  //     logger.info("done")
-  //     res.send({ token: createJWT(user), msg: "pong" });          
-  // });
+  User.findOne({ $or: [ { email: req.body.email }, { username: req.body.username } ] }, function(err, user) {
+      if (!user) {
+          logger.error("user not found");
+          return res.status(404).send({ message: 'user not found' });
+      }      
+      logger.info("done");
+      res.status(200).send({ msg: 'pong', user: user.username });
+  });
 };
 
 UserController.prototype.login = function (req, res, next) {
@@ -172,7 +175,7 @@ UserController.prototype.login = function (req, res, next) {
       //     // logger.info("Login Failed!", error);
       //     res.send(500);                    
       //   } else {
-      //     ////logger.info("Login Succeeded!", authData);
+      //     // logger.info("Login Succeeded!", authData);
       //     // res.send({ token: createJWT(user), auth: authData,  user: user });          
       //   }
       // });      

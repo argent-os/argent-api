@@ -187,7 +187,7 @@ var expressSession = require('express-session')
 //
 // Create an HTTP server.
 //
-if(process.env.ENVIRONMENT === 'DEV') {
+if(process.env.HOST_ENV === 'LOCAL') {
   require('dns').lookup(require('os').hostname(), function (err, address, fam) {
     var server = http.createServer(app).listen(port, address);
     logger.info("Running app on port " + port + " address: " + address)
@@ -195,7 +195,7 @@ if(process.env.ENVIRONMENT === 'DEV') {
       process.exit();
     });
   })
-} else if(process.env.ENVIRONMENT === 'PROD') {
+} else if(process.env.HOST_ENV === 'PRODUCTION') {
     var server = http.createServer(app).listen(port);
     logger.info("Running app on port " + port)
     server.on("close", function() {
