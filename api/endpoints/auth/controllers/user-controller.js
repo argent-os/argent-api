@@ -299,131 +299,145 @@ UserController.prototype.removeAccount = function (req, res, next) {
 
 UserController.prototype.editProfile = function (req, res, next) {
   var data = req.body;
+  logger.trace("update req received")
+  logger.info(data)
   // logger.info(data.stripeData);
   // req.assert('username', 'Username must be at least 4 characters long').len(4);
   // req.assert('email', 'Email is not valid').isEmail();
-  var errors = req.validationErrors();
-  if (errors) {
-    res.status(400).json(errors);
-    return false;
-  }
+  // var errors = req.validationErrors();
+  // if (errors) {
+  //   res.status(400).json(errors);
+  //   return false;
+  // }
   userHelper.checkIfUserExists(req.user, data, function (result) {
+    logger.trace("checking if user exists")
     if (result === 'user_uniq') {
       User.findOne({_id: req.user._id}, function (err, user) {
           if (!user) {
-            //logger.info('User not found for account update. User id : ' + req.user._id);
+            logger.info('User not found for account update. User id : ' + req.user._id);
             res.status(404).json({msg: 'User not found, could not update'})
             return;
           }
           else {
+            logger.trace("user found in update")
             var updated = [];
-            if (user.email !== data.user.email && data.user.email !=null && data.email !== '' && data.email !== undefined) {
-              updated.push('email');
-              user.email = data.user.email;
-            }
-            if (user.role !== data.user.role && data.user.email !=null && data.role !== '' && data.role !== undefined) {
-              updated.push('role');
-              user.role = data.user.role;
-            }      
-            if (user.orgId !== data.orgId && data.orgId !=null && data.orgId !== '' && data.orgId !== undefined) {
-              updated.push('orgId');
-              user.orgId = data.orgId;
-            }      
-            if (user.notificationsEnabled !== data.user.notificationsEnabled) {
-              updated.push('notificationsEnabled');
-              user.notificationsEnabled = data.user.notificationsEnabled;
-            }   
-            if (user.apiKey !== data.apiKey && data.apiKey !=null) {
-              updated.push('apiKey');
-              user.apiKey = data.apiKey;
-            }     
-            if (user.picture !== data.picture && data.picture !=null) {
-              updated.push('picture');
-              user.picture = data.picture;
-            }      
-            if (user.fullname !== data.user.fullname && data.stripeToken !== null) {
-              updated.push('fullname');
-              user.fullname = data.user.fullname;
-            }    
-            if (user.first_name !== data.user.first_name) {
-              updated.push('first_name');
-              user.first_name = data.user.first_name;
-            }     
-            if (user.last_name !== data.user.last_name) {
-              updated.push('last_name');
-              user.last_name = data.user.last_name;
-            }                                                                           
-            if (user.username !== data.user.username && data.stripeToken !== null) {
-              updated.push('username');
-              user.username = data.user.username;
-            }     
-            if (user.stripeToken !== data.stripeToken && data.stripeToken !== undefined && data.stripeToken !== null) {
-              updated.push('stripeToken');
-              user.stripeToken = data.stripeToken;
-            }    
-            if (user.stripeEnabled !== data.stripeEnabled && data.stripeEnabled !== undefined && data.stripeEnabled !== null && data.stripeEnabled !== "") {
-              updated.push('stripeEnabled');
-              user.stripeEnabled = data.stripeEnabled;
-            } 
-            if (user.stripeData !== data.stripeData && data.stripeData !== null) {
-              updated.push('stripeData');
-              user.stripeData = data.stripeData;
-            }                                  
-            if (user.verified !== data.verified && data.verified !== undefined && data.verified !== null && data.verified !== "") {
-              updated.push('verified');
-              user.verified = data.verified;
-            }    
-            if (user.theme !== data.theme && data.theme !== undefined && data.theme !== null && data.theme !== "") {
-              updated.push('theme');
-              user.theme = data.theme;
-            }                     
-            if (user.verifyToken !== data.verifyToken) {
-              updated.push('verifyToken');
-              user.verifyToken = data.verifyToken;
-            }                                       
-            if (data.password !== '' && data.password !== null && data.password !== undefined && data.password !== '') {
-              updated.push('password');
-              user.password = data.password;
-            }
-            if (updated.length > 0) {
-              user.date_modified = Date.now();
-              var out = {
-                email: user.email,
-                password: user.password,
-                fullname: user.fullname,
-                first_name: user.first_name,
-                last_name: user.last_name,
-                username: user.username,
-                stripeToken: user.stripeToken,
-                stripeEnabled: user.stripeEnabled,
-                stripeData: user.stripeData,
-                verifyToken: user.verifyToken,
-                verified: user.verified,
-                theme: user.theme,
-                orgId: user.orgId,
-                notificationsEnabled: user.notificationsEnabled,
-                apiKey: user.apiKey,
-                picture: user.picture,
-                role: [user.role]
-              };
-            }
-            else {
-              res.status(200).json({msg: 'Data not modified'});
-              return;
-            }
-
-            user.save(function(err) {
-              if (err) {
-                // logger.info(err);
-                //logger.error('Error updating user account. User id: ' + req.user._id + ' Err: ' + err);
-                res.status(401).json({msg: 'update_error'});
+            if(data.user != null || data.user != undefined) {
+              if (user.email !== data.user.email && data.user.email !=null && data.user.email !== '' && data.user.email !== undefined) {
+                updated.push('email');
+                user.email = data.user.email;
+              }
+              if (user.role !== data.user.role && data.user.email !=null && data.role !== '' && data.role !== undefined) {
+                updated.push('role');
+                user.role = data.user.role;
+              }      
+              if (user.orgId !== data.orgId && data.orgId !=null && data.orgId !== '' && data.orgId !== undefined) {
+                updated.push('orgId');
+                user.orgId = data.orgId;
+              }      
+              if (user.notificationsEnabled !== data.user.notificationsEnabled) {
+                updated.push('notificationsEnabled');
+                user.notificationsEnabled = data.user.notificationsEnabled;
+              }   
+              if (user.apiKey !== data.apiKey && data.apiKey !=null) {
+                updated.push('apiKey');
+                user.apiKey = data.apiKey;
+              }     
+              if (user.picture !== data.picture && data.picture !=null) {
+                updated.push('picture');
+                user.picture = data.picture;
+              }      
+              if (user.fullname !== data.user.fullname && data.stripeToken !== null) {
+                updated.push('fullname');
+                user.fullname = data.user.fullname;
+              }    
+              if (user.first_name !== data.user.first_name) {
+                updated.push('first_name');
+                user.first_name = data.user.first_name;
+              }     
+              if (user.last_name !== data.user.last_name) {
+                updated.push('last_name');
+                user.last_name = data.user.last_name;
+              }                                                                           
+              if (user.username !== data.user.username && data.stripeToken !== null) {
+                updated.push('username');
+                user.username = data.user.username;
+              }     
+              if (user.stripeToken !== data.stripeToken && data.stripeToken !== undefined && data.stripeToken !== null) {
+                updated.push('stripeToken');
+                user.stripeToken = data.stripeToken;
+              }            
+              if (user.stripeEnabled !== data.stripeEnabled && data.stripeEnabled !== undefined && data.stripeEnabled !== null && data.stripeEnabled !== "") {
+                updated.push('stripeEnabled');
+                user.stripeEnabled = data.stripeEnabled;
+              } 
+              if (user.stripeData !== data.stripeData && data.stripeData !== null) {
+                updated.push('stripeData');
+                user.stripeData = data.stripeData;
+              }    
+              if (user.plaid !== data.plaid && data.plaid !== undefined && data.plaid !== null && data.plaid != '') {
+                updated.push('plaid');
+                user.plaid = data.plaid;
+              }                                                  
+              if (user.verified !== data.verified && data.verified !== undefined && data.verified !== null && data.verified !== '') {
+                updated.push('verified');
+                user.verified = data.verified;
+              }    
+              if (user.theme !== data.theme && data.theme !== undefined && data.theme !== null && data.theme !== '') {
+                updated.push('theme');
+                user.theme = data.theme;
+              }                     
+              if (user.verifyToken !== data.verifyToken) {
+                updated.push('verifyToken');
+                user.verifyToken = data.verifyToken;
+              }                                       
+              if (data.password !== '' && data.password !== null && data.password !== undefined && data.password !== '') {
+                updated.push('password');
+                user.password = data.password;
+              }
+              if (updated.length > 0) {
+                user.date_modified = Date.now();
+                var out = {
+                  email: user.email,
+                  password: user.password,
+                  fullname: user.fullname,
+                  first_name: user.first_name,
+                  last_name: user.last_name,
+                  username: user.username,
+                  stripeToken: user.stripeToken,
+                  stripeEnabled: user.stripeEnabled,
+                  stripeData: user.stripeData,
+                  plaid: user.plaid,                
+                  verifyToken: user.verifyToken,
+                  verified: user.verified,
+                  theme: user.theme,
+                  orgId: user.orgId,
+                  notificationsEnabled: user.notificationsEnabled,
+                  apiKey: user.apiKey,
+                  picture: user.picture,
+                  role: [user.role]
+                };
               }
               else {
-                var newToken = createJWT(user);
-                res.json({token: newToken, user: user});
+                res.status(200).json({msg: 'Data not modified'});
+                return;
               }
-            });
-          }
+
+              user.save(function(err) {
+                if (err) {
+                  logger.error(err);
+                  //logger.error('Error updating user account. User id: ' + req.user._id + ' Err: ' + err);
+                  res.status(401).json({msg: 'update_error'});
+                }
+                else {
+                  logger.info("saving user update")
+                  var newToken = createJWT(user);
+                  res.json({token: newToken, user: user});
+                }
+              });
+            } else {
+              logger.error("user data not in request")
+            }
+          } 
         });
     }
     else {

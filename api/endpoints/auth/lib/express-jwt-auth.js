@@ -90,7 +90,7 @@ module.exports = function (app, options) {
 
   /*
    |--------------------------------------------------------------------------
-   | Login with TimeKloud
+   | Login with OAuth
    |--------------------------------------------------------------------------
    */
   app.post(urlStrings.oAuthEndpoint, userController.loginOAuth);
@@ -114,7 +114,7 @@ module.exports = function (app, options) {
 
   /*
    |--------------------------------------------------------------------------
-   | Stripe oAuth
+   | Stripe OAuth
    |--------------------------------------------------------------------------
    */  
   var TOKEN_URI = 'https://connect.stripe.com/oauth/token';

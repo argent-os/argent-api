@@ -12,6 +12,10 @@ var pictureDef = {
   secureUrl: { type: String }
 };
 
+var plaidDef = {
+   access_token: { type: String }
+}
+
 var stripeDef = {  
    access_token: { type: String },
    livemode: { type: Boolean },
@@ -35,7 +39,7 @@ var dobDef = {
 var UserSchema = new mongoose.Schema({
   first_name: { type: String },
   last_name: { type: String },
-  username: { type: String, lowercase: true, trim: true, unique : true, required : true, dropDups: true },
+  username: { type: String, lowercase: true, trim: true, unique : true, required : true },
   full_name: { type: String, trim: true },
   phone_number: { type: String, trim: true },
   country: { type: String },
@@ -47,7 +51,7 @@ var UserSchema = new mongoose.Schema({
   apiKey: { type: String },
   picture: pictureDef,
   notificationsEnabled: { type: Boolean },  
-  email: { type: String, lowercase: true, trim: true, unique : true, required : true, dropDups: true },
+  email: { type: String, lowercase: true, trim: true, unique : true, required : true},
   display_name: { type: String },
   device_token_ios: { type: String },
   device_token_android: { type: String },
@@ -59,12 +63,13 @@ var UserSchema = new mongoose.Schema({
   stripeToken: { type: String },
   stripeEnabled: { type: Boolean },
   stripeData: stripeDef,
+  plaid: plaidDef,
   env: { type: String },
   firebaseUrl: { type: String },
   apiUrl: { type: String },
-  token_client_id: { type: String, dropDups: true },
-  token_client_secret: { type: String, dropDups: true },
-  token_access_token: { type: String, dropDups: true },
+  token_client_id: { type: String },
+  token_client_secret: { type: String },
+  token_access_token: { type: String },
   token_type: { type: String },
   token_scope: { type: String },
   token_livemode: { type: Boolean },
