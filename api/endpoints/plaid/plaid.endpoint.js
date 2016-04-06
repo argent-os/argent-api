@@ -49,7 +49,7 @@ module.exports = function (app, options) {
 	   
 	// Example MFA Auth AWS
 
-	// curl -X POST -i -H "Content-Type: application/json" -d '{"institution_type": "bofa", "credentials":{"username":"plaid_test", "password": "plaid_good"}}' http://http://proton-api-dev.us-east-1.elasticbeanstalk.com/v1/plaid/auth	   
+	// curl -X POST -i -H "Content-Type: application/json" -d '{"institution_type": "bofa", "credentials":{"username":"plaid_test", "password": "plaid_good"}}' http://proton-api-dev.us-east-1.elasticbeanstalk.com/v1/plaid/auth	   
 
 	// AUTH
 	app.post(endpoint.version + endpoint.base + endpoint.auth, function(req, res, next) {
