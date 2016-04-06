@@ -53,7 +53,7 @@ module.exports = function (app, options) {
 
 	// AUTH
 	app.post(endpoint.version + endpoint.base + endpoint.auth, function(req, res, next) {
-		logger.trace('req received');
+		logger.trace('req addAuthUser received');
 		// addAuthUser(String, Object, Object?, Function)
 		var institution_type = req.body.institution_type;
 		var credentials = req.body.credentials;
@@ -66,18 +66,18 @@ module.exports = function (app, options) {
 			logger.info(response);
 
 			if(err) {
-				res.json({err: err})
+				res.json({err: err}).end();
 			}
 
 			if(mfaResponse) {
-				res.json({mfa: mfaResponse, response: response})
+				return res.json({mfa: mfaResponse, response: response}).end();
 			} else {
-				res.json({response: response})
-			}
+				return res.json({response: response}).end();	  
+			}  
 		});
 	});
 	app.post(endpoint.version + endpoint.base + endpoint.auth, function(req, res, next) {
-		logger.trace('req received');
+		logger.trace('req stepAuthUser received');
 		// stepAuthUser(String, String, Object?, Function)
 		var access_token = req.body.access_token;
 		var mfaResponse = req.body.mfaResponse;
@@ -90,38 +90,37 @@ module.exports = function (app, options) {
 			logger.info(response);
 
 			if(err) {
-				res.json({err: err})
+				res.json({err: err}).end();
 			}
 
 			if(mfaResponse) {
-				res.json({mfa: mfaResponse, response: response})
+				return res.json({mfa: mfaResponse, response: response}).end();
 			} else {
-				res.json({response: response})
-			}
+				return res.json({response: response}).end();	  
+			}  
 		})
 	});
+
+	// curl -X GET -i -H "Content-Type: application/json" -d '{"access_token": "test_bofa"}' http://192.168.1.232:5001/v1/plaid/auth
 	app.get(endpoint.version + endpoint.base + endpoint.auth, function(req, res, next) {
+		logger.trace('req getAuthUser received');
+		logger.info(req.body);
 		// getAuthUser(String, Object?, Function)
 		var access_token = req.body.access_token;
 		var options = req.body.options;		
 		plaidClient.getAuthUser(access_token, options, function callback(err, response) {
 		  // err can be a network error or a Plaid API error (i.e. invalid credentials)
 			logger.error(err);
-			logger.info(mfaResponse);
 			logger.info(response);
 
 			if(err) {
-				res.json({err: err})
+				res.json({err: err}).end();
 			}
-
-			if(mfaResponse) {
-				res.json({mfa: mfaResponse, response: response})
-			} else {
-				res.json({response: response})
-			}
+			return res.json({response: response}).end();
 		})
 	});
 	app.patch(endpoint.version + endpoint.base + endpoint.auth, function(req, res, next) {
+		logger.trace('req patchAuthUser received');
 		// patchAuthUser(String, Object, Object? Function)
 		var access_token = req.body.access_token;
 		var credentials = req.body.credentials;
@@ -134,17 +133,18 @@ module.exports = function (app, options) {
 			logger.info(response);	
 
 			if(err) {
-				res.json({err: err})
+				res.json({err: err}).end();
 			}
 
 			if(mfaResponse) {
-				res.json({mfa: mfaResponse, response: response})
+				return res.json({mfa: mfaResponse, response: response}).end();
 			} else {
-				res.json({response: response})
-			}	  
+				return res.json({response: response}).end();	  
+			}    
 		})
 	});
 	app.delete(endpoint.version + endpoint.base + endpoint.auth, function(req, res, next) {
+		logger.trace('req deleteAuthUser received');
 		// deleteAuthUser(String, Object?, Function)
 		var access_token = req.body.access_token;
 		var options = req.body.options;		
@@ -154,16 +154,15 @@ module.exports = function (app, options) {
 			logger.info(response);		
 
 			if(err) {
-				res.json({err: err})
+				res.json({err: err}).end();
 			}
-
-			res.json({response: response})
-
+			return res.json({response: response}).end();
 		})
 	});
 
 	// CONNECT
 	app.post(endpoint.version + endpoint.base + endpoint.connect, function(req, res, next) {
+		logger.trace('req addConnectUser received');
 		// addConnectUser(String, Object, Object?, Function)
 		var institution_type = req.body.institution_type;
 		var credentials = req.body.credentials;
@@ -176,17 +175,18 @@ module.exports = function (app, options) {
 			logger.info(response);	
 
 			if(err) {
-				res.json({err: err})
+				res.json({err: err}).end();
 			}
 
 			if(mfaResponse) {
-				res.json({mfa: mfaResponse, response: response})
+				return res.json({mfa: mfaResponse, response: response}).end();
 			} else {
-				res.json({response: response})
-			}	  
+				return res.json({response: response}).end();	  
+			}  
 		})
 	});
 	app.post(endpoint.version + endpoint.base + endpoint.connect, function(req, res, next) {
+		logger.trace('req stepConnectUser received');
 		// stepConnectUser(String, String, Object?, Function)
 		var institution_type = req.body.institution_type;
 		var mfaResponse = req.body.mfaResponse;
@@ -199,17 +199,18 @@ module.exports = function (app, options) {
 			logger.info(response);		
 
 			if(err) {
-				res.json({err: err})
+				res.json({err: err}).end();
 			}
 
 			if(mfaResponse) {
-				res.json({mfa: mfaResponse, response: response})
+				return res.json({mfa: mfaResponse, response: response}).end();
 			} else {
-				res.json({response: response})
+				return res.json({response: response}).end();	  
 			}  
 		})
 	});
 	app.get(endpoint.version + endpoint.base + endpoint.connect, function(req, res, next) {
+		logger.trace('req getConnectUser received');
 		// getConnectUser(String, Object?, Function)
 		var access_token = req.body.access_token;
 		var options = req.body.options;		
@@ -219,13 +220,13 @@ module.exports = function (app, options) {
 			logger.info(response);	
 
 			if(err) {
-				res.json({err: err})
+				res.json({err: err}).end();
 			}
-
-			res.json({response: response})	  
+			return res.json({response: response}).end();
 		})
 	});
 	app.patch(endpoint.version + endpoint.base + endpoint.connect, function(req, res, next) {
+		logger.trace('req patchConnectUsert received');
 		// patchConnectUser(String, Object, Object?, Function)
 		var access_token = req.body.access_token;
 		var credentials = req.body.credentials;
@@ -238,17 +239,18 @@ module.exports = function (app, options) {
 			logger.info(response);	
 
 			if(err) {
-				res.json({err: err})
+				res.json({err: err}).end();
 			}
 
 			if(mfaResponse) {
-				res.json({mfa: mfaResponse, response: response})
+				return res.json({mfa: mfaResponse, response: response}).end();
 			} else {
-				res.json({response: response})
-			}	  
+				return res.json({response: response}).end();	  
+			}  
 		})
 	});
 	app.delete(endpoint.version + endpoint.base + endpoint.connect, function(req, res, next) {
+		logger.trace('req deleteConnectUser received');
 		// deleteConnectUser(String, Object?, Function)
 		var access_token = req.body.access_token;
 		var options = req.body.options;		
@@ -258,15 +260,15 @@ module.exports = function (app, options) {
 			logger.info(response);	
 
 			if(err) {
-				res.json({err: err})
+				res.json({err: err}).end();
 			}
-
-			res.json({response: response})		  
+			return res.json({response: response}).end();	  
 		})
 	});
 
 	// INCOME
 	app.post(endpoint.version + endpoint.base + endpoint.income, function(req, res, next) {
+		logger.trace('req addIncomeUser received');
 		// addIncomeUser(String, Object, Object?, Function)
 		var institution_type = req.body.institution_type;
 		var credentials = req.body.credentials;
@@ -279,17 +281,18 @@ module.exports = function (app, options) {
 			logger.info(response);	
 
 			if(err) {
-				res.json({err: err})
+				res.json({err: err}).end();
 			}
 
 			if(mfaResponse) {
-				res.json({mfa: mfaResponse, response: response})
+				return res.json({mfa: mfaResponse, response: response}).end();
 			} else {
-				res.json({response: response})
-			}	  
+				return res.json({response: response}).end();	  
+			}  
 		})
 	});
 	app.post(endpoint.version + endpoint.base + endpoint.income, function(req, res, next) {
+		logger.trace('req stepIncomeUser received');
 		// stepIncomeUser(String, String, Object, Function)
 		var access_token = req.body.access_token;
 		var mfaResponse = req.body.mfaResponse;
@@ -302,17 +305,18 @@ module.exports = function (app, options) {
 			logger.info(response);	
 
 			if(err) {
-				res.json({err: err})
+				res.json({err: err}).end();
 			}
 
 			if(mfaResponse) {
-				res.json({mfa: mfaResponse, response: response})
+				return res.json({mfa: mfaResponse, response: response}).end();
 			} else {
-				res.json({response: response})
-			}	  
+				return res.json({response: response}).end();	  
+			}  
 		})
 	});
 	app.get(endpoint.version + endpoint.base + endpoint.income, function(req, res, next) {
+		logger.trace('req getIncomeUser received');
 		// getIncomeUser(String, Object?, Function)
 		var access_token = req.body.access_token;
 		var options = req.body.options;		
@@ -322,13 +326,13 @@ module.exports = function (app, options) {
 			logger.info(response);	
 
 			if(err) {
-				res.json({err: err})
+				res.json({err: err}).end();
 			}
-
-			res.json({response: response})		  
+			return res.json({response: response}).end();	  
 		})
 	});
 	app.patch(endpoint.version + endpoint.base + endpoint.income, function(req, res, next) {
+		logger.trace('req patchIncomeUser received');
 		// patchIncomeUser(String, Object, Object?, Function)
 		var access_token = req.body.access_token;
 		var credentials = req.body.credentials;
@@ -341,17 +345,18 @@ module.exports = function (app, options) {
 			logger.info(response);		
 
 			if(err) {
-				res.json({err: err})
+				res.json({err: err}).end();
 			}
 
 			if(mfaResponse) {
-				res.json({mfa: mfaResponse, response: response})
+				return res.json({mfa: mfaResponse, response: response}).end();
 			} else {
-				res.json({response: response})
+				return res.json({response: response}).end();	  
 			}  
 		})
 	});
 	app.delete(endpoint.version + endpoint.base + endpoint.income, function(req, res, next) {
+		logger.trace('req deleteIncomeUser received');
 		// deleteIncomeUser(String, Object?, Function)
 		var access_token = req.body.access_token;
 		var options = req.body.options;		
@@ -361,15 +366,15 @@ module.exports = function (app, options) {
 			logger.info(response);		
 
 			if(err) {
-				res.json({err: err})
+				res.json({err: err}).end();
 			}
-
-			res.json({response: response})	  
+			return res.json({response: response}).end();
 		})
 	});
 
 	// INFO
 	app.post(endpoint.version + endpoint.base + endpoint.info, function(req, res, next) {
+		logger.trace('req addInfoUser received');
 		// addInfoUser(String, Object, Object?, Function)
 		var institution_type = req.body.institution_type;
 		var credentials = req.body.credentials;
@@ -382,17 +387,18 @@ module.exports = function (app, options) {
 			logger.info(response);	
 
 			if(err) {
-				res.json({err: err})
+				res.json({err: err}).end();
 			}
 
 			if(mfaResponse) {
-				res.json({mfa: mfaResponse, response: response})
+				return res.json({mfa: mfaResponse, response: response}).end();
 			} else {
-				res.json({response: response})
-			}	  
+				return res.json({response: response}).end();	  
+			}  
 		})
 	});
 	app.post(endpoint.version + endpoint.base + endpoint.info, function(req, res, next) {
+		logger.trace('req stepInfoUser received');
 		// stepInfoUser(String, String, Object, Function)
 		var access_token = req.body.access_token;
 		var mfaResponse = req.body.mfaResponse;
@@ -405,17 +411,18 @@ module.exports = function (app, options) {
 			logger.info(response);	
 
 			if(err) {
-				res.json({err: err})
+				res.json({err: err}).end();
 			}
 
 			if(mfaResponse) {
-				res.json({mfa: mfaResponse, response: response})
+				return res.json({mfa: mfaResponse, response: response}).end();
 			} else {
-				res.json({response: response})
-			}	  
+				return res.json({response: response}).end();	  
+			}   
 		})
 	});
 	app.get(endpoint.version + endpoint.base + endpoint.info, function(req, res, next) {
+		logger.trace('req getInfoUser received');
 		// getInfoUser(String, Object?, Function)
 		var access_token = req.body.access_token;
 		var options = req.body.options;		
@@ -425,13 +432,13 @@ module.exports = function (app, options) {
 			logger.info(response);	
 
 			if(err) {
-				res.json({err: err})
+				res.json({err: err}).end();
 			}
-
-			res.json({response: response})		  
+			return res.json({response: response}).end();	  
 		})
 	});
 	app.patch(endpoint.version + endpoint.base + endpoint.info, function(req, res, next) {
+		logger.trace('req patchInfoUser received');
 		// patchInfoUser(String, Object, Object?, Function)
 		var access_token = req.body.access_token;
 		var credentials = req.body.credentials;
@@ -444,17 +451,18 @@ module.exports = function (app, options) {
 			logger.info(response);	
 
 			if(err) {
-				res.json({err: err})
+				res.json({err: err}).end();
 			}
 
 			if(mfaResponse) {
-				res.json({mfa: mfaResponse, response: response})
+				return res.json({mfa: mfaResponse, response: response}).end();
 			} else {
-				res.json({response: response})
-			}	  
+				return res.json({response: response}).end();	  
+			}  
 		})
 	});
 	app.delete(endpoint.version + endpoint.base + endpoint.info, function(req, res, next) {
+		logger.trace('req deleteInfoUser received');
 		// deleteInfoUser(String, Object?, Function)
 		var access_token = req.body.institution_type;
 		var options = req.body.options;		
@@ -464,15 +472,15 @@ module.exports = function (app, options) {
 			logger.info(response);	
 
 			if(err) {
-				res.json({err: err})
+				res.json({err: err}).end();
 			}
-
-			res.json({response: response})		  
+			return res.json({response: response}).end();	  
 		})
 	});
 
 	// RISK
 	app.post(endpoint.version + endpoint.base + endpoint.risk, function(req, res, next) {
+		logger.trace('req addRiskUser received');
 		// addRiskUser(String, Object, Object?, Function)
 		var institution_type = req.body.institution_type;
 		var credentials = req.body.credentials;
@@ -485,17 +493,18 @@ module.exports = function (app, options) {
 			logger.info(response);	
 
 			if(err) {
-				res.json({err: err})
+				res.json({err: err}).end();
 			}
 
 			if(mfaResponse) {
-				res.json({mfa: mfaResponse, response: response})
+				return res.json({mfa: mfaResponse, response: response}).end();
 			} else {
-				res.json({response: response})
-			}	  
+				return res.json({response: response}).end();	  
+			}  
 		})
 	});
 	app.post(endpoint.version + endpoint.base + endpoint.risk, function(req, res, next) {
+		logger.trace('req stepRiskUser received');
 		// stepRiskUser(String, String, Object, Function)
 		var access_token = req.body.access_token;
 		var mfaResponse = req.body.mfaResponse;
@@ -508,17 +517,18 @@ module.exports = function (app, options) {
 			logger.info(response);	
 
 			if(err) {
-				res.json({err: err})
+				res.json({err: err}).end();
 			}
 
 			if(mfaResponse) {
-				res.json({mfa: mfaResponse, response: response})
+				return res.json({mfa: mfaResponse, response: response}).end();
 			} else {
-				res.json({response: response})
-			}	  
+				return res.json({response: response}).end();	  
+			}  
 		})
 	});
 	app.get(endpoint.version + endpoint.base + endpoint.risk, function(req, res, next) {
+		logger.trace('req getRiskUser received');
 		// getRiskUser(String, Object?, Function)
 		var access_token = req.body.access_token;
 		var options = req.body.options;		
@@ -528,13 +538,13 @@ module.exports = function (app, options) {
 			logger.info(response);	
 
 			if(err) {
-				res.json({err: err})
+				res.json({err: err}).end();
 			}
-
-			res.json({response: response})		  
+			return res.json({response: response}).end();	  
 		})
 	});
 	app.patch(endpoint.version + endpoint.base + endpoint.risk, function(req, res, next) {
+		logger.trace('req patchRiskUser received');
 		// patchRiskUser(String, Object, Object?, Function)
 		var access_token = req.body.access_token;
 		var credentials = req.body.credentials;
@@ -547,17 +557,18 @@ module.exports = function (app, options) {
 			logger.info(response);	
 
 			if(err) {
-				res.json({err: err})
+				res.json({err: err}).end();
 			}
 
 			if(mfaResponse) {
-				res.json({mfa: mfaResponse, response: response})
+				return res.json({mfa: mfaResponse, response: response}).end();
 			} else {
-				res.json({response: response})
-			}	  
+				return res.json({response: response}).end();	  
+			}  
 		})
 	});
 	app.delete(endpoint.version + endpoint.base + endpoint.risk, function(req, res, next) {
+		logger.trace('req deleteIncomeUser received');
 		// deleteRiskUser(String, Object?, Function)
 		var access_token = req.body.access_token;
 		var options = req.body.options;
@@ -567,15 +578,15 @@ module.exports = function (app, options) {
 			logger.info(response);	
 
 			if(err) {
-				res.json({err: err})
+				res.json({err: err}).end();
 			}
-
-			res.json({response: response})		  
+			return res.json({response: response}).end();	  
 		})
 	});
 
 	// UTILITY
 	app.get(endpoint.version + endpoint.base + endpoint.balance, function(req, res, next) {
+		logger.trace('req getBalance received');
 		// getBalance(String, Function)
 		var access_token = req.body.access_token;
 		plaidClient.getBalance(access_token, function callback(err, response) {
@@ -584,13 +595,13 @@ module.exports = function (app, options) {
 			logger.info(response);	
 
 			if(err) {
-				res.json({err: err})
+				res.json({err: err}).end();
 			}
-
-			res.json({response: response})		  
+			return res.json({response: response}).end();	  
 		})
 	});
 	app.post(endpoint.version + endpoint.base + endpoint.upgrade, function(req, res, next) {
+		logger.trace('req upgradeUser received');
 		// upgradeUser(String, String, Object?, Function)
 		var access_token = req.body.access_token;
 		var upgrade_to = req.body.upgrade_to;
@@ -603,17 +614,18 @@ module.exports = function (app, options) {
 			logger.info(response);		
 
 			if(err) {
-				res.json({err: err})
+				res.json({err: err}).end();
 			}
 
 			if(mfaResponse) {
-				res.json({mfa: mfaResponse, response: response})
+				return res.json({mfa: mfaResponse, response: response}).end();
 			} else {
-				res.json({response: response})
+				return res.json({response: response}).end();	  
 			}  
 		})
 	});
 	app.get(endpoint.version + endpoint.base + endpoint.exchange, function(req, res, next) {
+		logger.trace('req exchangeToken received');
 		// Used for Plaid Link
 		// exchangeToken(String, Function)
 		// plaidClient.exchangeToken(public_token, callback);
@@ -628,6 +640,7 @@ module.exports = function (app, options) {
 		});
 	})
 	app.get(endpoint.version + endpoint.base + endpoint.longtail, function(req, res, next) {
+		logger.trace('req getLongtailInstitutions received');
 		// getLongtailInstitutions(Object, Function)
 		var optionsObject = req.body.optionsObject;
 		plaidClient.getLongtailInstitutions(optionsObject, function callback(err, response) {
@@ -636,10 +649,9 @@ module.exports = function (app, options) {
 			logger.info(response);	
 
 			if(err) {
-				res.json({err: err})
+				res.json({err: err}).end();
 			}
-
-			res.json({response: response})		  
+			return res.json({response: response}).end();	  
 		})
 	});
 
