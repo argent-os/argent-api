@@ -98,6 +98,7 @@ var prot_org     = require('./api/endpoints/organization')(app, options);
 var prot_company = require('./api/endpoints/company')(app, options);
 var notification = require('./api/endpoints/notification')(app, options);
 var stripe       = require('./api/endpoints/stripe/stripe.endpoint')(app, options);
+var plaid        = require('./api/endpoints/plaid/plaid.endpoint')(app, options);
 var quote        = require('./api/endpoints/quote')(app, options);
 
 // app.use(express.static(path.join(__dirname, 'api/web')));

@@ -1,0 +1,1589 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <title>plaid.endpoint.js</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
+  <link rel="stylesheet" media="all" href="docco.css" />
+</head>
+<body>
+  <div id="container">
+    <div id="background"></div>
+    
+    <ul class="sections">
+        
+          <li id="title">
+              <div class="annotation">
+                  <h1>plaid.endpoint.js</h1>
+              </div>
+          </li>
+        
+        
+        
+        <li id="section-1">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-1">&#182;</a>
+              </div>
+              
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-built_in">module</span>.exports = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">app, options</span>) </span>{
+
+	<span class="hljs-keyword">var</span> endpoint = {
+		version: <span class="hljs-string">'/v1'</span>,
+		base: <span class="hljs-string">'/plaid'</span>,
+		ping: <span class="hljs-string">'/ping'</span>,
+		exchange: <span class="hljs-string">'/exchange'</span>,     
+		auth: <span class="hljs-string">'/auth'</span>,      		     
+		connect: <span class="hljs-string">'/connect'</span>,    		        		     
+		income: <span class="hljs-string">'/income'</span>,    		        		     
+		info: <span class="hljs-string">'/info'</span>,    		        		     
+		risk: <span class="hljs-string">'/risk'</span>,    		     
+		balance: <span class="hljs-string">'/balance'</span>,    		     
+		upgrade: <span class="hljs-string">'/upgrade'</span>,    		     
+		longtail: <span class="hljs-string">'/longtail'</span>  		     
+	};
+
+	<span class="hljs-keyword">var</span> log4js = <span class="hljs-built_in">require</span>(<span class="hljs-string">'log4js'</span>);
+	<span class="hljs-keyword">var</span> logger = log4js.getLogger();
+	<span class="hljs-keyword">var</span> cors = <span class="hljs-built_in">require</span>(<span class="hljs-string">'cors'</span>);
+	<span class="hljs-keyword">var</span> bodyParser = <span class="hljs-built_in">require</span>(<span class="hljs-string">'body-parser'</span>);
+	<span class="hljs-keyword">var</span> expressValidator = <span class="hljs-built_in">require</span>(<span class="hljs-string">'express-validator'</span>);
+	app.use(cors());
+	app.use(bodyParser.json());
+	app.use(expressValidator());
+
+	<span class="hljs-keyword">var</span> plaid = <span class="hljs-built_in">require</span>(<span class="hljs-string">'plaid'</span>);
+	<span class="hljs-keyword">var</span> PLAID_CLIENT_ID = process.env.PLAID_CLIENT_ID;
+	<span class="hljs-keyword">var</span> PLAID_SECRET = process.env.PLAID_SECRET;
+	<span class="hljs-keyword">var</span> PLAID_ENV = plaid.environments.tartan; <span class="hljs-comment">// plaid.environments.production</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-2">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-2">&#182;</a>
+              </div>
+              <p>Initialize client</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>	<span class="hljs-keyword">var</span> plaidClient = <span class="hljs-keyword">new</span> plaid.Client(PLAID_CLIENT_ID, PLAID_SECRET, PLAID_ENV);</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-3">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-3">&#182;</a>
+              </div>
+              <p>TODO: Secure Plaid endpoints with JWT Authentication middleware</p>
+
+            </div>
+            
+        </li>
+        
+        
+        <li id="section-4">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-4">&#182;</a>
+              </div>
+              <p>PING
+curl -X POST -i -H “Content-Type: application/json” <a href="http://192.168.1.232:5001/v1/plaid/ping">http://192.168.1.232:5001/v1/plaid/ping</a></p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>	app.post(endpoint.version + endpoint.base + endpoint.ping, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">req, res, next</span>) </span>{
+		logger.trace(<span class="hljs-string">'req received'</span>);
+		res.json({msg:<span class="hljs-string">"ok"</span>})
+	});</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-5">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-5">&#182;</a>
+              </div>
+              <p>Example MFA Auth (unsecured) local</p>
+
+            </div>
+            
+        </li>
+        
+        
+        <li id="section-6">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-6">&#182;</a>
+              </div>
+              <p>** Be sure the quotes are straight, not curly</p>
+
+            </div>
+            
+        </li>
+        
+        
+        <li id="section-7">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-7">&#182;</a>
+              </div>
+              <p>curl -X POST -i -H “Content-Type: application/json” -d ‘{“institution_type”: “bofa”, “credentials”:{“username”:”plaid_test”, “password”: “plaid_good”}}’ <a href="http://192.168.1.232:5001/v1/plaid/auth">http://192.168.1.232:5001/v1/plaid/auth</a></p>
+
+            </div>
+            
+        </li>
+        
+        
+        <li id="section-8">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-8">&#182;</a>
+              </div>
+              <p>Example MFA Auth AWS</p>
+
+            </div>
+            
+        </li>
+        
+        
+        <li id="section-9">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-9">&#182;</a>
+              </div>
+              <p>curl -X POST -i -H “Content-Type: application/json” -d ‘{“institution_type”: “bofa”, “credentials”:{“username”:”plaid_test”, “password”: “plaid_good”}}’ <a href="http://http://proton-api-dev.us-east-1.elasticbeanstalk.com//v1/plaid/auth">http://http://proton-api-dev.us-east-1.elasticbeanstalk.com//v1/plaid/auth</a>       </p>
+
+            </div>
+            
+        </li>
+        
+        
+        <li id="section-10">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-10">&#182;</a>
+              </div>
+              <p>AUTH</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>	app.post(endpoint.version + endpoint.base + endpoint.auth, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">req, res, next</span>) </span>{
+		logger.trace(<span class="hljs-string">'req received'</span>);</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-11">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-11">&#182;</a>
+              </div>
+              <p>addAuthUser(String, Object, Object?, Function)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>		<span class="hljs-keyword">var</span> institution_type = req.body.institution_type;
+		<span class="hljs-keyword">var</span> credentials = req.body.credentials;
+		<span class="hljs-keyword">var</span> options = req.body.options;
+		plaidClient.addAuthUser(institution_type, credentials, options, <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">callback</span>(<span class="hljs-params">err, mfaResponse, response</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-12">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-12">&#182;</a>
+              </div>
+              <p>err can be a network error or a Plaid API error (i.e. invalid credentials)
+mfaResponse can be any type of Plaid MFA flow</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>			logger.error(err);
+			logger.info(mfaResponse);
+			logger.info(response);
+
+			<span class="hljs-keyword">if</span>(err) {
+				res.json({err: err})
+			}
+
+			<span class="hljs-keyword">if</span>(mfaResponse) {
+				res.json({mfa: mfaResponse, response: response})
+			} <span class="hljs-keyword">else</span> {
+				res.json({response: response})
+			}
+		});
+	});
+	app.post(endpoint.version + endpoint.base + endpoint.auth, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">req, res, next</span>) </span>{
+		logger.trace(<span class="hljs-string">'req received'</span>);</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-13">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-13">&#182;</a>
+              </div>
+              <p>stepAuthUser(String, String, Object?, Function)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>		<span class="hljs-keyword">var</span> access_token = req.body.access_token;
+		<span class="hljs-keyword">var</span> mfaResponse = req.body.mfaResponse;
+		<span class="hljs-keyword">var</span> options = req.body.options;
+		plaidClient.stepAuthUser(access_token, mfaResponse, options, <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">callback</span>(<span class="hljs-params">err, mfaResponse, response</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-14">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-14">&#182;</a>
+              </div>
+              <p>err can be a network error or a Plaid API error (i.e. invalid credentials)
+mfaResponse can be any type of Plaid MFA flow</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>			logger.error(err);
+			logger.info(mfaResponse);
+			logger.info(response);
+
+			<span class="hljs-keyword">if</span>(err) {
+				res.json({err: err})
+			}
+
+			<span class="hljs-keyword">if</span>(mfaResponse) {
+				res.json({mfa: mfaResponse, response: response})
+			} <span class="hljs-keyword">else</span> {
+				res.json({response: response})
+			}
+		})
+	});
+	app.get(endpoint.version + endpoint.base + endpoint.auth, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">req, res, next</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-15">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-15">&#182;</a>
+              </div>
+              <p>getAuthUser(String, Object?, Function)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>		<span class="hljs-keyword">var</span> access_token = req.body.access_token;
+		<span class="hljs-keyword">var</span> options = req.body.options;		
+		plaidClient.getAuthUser(access_token, options, <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">callback</span>(<span class="hljs-params">err, response</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-16">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-16">&#182;</a>
+              </div>
+              <p>err can be a network error or a Plaid API error (i.e. invalid credentials)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>			logger.error(err);
+			logger.info(mfaResponse);
+			logger.info(response);
+
+			<span class="hljs-keyword">if</span>(err) {
+				res.json({err: err})
+			}
+
+			<span class="hljs-keyword">if</span>(mfaResponse) {
+				res.json({mfa: mfaResponse, response: response})
+			} <span class="hljs-keyword">else</span> {
+				res.json({response: response})
+			}
+		})
+	});
+	app.patch(endpoint.version + endpoint.base + endpoint.auth, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">req, res, next</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-17">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-17">&#182;</a>
+              </div>
+              <p>patchAuthUser(String, Object, Object? Function)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>		<span class="hljs-keyword">var</span> access_token = req.body.access_token;
+		<span class="hljs-keyword">var</span> credentials = req.body.credentials;
+		<span class="hljs-keyword">var</span> options = req.body.options;		
+		plaidClient.patchAuthUser(access_token, credentials, options, <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">callback</span>(<span class="hljs-params">err, mfaResponse, response</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-18">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-18">&#182;</a>
+              </div>
+              <p>err can be a network error or a Plaid API error (i.e. invalid credentials)
+mfaResponse can be any type of Plaid MFA flow</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>			logger.error(err);
+			logger.info(mfaResponse);
+			logger.info(response);	
+
+			<span class="hljs-keyword">if</span>(err) {
+				res.json({err: err})
+			}
+
+			<span class="hljs-keyword">if</span>(mfaResponse) {
+				res.json({mfa: mfaResponse, response: response})
+			} <span class="hljs-keyword">else</span> {
+				res.json({response: response})
+			}	  
+		})
+	});
+	app.delete(endpoint.version + endpoint.base + endpoint.auth, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">req, res, next</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-19">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-19">&#182;</a>
+              </div>
+              <p>deleteAuthUser(String, Object?, Function)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>		<span class="hljs-keyword">var</span> access_token = req.body.access_token;
+		<span class="hljs-keyword">var</span> options = req.body.options;		
+		plaidClient.deleteAuthUser(access_token, options, <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">callback</span>(<span class="hljs-params">err, response</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-20">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-20">&#182;</a>
+              </div>
+              <p>err can be a network error or a Plaid API error (i.e. invalid credentials)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>			logger.error(err);
+			logger.info(response);		
+
+			<span class="hljs-keyword">if</span>(err) {
+				res.json({err: err})
+			}
+
+			res.json({response: response})
+
+		})
+	});</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-21">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-21">&#182;</a>
+              </div>
+              <p>CONNECT</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>	app.post(endpoint.version + endpoint.base + endpoint.connect, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">req, res, next</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-22">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-22">&#182;</a>
+              </div>
+              <p>addConnectUser(String, Object, Object?, Function)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>		<span class="hljs-keyword">var</span> institution_type = req.body.institution_type;
+		<span class="hljs-keyword">var</span> credentials = req.body.credentials;
+		<span class="hljs-keyword">var</span> options = req.body.options;		
+		plaidClient.addConnectUser(institution_type, credentials, options, <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">callback</span>(<span class="hljs-params">err, mfaResponse, response</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-23">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-23">&#182;</a>
+              </div>
+              <p>err can be a network error or a Plaid API error (i.e. invalid credentials)
+mfaResponse can be any type of Plaid MFA flow</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>			logger.error(err);
+			logger.info(mfaResponse);
+			logger.info(response);	
+
+			<span class="hljs-keyword">if</span>(err) {
+				res.json({err: err})
+			}
+
+			<span class="hljs-keyword">if</span>(mfaResponse) {
+				res.json({mfa: mfaResponse, response: response})
+			} <span class="hljs-keyword">else</span> {
+				res.json({response: response})
+			}	  
+		})
+	});
+	app.post(endpoint.version + endpoint.base + endpoint.connect, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">req, res, next</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-24">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-24">&#182;</a>
+              </div>
+              <p>stepConnectUser(String, String, Object?, Function)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>		<span class="hljs-keyword">var</span> institution_type = req.body.institution_type;
+		<span class="hljs-keyword">var</span> mfaResponse = req.body.mfaResponse;
+		<span class="hljs-keyword">var</span> options = req.body.options;		
+		plaidClient.stepConnectUser(access_token, mfaResponse, options, <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">callback</span>(<span class="hljs-params">err, mfaResponse, response</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-25">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-25">&#182;</a>
+              </div>
+              <p>err can be a network error or a Plaid API error (i.e. invalid credentials)
+mfaResponse can be any type of Plaid MFA flow</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>			logger.error(err);
+			logger.info(mfaResponse);
+			logger.info(response);		
+
+			<span class="hljs-keyword">if</span>(err) {
+				res.json({err: err})
+			}
+
+			<span class="hljs-keyword">if</span>(mfaResponse) {
+				res.json({mfa: mfaResponse, response: response})
+			} <span class="hljs-keyword">else</span> {
+				res.json({response: response})
+			}  
+		})
+	});
+	app.get(endpoint.version + endpoint.base + endpoint.connect, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">req, res, next</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-26">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-26">&#182;</a>
+              </div>
+              <p>getConnectUser(String, Object?, Function)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>		<span class="hljs-keyword">var</span> access_token = req.body.access_token;
+		<span class="hljs-keyword">var</span> options = req.body.options;		
+		plaidClient.getConnectUser(access_token, options, <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">callback</span>(<span class="hljs-params">err, response</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-27">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-27">&#182;</a>
+              </div>
+              <p>err can be a network error or a Plaid API error (i.e. invalid credentials)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>			logger.error(err);
+			logger.info(response);	
+
+			<span class="hljs-keyword">if</span>(err) {
+				res.json({err: err})
+			}
+
+			res.json({response: response})	  
+		})
+	});
+	app.patch(endpoint.version + endpoint.base + endpoint.connect, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">req, res, next</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-28">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-28">&#182;</a>
+              </div>
+              <p>patchConnectUser(String, Object, Object?, Function)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>		<span class="hljs-keyword">var</span> access_token = req.body.access_token;
+		<span class="hljs-keyword">var</span> credentials = req.body.credentials;
+		<span class="hljs-keyword">var</span> options = req.body.options;		
+		plaidClient.patchConnectUser(access_token, credentials, options, <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">callback</span>(<span class="hljs-params">err, mfaResponse, response</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-29">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-29">&#182;</a>
+              </div>
+              <p>err can be a network error or a Plaid API error (i.e. invalid credentials)
+mfaResponse can be any type of Plaid MFA flow</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>			logger.error(err);
+			logger.info(mfaResponse);
+			logger.info(response);	
+
+			<span class="hljs-keyword">if</span>(err) {
+				res.json({err: err})
+			}
+
+			<span class="hljs-keyword">if</span>(mfaResponse) {
+				res.json({mfa: mfaResponse, response: response})
+			} <span class="hljs-keyword">else</span> {
+				res.json({response: response})
+			}	  
+		})
+	});
+	app.delete(endpoint.version + endpoint.base + endpoint.connect, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">req, res, next</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-30">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-30">&#182;</a>
+              </div>
+              <p>deleteConnectUser(String, Object?, Function)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>		<span class="hljs-keyword">var</span> access_token = req.body.access_token;
+		<span class="hljs-keyword">var</span> options = req.body.options;		
+		plaidClient.deleteConnectUser(access_token, options, <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">callback</span>(<span class="hljs-params">err, response</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-31">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-31">&#182;</a>
+              </div>
+              <p>err can be a network error or a Plaid API error (i.e. invalid credentials)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>			logger.error(err);
+			logger.info(response);	
+
+			<span class="hljs-keyword">if</span>(err) {
+				res.json({err: err})
+			}
+
+			res.json({response: response})		  
+		})
+	});</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-32">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-32">&#182;</a>
+              </div>
+              <p>INCOME</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>	app.post(endpoint.version + endpoint.base + endpoint.income, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">req, res, next</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-33">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-33">&#182;</a>
+              </div>
+              <p>addIncomeUser(String, Object, Object?, Function)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>		<span class="hljs-keyword">var</span> institution_type = req.body.institution_type;
+		<span class="hljs-keyword">var</span> credentials = req.body.credentials;
+		<span class="hljs-keyword">var</span> options = req.body.options;		
+		plaidClient.addIncomeUser(institution_type, credentials, options, <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">callback</span>(<span class="hljs-params">err, mfaResponse, response</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-34">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-34">&#182;</a>
+              </div>
+              <p>err can be a network error or a Plaid API error (i.e. invalid credentials)
+mfaResponse can be any type of Plaid MFA flow</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>			logger.error(err);
+			logger.info(mfaResponse);
+			logger.info(response);	
+
+			<span class="hljs-keyword">if</span>(err) {
+				res.json({err: err})
+			}
+
+			<span class="hljs-keyword">if</span>(mfaResponse) {
+				res.json({mfa: mfaResponse, response: response})
+			} <span class="hljs-keyword">else</span> {
+				res.json({response: response})
+			}	  
+		})
+	});
+	app.post(endpoint.version + endpoint.base + endpoint.income, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">req, res, next</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-35">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-35">&#182;</a>
+              </div>
+              <p>stepIncomeUser(String, String, Object, Function)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>		<span class="hljs-keyword">var</span> access_token = req.body.access_token;
+		<span class="hljs-keyword">var</span> mfaResponse = req.body.mfaResponse;
+		<span class="hljs-keyword">var</span> options = req.body.options;		
+		plaidClient.stepIncomeUser(access_token, mfaResponse, options, <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">callback</span>(<span class="hljs-params">err, mfaResponse, response</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-36">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-36">&#182;</a>
+              </div>
+              <p>err can be a network error or a Plaid API error (i.e. invalid credentials)
+mfaResponse can be any type of Plaid MFA flow</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>			logger.error(err);
+			logger.info(mfaResponse);
+			logger.info(response);	
+
+			<span class="hljs-keyword">if</span>(err) {
+				res.json({err: err})
+			}
+
+			<span class="hljs-keyword">if</span>(mfaResponse) {
+				res.json({mfa: mfaResponse, response: response})
+			} <span class="hljs-keyword">else</span> {
+				res.json({response: response})
+			}	  
+		})
+	});
+	app.get(endpoint.version + endpoint.base + endpoint.income, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">req, res, next</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-37">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-37">&#182;</a>
+              </div>
+              <p>getIncomeUser(String, Object?, Function)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>		<span class="hljs-keyword">var</span> access_token = req.body.access_token;
+		<span class="hljs-keyword">var</span> options = req.body.options;		
+		plaidClient.getIncomeUser(access_token, options, <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">callback</span>(<span class="hljs-params">err, response</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-38">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-38">&#182;</a>
+              </div>
+              <p>err can be a network error or a Plaid API error (i.e. invalid credentials)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>			logger.error(err);
+			logger.info(response);	
+
+			<span class="hljs-keyword">if</span>(err) {
+				res.json({err: err})
+			}
+
+			res.json({response: response})		  
+		})
+	});
+	app.patch(endpoint.version + endpoint.base + endpoint.income, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">req, res, next</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-39">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-39">&#182;</a>
+              </div>
+              <p>patchIncomeUser(String, Object, Object?, Function)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>		<span class="hljs-keyword">var</span> access_token = req.body.access_token;
+		<span class="hljs-keyword">var</span> credentials = req.body.credentials;
+		<span class="hljs-keyword">var</span> options = req.body.options;		
+		plaidClient.patchIncomeUser(access_token, credentials, options, <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">callback</span>(<span class="hljs-params">err, mfaResponse, response</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-40">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-40">&#182;</a>
+              </div>
+              <p>err can be a network error or a Plaid API error (i.e. invalid credentials)
+mfaResponse can be any type of Plaid MFA flow</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>			logger.error(err);
+			logger.info(mfaResponse);
+			logger.info(response);		
+
+			<span class="hljs-keyword">if</span>(err) {
+				res.json({err: err})
+			}
+
+			<span class="hljs-keyword">if</span>(mfaResponse) {
+				res.json({mfa: mfaResponse, response: response})
+			} <span class="hljs-keyword">else</span> {
+				res.json({response: response})
+			}  
+		})
+	});
+	app.delete(endpoint.version + endpoint.base + endpoint.income, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">req, res, next</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-41">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-41">&#182;</a>
+              </div>
+              <p>deleteIncomeUser(String, Object?, Function)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>		<span class="hljs-keyword">var</span> access_token = req.body.access_token;
+		<span class="hljs-keyword">var</span> options = req.body.options;		
+		plaidClient.deleteIncomeUser(access_token, options, <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">callback</span>(<span class="hljs-params">err, response</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-42">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-42">&#182;</a>
+              </div>
+              <p>err can be a network error or a Plaid API error (i.e. invalid credentials)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>			logger.error(err);
+			logger.info(response);		
+
+			<span class="hljs-keyword">if</span>(err) {
+				res.json({err: err})
+			}
+
+			res.json({response: response})	  
+		})
+	});</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-43">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-43">&#182;</a>
+              </div>
+              <p>INFO</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>	app.post(endpoint.version + endpoint.base + endpoint.info, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">req, res, next</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-44">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-44">&#182;</a>
+              </div>
+              <p>addInfoUser(String, Object, Object?, Function)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>		<span class="hljs-keyword">var</span> institution_type = req.body.institution_type;
+		<span class="hljs-keyword">var</span> credentials = req.body.credentials;
+		<span class="hljs-keyword">var</span> options = req.body.options;		
+		plaidClient.addInfoUser(institution_type, credentials, options, <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">callback</span>(<span class="hljs-params">err, mfaResponse, response</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-45">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-45">&#182;</a>
+              </div>
+              <p>err can be a network error or a Plaid API error (i.e. invalid credentials)
+mfaResponse can be any type of Plaid MFA flow</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>			logger.error(err);
+			logger.info(mfaResponse);
+			logger.info(response);	
+
+			<span class="hljs-keyword">if</span>(err) {
+				res.json({err: err})
+			}
+
+			<span class="hljs-keyword">if</span>(mfaResponse) {
+				res.json({mfa: mfaResponse, response: response})
+			} <span class="hljs-keyword">else</span> {
+				res.json({response: response})
+			}	  
+		})
+	});
+	app.post(endpoint.version + endpoint.base + endpoint.info, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">req, res, next</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-46">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-46">&#182;</a>
+              </div>
+              <p>stepInfoUser(String, String, Object, Function)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>		<span class="hljs-keyword">var</span> access_token = req.body.access_token;
+		<span class="hljs-keyword">var</span> mfaResponse = req.body.mfaResponse;
+		<span class="hljs-keyword">var</span> options = req.body.options;		
+		plaidClient.stepInfoUser(access_token, mfaResponse, options, <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">callback</span>(<span class="hljs-params">err, mfaResponse, response</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-47">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-47">&#182;</a>
+              </div>
+              <p>err can be a network error or a Plaid API error (i.e. invalid credentials)
+mfaResponse can be any type of Plaid MFA flow</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>			logger.error(err);
+			logger.info(mfaResponse);
+			logger.info(response);	
+
+			<span class="hljs-keyword">if</span>(err) {
+				res.json({err: err})
+			}
+
+			<span class="hljs-keyword">if</span>(mfaResponse) {
+				res.json({mfa: mfaResponse, response: response})
+			} <span class="hljs-keyword">else</span> {
+				res.json({response: response})
+			}	  
+		})
+	});
+	app.get(endpoint.version + endpoint.base + endpoint.info, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">req, res, next</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-48">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-48">&#182;</a>
+              </div>
+              <p>getInfoUser(String, Object?, Function)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>		<span class="hljs-keyword">var</span> access_token = req.body.access_token;
+		<span class="hljs-keyword">var</span> options = req.body.options;		
+		plaidClient.getInfoUser(access_token, options, <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">callback</span>(<span class="hljs-params">err, response</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-49">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-49">&#182;</a>
+              </div>
+              <p>err can be a network error or a Plaid API error (i.e. invalid credentials)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>			logger.error(err);
+			logger.info(response);	
+
+			<span class="hljs-keyword">if</span>(err) {
+				res.json({err: err})
+			}
+
+			res.json({response: response})		  
+		})
+	});
+	app.patch(endpoint.version + endpoint.base + endpoint.info, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">req, res, next</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-50">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-50">&#182;</a>
+              </div>
+              <p>patchInfoUser(String, Object, Object?, Function)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>		<span class="hljs-keyword">var</span> access_token = req.body.access_token;
+		<span class="hljs-keyword">var</span> credentials = req.body.credentials;
+		<span class="hljs-keyword">var</span> options = req.body.options;		
+		plaidClient.patchInfoUser(access_token, credentials, options, <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">callback</span>(<span class="hljs-params">err, mfaResponse, response</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-51">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-51">&#182;</a>
+              </div>
+              <p>err can be a network error or a Plaid API error (i.e. invalid credentials)
+mfaResponse can be any type of Plaid MFA flow</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>			logger.error(err);
+			logger.info(mfaResponse);
+			logger.info(response);	
+
+			<span class="hljs-keyword">if</span>(err) {
+				res.json({err: err})
+			}
+
+			<span class="hljs-keyword">if</span>(mfaResponse) {
+				res.json({mfa: mfaResponse, response: response})
+			} <span class="hljs-keyword">else</span> {
+				res.json({response: response})
+			}	  
+		})
+	});
+	app.delete(endpoint.version + endpoint.base + endpoint.info, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">req, res, next</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-52">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-52">&#182;</a>
+              </div>
+              <p>deleteInfoUser(String, Object?, Function)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>		<span class="hljs-keyword">var</span> access_token = req.body.institution_type;
+		<span class="hljs-keyword">var</span> options = req.body.options;		
+		plaidClient.deleteInfoUser(access_token, options, <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">callback</span>(<span class="hljs-params">err, response</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-53">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-53">&#182;</a>
+              </div>
+              <p>err can be a network error or a Plaid API error (i.e. invalid credentials)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>			logger.error(err);
+			logger.info(response);	
+
+			<span class="hljs-keyword">if</span>(err) {
+				res.json({err: err})
+			}
+
+			res.json({response: response})		  
+		})
+	});</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-54">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-54">&#182;</a>
+              </div>
+              <p>RISK</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>	app.post(endpoint.version + endpoint.base + endpoint.risk, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">req, res, next</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-55">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-55">&#182;</a>
+              </div>
+              <p>addRiskUser(String, Object, Object?, Function)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>		<span class="hljs-keyword">var</span> institution_type = req.body.institution_type;
+		<span class="hljs-keyword">var</span> credentials = req.body.credentials;
+		<span class="hljs-keyword">var</span> options = req.body.options;		
+		plaidClient.addRiskUser(institution_type, credentials, options, <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">callback</span>(<span class="hljs-params">err, mfaResponse, response</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-56">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-56">&#182;</a>
+              </div>
+              <p>err can be a network error or a Plaid API error (i.e. invalid credentials)
+mfaResponse can be any type of Plaid MFA flow</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>			logger.error(err);
+			logger.info(mfaResponse);
+			logger.info(response);	
+
+			<span class="hljs-keyword">if</span>(err) {
+				res.json({err: err})
+			}
+
+			<span class="hljs-keyword">if</span>(mfaResponse) {
+				res.json({mfa: mfaResponse, response: response})
+			} <span class="hljs-keyword">else</span> {
+				res.json({response: response})
+			}	  
+		})
+	});
+	app.post(endpoint.version + endpoint.base + endpoint.risk, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">req, res, next</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-57">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-57">&#182;</a>
+              </div>
+              <p>stepRiskUser(String, String, Object, Function)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>		<span class="hljs-keyword">var</span> access_token = req.body.access_token;
+		<span class="hljs-keyword">var</span> mfaResponse = req.body.mfaResponse;
+		<span class="hljs-keyword">var</span> options = req.body.options;		
+		plaidClient.stepRiskUser(access_token, mfaResponse, options, <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">callback</span>(<span class="hljs-params">err, mfaResponse, response</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-58">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-58">&#182;</a>
+              </div>
+              <p>err can be a network error or a Plaid API error (i.e. invalid credentials)
+mfaResponse can be any type of Plaid MFA flow</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>			logger.error(err);
+			logger.info(mfaResponse);
+			logger.info(response);	
+
+			<span class="hljs-keyword">if</span>(err) {
+				res.json({err: err})
+			}
+
+			<span class="hljs-keyword">if</span>(mfaResponse) {
+				res.json({mfa: mfaResponse, response: response})
+			} <span class="hljs-keyword">else</span> {
+				res.json({response: response})
+			}	  
+		})
+	});
+	app.get(endpoint.version + endpoint.base + endpoint.risk, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">req, res, next</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-59">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-59">&#182;</a>
+              </div>
+              <p>getRiskUser(String, Object?, Function)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>		<span class="hljs-keyword">var</span> access_token = req.body.access_token;
+		<span class="hljs-keyword">var</span> options = req.body.options;		
+		plaidClient.getRiskUser(access_token, options, <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">callback</span>(<span class="hljs-params">err, response</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-60">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-60">&#182;</a>
+              </div>
+              <p>err can be a network error or a Plaid API error (i.e. invalid credentials)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>			logger.error(err);
+			logger.info(response);	
+
+			<span class="hljs-keyword">if</span>(err) {
+				res.json({err: err})
+			}
+
+			res.json({response: response})		  
+		})
+	});
+	app.patch(endpoint.version + endpoint.base + endpoint.risk, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">req, res, next</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-61">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-61">&#182;</a>
+              </div>
+              <p>patchRiskUser(String, Object, Object?, Function)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>		<span class="hljs-keyword">var</span> access_token = req.body.access_token;
+		<span class="hljs-keyword">var</span> credentials = req.body.credentials;
+		<span class="hljs-keyword">var</span> options = req.body.options;
+		plaidClient.patchRiskUser(access_token, credentials, options, <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">callback</span>(<span class="hljs-params">err, mfaResponse, response</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-62">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-62">&#182;</a>
+              </div>
+              <p>err can be a network error or a Plaid API error (i.e. invalid credentials)
+mfaResponse can be any type of Plaid MFA flow</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>			logger.error(err);
+			logger.info(mfaResponse);
+			logger.info(response);	
+
+			<span class="hljs-keyword">if</span>(err) {
+				res.json({err: err})
+			}
+
+			<span class="hljs-keyword">if</span>(mfaResponse) {
+				res.json({mfa: mfaResponse, response: response})
+			} <span class="hljs-keyword">else</span> {
+				res.json({response: response})
+			}	  
+		})
+	});
+	app.delete(endpoint.version + endpoint.base + endpoint.risk, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">req, res, next</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-63">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-63">&#182;</a>
+              </div>
+              <p>deleteRiskUser(String, Object?, Function)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>		<span class="hljs-keyword">var</span> access_token = req.body.access_token;
+		<span class="hljs-keyword">var</span> options = req.body.options;
+		plaidClient.deleteIncomeUser(access_token, options, <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">callback</span>(<span class="hljs-params">err, response</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-64">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-64">&#182;</a>
+              </div>
+              <p>err can be a network error or a Plaid API error (i.e. invalid credentials)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>			logger.error(err);
+			logger.info(response);	
+
+			<span class="hljs-keyword">if</span>(err) {
+				res.json({err: err})
+			}
+
+			res.json({response: response})		  
+		})
+	});</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-65">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-65">&#182;</a>
+              </div>
+              <p>UTILITY</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>	app.get(endpoint.version + endpoint.base + endpoint.balance, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">req, res, next</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-66">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-66">&#182;</a>
+              </div>
+              <p>getBalance(String, Function)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>		<span class="hljs-keyword">var</span> access_token = req.body.access_token;
+		plaidClient.getBalance(access_token, <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">callback</span>(<span class="hljs-params">err, response</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-67">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-67">&#182;</a>
+              </div>
+              <p>err can be a network error or a Plaid API error (i.e. invalid credentials)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>			logger.error(err);
+			logger.info(response);	
+
+			<span class="hljs-keyword">if</span>(err) {
+				res.json({err: err})
+			}
+
+			res.json({response: response})		  
+		})
+	});
+	app.post(endpoint.version + endpoint.base + endpoint.upgrade, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">req, res, next</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-68">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-68">&#182;</a>
+              </div>
+              <p>upgradeUser(String, String, Object?, Function)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>		<span class="hljs-keyword">var</span> access_token = req.body.access_token;
+		<span class="hljs-keyword">var</span> upgrade_to = req.body.upgrade_to;
+		<span class="hljs-keyword">var</span> options = req.body.options;
+		plaidClient.upgradeUser(access_token, upgrade_to, options, <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">callback</span>(<span class="hljs-params">err, mfaResponse, response</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-69">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-69">&#182;</a>
+              </div>
+              <p>err can be a network error or a Plaid API error (i.e. invalid credentials)
+mfaResponse can be any type of Plaid MFA flow</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>			logger.error(err);
+			logger.info(mfaResponse);
+			logger.info(response);		
+
+			<span class="hljs-keyword">if</span>(err) {
+				res.json({err: err})
+			}
+
+			<span class="hljs-keyword">if</span>(mfaResponse) {
+				res.json({mfa: mfaResponse, response: response})
+			} <span class="hljs-keyword">else</span> {
+				res.json({response: response})
+			}  
+		})
+	});
+	app.get(endpoint.version + endpoint.base + endpoint.exchange, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">req, res, next</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-70">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-70">&#182;</a>
+              </div>
+              <p>Used for Plaid Link
+exchangeToken(String, Function)
+plaidClient.exchangeToken(public_token, callback);</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>		<span class="hljs-keyword">var</span> public_token = req.query.public_token;
+		<span class="hljs-keyword">var</span> account_id = req.query.account_id;
+		plaidClient.exchangeToken(public_token, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">err, tokenResponse</span>) </span>{
+		  <span class="hljs-keyword">if</span> (err != <span class="hljs-literal">null</span>) {
+		    res.json({error: <span class="hljs-string">'Unable to exchange public_token'</span>});
+		  } <span class="hljs-keyword">else</span> {
+		    <span class="hljs-keyword">var</span> access_token = tokenResponse.access_token;
+		  }
+		});
+	})
+	app.get(endpoint.version + endpoint.base + endpoint.longtail, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">req, res, next</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-71">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-71">&#182;</a>
+              </div>
+              <p>getLongtailInstitutions(Object, Function)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>		<span class="hljs-keyword">var</span> optionsObject = req.body.optionsObject;
+		plaidClient.getLongtailInstitutions(optionsObject, <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">callback</span>(<span class="hljs-params">err, response</span>) </span>{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-72">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-72">&#182;</a>
+              </div>
+              <p>err can be a network error or a Plaid API error (i.e. invalid credentials)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>			logger.error(err);
+			logger.info(response);	
+
+			<span class="hljs-keyword">if</span>(err) {
+				res.json({err: err})
+			}
+
+			res.json({response: response})		  
+		})
+	});
+
+	<span class="hljs-keyword">return</span>;
+};</pre></div></div>
+            
+        </li>
+        
+    </ul>
+  </div>
+</body>
+</html>
