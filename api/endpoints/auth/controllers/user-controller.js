@@ -125,7 +125,8 @@ UserController.prototype.register = function (req, res, next) {
                         // var resp = {};
                         // resp.msg = 'verify_link_sent';
                         // res.status(200).json(resp);
-                        res.send({ token: createJWT(user), auth: authData,  user: user });                                
+                        // send username alongside userinfo at login
+                        res.send({ token: createJWT(user, user.username), auth: authData,  user: user });                                
                       }
                     });                  
                   }
@@ -158,6 +159,9 @@ UserController.prototype.login = function (req, res, next) {
     if (!user) {
       return res.status(401).send({ message: 'Wrong username/email and/or password' });
     }
+    if(err) {
+      logger.error(err);
+    }
     logger.info('found user, comparing password');
     user.comparePassword(req.body.password, function(err, isMatch) {
       if (!isMatch) {
@@ -168,6 +172,9 @@ UserController.prototype.login = function (req, res, next) {
         return res.status(401).send({ message: 'Error logging in' });        
       }
       logger.info('password match for user', user.username);      
+      logger.debug("login data is");
+      logger.debug(user);
+
       res.send({ token: createJWT(user), user: user });          
       // var _firebaseToken = tokenGenerator.createToken({ uid: (user._id).toString(), username: user.username, hasTCAccess: true });
       // ref.authWithCustomToken(_firebaseToken, function(error, authData) {
@@ -205,9 +212,9 @@ UserController.prototype.loginOAuth = function(req, res, next) {
           return res.status(500).send({ message: profile.error.message });
         }
         if (req.headers.authorization) {
-          User.findOne({ timekloud: profile.id }, function(err, existingUser) {
+          User.findOne({ proton: profile.id }, function(err, existingUser) {
             if (existingUser) {
-              return res.status(409).send({ message: 'There is already a TimeKloud account that belongs to you' });
+              return res.status(409).send({ message: 'There is already a Proton account that belongs to you' });
             }
             var token = req.headers.authorization.split(' ')[1];
             var payload = jwt.decode(token, tokenSecret);
@@ -215,7 +222,7 @@ UserController.prototype.loginOAuth = function(req, res, next) {
               if (!user) {
                 return res.status(400).send({ message: 'User not found' });
               }
-              user.timekloud = profile.id;
+              user.proton = profile.id;
               user.picture = user.picture || 'http://localhost:5000/v1/' + profile.id + '/picture?type=large';
               user.displayName = user.displayName || profile.name;
               user.save(function() {
@@ -226,13 +233,13 @@ UserController.prototype.loginOAuth = function(req, res, next) {
           });
         } else {
           // Step 3b. Create a new user account or return an existing one.
-          User.findOne({ timekloud: profile.id }, function(err, existingUser) {
+          User.findOne({ proton: profile.id }, function(err, existingUser) {
             if (existingUser) {
               var token = createJWT(existingUser);
               return res.send({ token: token, user: existingUser });
             }
             var user = new User();
-            user.timekloud = profile.id;
+            user.proton = profile.id;
             user.picture = 'http://localhost:5000/' + profile.id + '/picture?type=large';
             user.displayName = profile.name;
             user.save(function() {
@@ -300,7 +307,11 @@ UserController.prototype.removeAccount = function (req, res, next) {
 UserController.prototype.editProfile = function (req, res, next) {
   var data = req.body;
   logger.trace("update req received")
-  logger.info(data)
+  // logger.info(data)
+  // logger.debug(req.query);
+  // logger.debug(req.body);
+  // logger.debug(req.params);
+  logger.debug(req.user);
   // logger.info(data.stripeData);
   // req.assert('username', 'Username must be at least 4 characters long').len(4);
   // req.assert('email', 'Email is not valid').isEmail();
@@ -321,6 +332,7 @@ UserController.prototype.editProfile = function (req, res, next) {
           else {
             logger.trace("user found in update")
             var updated = [];
+            logger.debug(data.user);
             if(data.user != null || data.user != undefined) {
               if (user.email !== data.user.email && data.user.email !=null && data.user.email !== '' && data.user.email !== undefined) {
                 updated.push('email');
@@ -358,7 +370,7 @@ UserController.prototype.editProfile = function (req, res, next) {
                 updated.push('last_name');
                 user.last_name = data.user.last_name;
               }                                                                           
-              if (user.username !== data.user.username && data.stripeToken !== null) {
+              if (user.username !== data.user.username && data.user.username !== null && data.user.username !== undefined && data.user.username !== "") {
                 updated.push('username');
                 user.username = data.user.username;
               }     
@@ -377,7 +389,12 @@ UserController.prototype.editProfile = function (req, res, next) {
               if (user.plaid !== data.plaid && data.plaid !== undefined && data.plaid !== null && data.plaid != '') {
                 updated.push('plaid');
                 user.plaid = data.plaid;
-              }                                                  
+              }    
+              if (user.ios !== data.ios && data.ios !== undefined && data.ios !== null && data.ios != '') {
+                updated.push('plaid');
+                logger.debug(data.ios);
+                user.ios = data.ios;
+              }                                                                
               if (user.verified !== data.verified && data.verified !== undefined && data.verified !== null && data.verified !== '') {
                 updated.push('verified');
                 user.verified = data.verified;
@@ -407,6 +424,7 @@ UserController.prototype.editProfile = function (req, res, next) {
                   stripeEnabled: user.stripeEnabled,
                   stripeData: user.stripeData,
                   plaid: user.plaid,                
+                  ios: user.ios,                
                   verifyToken: user.verifyToken,
                   verified: user.verified,
                   theme: user.theme,
@@ -425,8 +443,8 @@ UserController.prototype.editProfile = function (req, res, next) {
               user.save(function(err) {
                 if (err) {
                   logger.error(err);
-                  //logger.error('Error updating user account. User id: ' + req.user._id + ' Err: ' + err);
-                  res.status(401).json({msg: 'update_error'});
+                  logger.error('Error updating user account. User id: ' + req.user._id + ' Err: ' + err);
+                  res.status(401).json({msg: 'update_error', err: err});
                 }
                 else {
                   logger.info("saving user update")
@@ -578,15 +596,18 @@ UserController.prototype.authorize = function (req, res, next) {
 
   var payload = null;
   try {
+    logger.debug('decoding jwt, token is', token);
     payload = jwt.decode(token, tokenSecret);
   }
   catch (err) {
-    return res.status(401).send({ message: err.message });
+    return res.status(401).send({ message: err.message, err: err });
   }
 
   if (payload.exp <= moment().unix()) {
     return res.status(401).send({ message: 'Token has expired' });
   }
+  logger.debug('payload user is', payload.user);
+  logger.debug('payload is', payload);
   req.user = payload.user;
   next();
 }
@@ -603,7 +624,7 @@ UserController.prototype.keepAlive = function (req, res, next) {
     else {
       User.findOne({_id: decoded.user._id}, function (err, user) {
         if (err || !user) {
-          //logger.error('KeepAlive, issue generating token for user id : ' + decoded.user._id);
+          logger.error('KeepAlive, issue generating token for user id : ' + decoded.user._id);
           res.status(400).json({error: 'Issue generating token'});
         }
         else {
@@ -717,7 +738,7 @@ function getToken(req) {
 
 var hat = require('hat');
 function createApiKey(user) {
-  user = _.pick(user, '_id' ,'email'); 
+  user = _.pick(user, '_id' ,'email', 'username'); 
   var rack = hat.rack(); 
   var payload = {
     user: user,
@@ -728,13 +749,26 @@ function createApiKey(user) {
 }
 
 function createJWT(user, data) {
-  user = _.pick(user, '_id' ,'email');  
+  user = _.pick(user, '_id', 'email', 'username');  
+  logger.debug("user jwt is");
+  logger.debug(user);
+  logger.debug(data);
+  logger.debug('the data for the user is');
+  // logger.debug(user._id);
+  logger.debug(user.email);
+  logger.debug(user.username);
+
   var payload = {
-    user: user,
+    user: {
+      _id: user["_id"],
+      email: user["email"],
+      username: user["username"]
+    },
     data: data,
     iat: new Date().getTime(),
     exp: moment().add(7, 'days').valueOf()
   };
+  logger.debug(payload);
   return jwt.encode(payload, tokenSecret);
 }
 

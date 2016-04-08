@@ -155,43 +155,5 @@ module.exports = function (app, options) {
     });
   });
 
-  var plaid = require('plaid');
-  var PLAID_CLIENT_ID = process.env.PLAID_CLIENT_ID;
-  var PLAID_SECRET = process.env.PLAID_SECRET;
-  // BE SURE TO CHANGE plaid.environments.tartan to PROD WHEN GOING LIVE
-  var plaidClient = new plaid.Client(PLAID_CLIENT_ID, PLAID_SECRET, plaid.environments.tartan);
-
-  // AJAX endpoint that first exchanges a public_token from the Plaid Link
-  // module for a Plaid access token and then uses that access_token to
-  // retrieve account data and balances for a user.
-  //
-  // Input: a public_token
-  // Output: an error or an array of accounts
-  app.get('/v1/plaid', function(req, res, next) {
-    var public_token = req.query.public_token;
-    var account_id = req.query.account_id;
-
-    plaidClient.exchangeToken(public_token, function(err, tokenResponse) {
-      if (err != null) {
-        res.json({error: 'Unable to exchange public_token'});
-      } else {
-        // The exchange was successful - this access_token can now be used to
-        // safely pull account and routing numbers or transaction data for the
-        // user from the Plaid API using your private client_id and secret.
-        var access_token = tokenResponse.access_token;
-
-        plaidClient.getAuthUser(access_token, function(err, authResponse) {
-          if (err != null) {
-            res.json({error: 'Unable to pull accounts from the Plaid API'});
-          } else {
-            // Return a JSON body containing the user's accounts, which
-            // includes names, balances, and account and routing numbers.
-            res.json({accounts: authResponse.accounts});
-          }
-        });
-      }
-    });
-  });
-
   return userController.authorize;
 };

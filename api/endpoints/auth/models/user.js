@@ -13,27 +13,32 @@ var pictureDef = {
 };
 
 var plaidDef = {
-   access_token: { type: String }
+  access_token: { type: String }
+}
+
+var iosPushNotificationDef = {
+  device_token: { type: String },
+  push_state: { type: Boolean }
 }
 
 var stripeDef = {  
-   access_token: { type: String },
-   livemode: { type: Boolean },
-   refresh_token: { type: String },
-   token_type: { type: String },
-   stripe_publishable_key: { type: String },
-   stripe_user_id: { type: String },
-   scope: { type: String }
+  access_token: { type: String },
+  livemode: { type: Boolean },
+  refresh_token: { type: String },
+  token_type: { type: String },
+  stripe_publishable_key: { type: String },
+  stripe_user_id: { type: String },
+  scope: { type: String }
 };
 
 var tosDef = {
-    "date": { type: String },
-    "ip": { type: String }
+  "date": { type: String },
+  "ip": { type: String }
 }
 var dobDef = {
-    "day": { type: Number },
-    "month": { type: Number },
-    "year": { type: Number }
+  "day": { type: Number },
+  "month": { type: Number },
+  "year": { type: Number }
 }
 
 var UserSchema = new mongoose.Schema({
@@ -53,6 +58,7 @@ var UserSchema = new mongoose.Schema({
   notificationsEnabled: { type: Boolean },  
   email: { type: String, lowercase: true, trim: true, unique : true, required : true},
   display_name: { type: String },
+  ios: iosPushNotificationDef,
   device_token_ios: { type: String },
   device_token_android: { type: String },
   password: { type: String },

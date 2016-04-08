@@ -41,6 +41,32 @@ module.exports = function (app, options) {
 		res.json({msg:"ok"})
 	});
 
+	// app.get('/v1/plaid', function(req, res, next) {
+	// 	var public_token = req.query.public_token;
+	// 	var account_id = req.query.account_id;
+
+	// 	plaidClient.exchangeToken(public_token, function(err, tokenResponse) {
+	// 	  if (err != null) {
+	// 	    res.json({error: 'Unable to exchange public_token'});
+	// 	  } else {
+	// 	    // The exchange was successful - this access_token can now be used to
+	// 	    // safely pull account and routing numbers or transaction data for the
+	// 	    // user from the Plaid API using your private client_id and secret.
+	// 	    var access_token = tokenResponse.access_token;
+
+	// 	    plaidClient.getAuthUser(access_token, function(err, authResponse) {
+	// 	      if (err != null) {
+	// 	        res.json({error: 'Unable to pull accounts from the Plaid API'});
+	// 	      } else {
+	// 	        // Return a JSON body containing the user's accounts, which
+	// 	        // includes names, balances, and account and routing numbers.
+	// 	        res.json({accounts: authResponse.accounts});
+	// 	      }
+	// 	    });
+	// 	  }
+	// 	});
+	// });
+  
 	// Example MFA Auth (unsecured) local
 
 	// ** Be sure the quotes are straight, not curly
