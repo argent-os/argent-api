@@ -118,6 +118,11 @@ module.exports = function (app, options) {
       logger.debug(cardObject);
       logger.debug(accountId);
       logger.debug("debugging");
+
+      if(accountId == "" || accountId == null || accountId == undefined) {
+        logger.error("no accountId specified");
+        return res.json({msg:"no accountId specified"}).end();
+      }
       // First create a tokenized card based on the request
       stripe.tokens.create(cardObject, function(err, token) {
           logger.debug(token);
