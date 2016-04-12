@@ -482,6 +482,19 @@ UserController.prototype.getProfile = function (req, res, next) {
     });
 };
 
+UserController.prototype.getUser = function (userId, cb) {
+  return User.findById(userId, function (err, user) {
+      if (!user) {
+        logger.info('User not found for account | User id : ' + userId);
+        return;
+      }
+      else {
+        logger.info('got user');
+        return user;
+      }
+    });
+};
+
 UserController.prototype.generateApiKey = function (req, res, next) {
   var errors = req.validationErrors();
   if (errors) {
