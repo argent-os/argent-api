@@ -53,18 +53,9 @@ module.exports = function (app, options) {
     throw Error('You must specify db connection details!');
   }
 
-// *****************************************************************************
-// ************************** SERVER STARTUP ***********************************
-// *****************************************************************************
-
-  mongoose.connect(options.mongoconnection);
-  mongoose.connection.on('error', function () {
-    console.log('Cannot connect to MongoDB');
-  });
-
   var urlStrings = {
     oAuthEndpoint:  '/auth/proton',
-    ping:           '/v1/user/ping',    
+    ping:           '/v1/user/ping', 
     register:       '/v1/register',
     login:          '/v1/login',
     remindpassword: '/v1/remindpassword',
@@ -76,7 +67,9 @@ module.exports = function (app, options) {
     removeaccount:  '/v1/removeaccount',
     billing:        '/v1/billing',
     plan:           '/v1/plan',        
-    customers:      '/v1/customers'      
+    customers:      '/v1/customers',
+    search:         '/v1/user/search',
+    list:           '/v1/user/list'   
   };
 
   if (options.urlStrings) {
@@ -109,51 +102,10 @@ module.exports = function (app, options) {
   app.get(urlStrings.profile,         userController.authorize, userController.getProfile);
   app.post(urlStrings.billing,        userController.authorize, userController.postBilling);
   app.post(urlStrings.plan,           userController.authorize, userController.postPlan);
+  app.post(urlStrings.search,         userController.searchUser);
+  app.get(urlStrings.list,            userController.listAllUsers);
 
   // See full code example here: https://gist.github.com/7109113
-
-  /*
-   |--------------------------------------------------------------------------
-   | Stripe OAuth
-   |--------------------------------------------------------------------------
-   */  
-  var TOKEN_URI = 'https://connect.stripe.com/oauth/token';
-  var AUTHORIZE_URI = 'https://connect.stripe.com/oauth/authorize';
-  // var CLIENT_ID = process.env.STRIPE_CLIENT_ID;
-  // var API_KEY = process.env.STRIPE_KEY;
-  var qs = require('querystring');
-  var request = require('request');
-
-  process.env.ENVIRONMENT == 'DEV' || process.env.ENVIRONMENT == undefined ? CLIENT_ID = process.env.STRIPE_TEST_CLIENT_ID : '';
-  process.env.ENVIRONMENT == 'PROD' ? CLIENT_ID = process.env.STRIPE_CLIENT_ID : '';
-
-  process.env.ENVIRONMENT == 'DEV' || process.env.ENVIRONMENT == undefined ? stripeApiKey = process.env.STRIPE_TEST_KEY : '';
-  process.env.ENVIRONMENT == 'DEV' || process.env.ENVIRONMENT == undefined ? stripePublishableKey = process.env.STRIPE_TEST_PUB_KEY : '';
-  process.env.ENVIRONMENT == 'PROD' ? stripeApiKey = process.env.STRIPE_KEY : '';
-  process.env.ENVIRONMENT == 'PROD' ? stripePublishableKey = process.env.STRIPE_PUB_KEY : '';
-
-  app.get('/oauth/callback', userController.authorize, function(req, res) {
-    var code = req.query.code;
-    // console.log('received code', code);
-    // Make /oauth/token endpoint POST request
-    request.post({
-      url: TOKEN_URI,
-      form: {
-        grant_type: 'authorization_code',
-        client_id: CLIENT_ID,
-        code: code,
-        client_secret: stripeApiKey
-      }
-    }, function(err, r, body) {
-      
-      var accessToken = JSON.parse(body).access_token;
-      // console.log(body);
-      // Do something with your accessToken
-
-      res.send({ 'stripeToken': accessToken, 'stripeData':body });
-      
-    });
-  });
 
   return userController.authorize;
 };

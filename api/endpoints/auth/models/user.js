@@ -16,7 +16,12 @@ var plaidDef = {
   access_token: { type: String }
 }
 
-var iosPushNotificationDef = {
+var iosDef = {
+  device_token: { type: String },
+  push_state: { type: Boolean }
+}
+
+var androidDef = {
   device_token: { type: String },
   push_state: { type: Boolean }
 }
@@ -53,34 +58,30 @@ var UserSchema = new mongoose.Schema({
   legal_entity_type: { type: String },
   role: { type: Array },
   orgId: { type: String },
-  apiKey: { type: String },
   picture: pictureDef,
   notificationsEnabled: { type: Boolean },  
   email: { type: String, lowercase: true, trim: true, unique : true, required : true},
   display_name: { type: String },
-  ios: iosPushNotificationDef,
-  device_token_ios: { type: String },
-  device_token_android: { type: String },
+  ios: iosDef,
+  android: androidDef,
   password: { type: String },
   resetToken: { type: String, dropDups: true },
   verifyToken: { type: String },
   verified: { type: Boolean },
   theme: { type: String },
-  stripeToken: { type: String },
-  stripeEnabled: { type: Boolean },
-  stripeData: stripeDef,
+  stripe: stripeDef,
   plaid: plaidDef,
   env: { type: String },
   firebaseUrl: { type: String },
   apiUrl: { type: String },
+  redirectUri: { type: String },
   token_client_id: { type: String },
   token_client_secret: { type: String },
   token_access_token: { type: String },
   token_type: { type: String },
   token_scope: { type: String },
   token_livemode: { type: Boolean },
-  token_expires: { type: Date },
-  redirectUri: { type: String }    
+  token_expires: { type: Date }
 });
 
 UserSchema.plugin(timestamps);
@@ -105,5 +106,7 @@ UserSchema.methods.comparePassword = function (candidatePassword, cb) {
     cb(null, isMatch);
   });
 };
+
+UserSchema.index({ email: 'text', username: 'text' });
 
 module.exports = mongoose.model('User', UserSchema);

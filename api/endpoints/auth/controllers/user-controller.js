@@ -63,7 +63,6 @@ UserController.prototype.register = function (req, res, next) {
             var scope = 'read_write';    
             var tokenType = 'bearer';    
             var livemode = 'true';    
-            var deviceTokenIOS = req.body.device_token_ios;
             var _date = req.body.tos_acceptance.data.date;
             if( _date.indexOf('.') != -1 ) {
                 var parsedDate = _date.substring(0, _date.indexOf('.'));
@@ -78,7 +77,6 @@ UserController.prototype.register = function (req, res, next) {
               password: req.body.password,
               country: req.body.country,
               legal_entity_type: req.body.legal_entity_type,
-              device_token_ios: deviceTokenIOS,
               tos_acceptance: {
                 "ip":req.body.tos_acceptance.data.ip,
                 "date":parsedDate
@@ -173,7 +171,7 @@ UserController.prototype.login = function (req, res, next) {
       }
       logger.info('password match for user', user.username);      
       logger.debug("login data is");
-      logger.debug(user);
+      // logger.debug(user);
 
       res.send({ token: createJWT(user), user: user });          
       // var _firebaseToken = tokenGenerator.createToken({ uid: (user._id).toString(), username: user.username, hasTCAccess: true });
@@ -312,7 +310,7 @@ UserController.prototype.editProfile = function (req, res, next) {
   // logger.debug(req.body);
   // logger.debug(req.params);
   logger.debug(req.user);
-  // logger.info(data.stripeData);
+  logger.info(data.stripe);
   // req.assert('username', 'Username must be at least 4 characters long').len(4);
   // req.assert('email', 'Email is not valid').isEmail();
   // var errors = req.validationErrors();
@@ -349,11 +347,7 @@ UserController.prototype.editProfile = function (req, res, next) {
               if (user.notificationsEnabled !== data.user.notificationsEnabled) {
                 updated.push('notificationsEnabled');
                 user.notificationsEnabled = data.user.notificationsEnabled;
-              }   
-              if (user.apiKey !== data.apiKey && data.apiKey !=null) {
-                updated.push('apiKey');
-                user.apiKey = data.apiKey;
-              }     
+              }    
               if (user.picture !== data.picture && data.picture !=null) {
                 updated.push('picture');
                 user.picture = data.picture;
@@ -374,17 +368,9 @@ UserController.prototype.editProfile = function (req, res, next) {
                 updated.push('username');
                 user.username = data.user.username;
               }     
-              if (user.stripeToken !== data.stripeToken && data.stripeToken !== undefined && data.stripeToken !== null) {
-                updated.push('stripeToken');
-                user.stripeToken = data.stripeToken;
-              }            
-              if (user.stripeEnabled !== data.stripeEnabled && data.stripeEnabled !== undefined && data.stripeEnabled !== null && data.stripeEnabled !== "") {
-                updated.push('stripeEnabled');
-                user.stripeEnabled = data.stripeEnabled;
-              } 
-              if (user.stripeData !== data.stripeData && data.stripeData !== null) {
-                updated.push('stripeData');
-                user.stripeData = data.stripeData;
+              if (user.stripe !== data.stripe && data.stripe !== null) {
+                updated.push('stripe');
+                user.stripe = data.stripe;
               }    
               if (user.plaid !== data.plaid && data.plaid !== undefined && data.plaid !== null && data.plaid != '') {
                 updated.push('plaid');
@@ -420,9 +406,7 @@ UserController.prototype.editProfile = function (req, res, next) {
                   first_name: user.first_name,
                   last_name: user.last_name,
                   username: user.username,
-                  stripeToken: user.stripeToken,
-                  stripeEnabled: user.stripeEnabled,
-                  stripeData: user.stripeData,
+                  stripe: user.stripe,
                   plaid: user.plaid,                
                   ios: user.ios,                
                   verifyToken: user.verifyToken,
@@ -430,7 +414,6 @@ UserController.prototype.editProfile = function (req, res, next) {
                   theme: user.theme,
                   orgId: user.orgId,
                   notificationsEnabled: user.notificationsEnabled,
-                  apiKey: user.apiKey,
                   picture: user.picture,
                   role: [user.role]
                 };
@@ -739,6 +722,54 @@ UserController.prototype.postPlan = function(req, res, next){
   });
 };
 
+UserController.prototype.searchUser = function (req, res, next) {
+  User.find({ $text: { $search: req.body.username } }, function(err, doc) {
+    //Do your action here..
+    if(err) {
+      logger.error(err);
+    }
+    usersArr = [];
+    for(var i = 0; i<doc.length; i++) {
+          var user = {
+            first_name: doc[i].first_name,
+            last_name: doc[i].last_name,
+            username: doc[i].username,
+            email: doc[i].email,
+            cust_id: doc[i].stripe.customerId
+          }
+          logger.info(doc[i]);
+          usersArr.push(user);
+    }
+
+    res.json({users: usersArr})
+  });
+}
+
+UserController.prototype.listAllUsers = function (req, res, next) {
+  User.find({}, function(err, users) {
+    var userMap = {};
+    var usersArr = [];
+    users.forEach(function(user) {
+      userMap[user._id] = {
+        first_name: user.first_name,
+        last_name: user.last_name,
+        username: user.username,
+        email: user.email,
+        cust_id: user.stripe.customerId
+      }
+      var user = {
+        first_name: user.first_name,
+        last_name: user.last_name,
+        username: user.username,
+        email: user.email,
+        cust_id: user.stripe.customerId
+      }
+      usersArr.push(user);
+    });
+    // res.send(userMap);  
+    res.send({users: usersArr});  
+  });
+}
 
 function getToken(req) {
   if (req.headers.authorization) {
@@ -777,7 +808,6 @@ function createJWT(user, data) {
       email: user["email"],
       username: user["username"]
     },
-    data: data,
     iat: new Date().getTime(),
     exp: moment().add(7, 'days').valueOf()
   };

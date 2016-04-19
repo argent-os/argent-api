@@ -4,6 +4,7 @@ module.exports = function (app, options) {
     version: '/v1',
     base: '/stripe',
     ping: '/ping',
+    oauth: '/oauth',
     account: '/account',     
     balance: '/balance',               
     charges: '/charges',                         
@@ -35,6 +36,50 @@ module.exports = function (app, options) {
   app.use(bodyParser.json());
   app.use(expressValidator());
       var stripe = require("stripe")(options.apiKey);
+
+  /*
+   |--------------------------------------------------------------------------
+   | Stripe OAuth
+   |--------------------------------------------------------------------------
+   */  
+  var TOKEN_URI = 'https://connect.stripe.com/oauth/token';
+  var AUTHORIZE_URI = 'https://connect.stripe.com/oauth/authorize';
+  // var CLIENT_ID = process.env.STRIPE_CLIENT_ID;
+  // var API_KEY = process.env.STRIPE_KEY;
+  var qs = require('querystring');
+  var request = require('request');
+
+  process.env.ENVIRONMENT == 'DEV' || process.env.ENVIRONMENT == undefined ? CLIENT_ID = process.env.STRIPE_TEST_CLIENT_ID : '';
+  process.env.ENVIRONMENT == 'PROD' ? CLIENT_ID = process.env.STRIPE_CLIENT_ID : '';
+
+  process.env.ENVIRONMENT == 'DEV' || process.env.ENVIRONMENT == undefined ? stripeApiKey = process.env.STRIPE_TEST_KEY : '';
+  process.env.ENVIRONMENT == 'DEV' || process.env.ENVIRONMENT == undefined ? stripePublishableKey = process.env.STRIPE_TEST_PUB_KEY : '';
+  process.env.ENVIRONMENT == 'PROD' ? stripeApiKey = process.env.STRIPE_KEY : '';
+  process.env.ENVIRONMENT == 'PROD' ? stripePublishableKey = process.env.STRIPE_PUB_KEY : '';
+
+  // /v1/stripe/oauth/callback
+  app.get(endpoint.version + endpoint.base + endpoint.oauth + '/callback', userController.authorize, function(req, res) {
+    var code = req.query.code;
+    // console.log('received code', code);
+    // Make /oauth/token endpoint POST request
+    request.post({
+      url: TOKEN_URI,
+      form: {
+        grant_type: 'authorization_code',
+        client_id: CLIENT_ID,
+        code: code,
+        client_secret: stripeApiKey
+      }
+    }, function(err, r, body) {
+      
+      var accessToken = JSON.parse(body).access_token;
+      // console.log(body);
+      // Do something with your accessToken
+
+      res.send({ 'stripeToken': accessToken, 'stripeData':body });
+      
+    });
+  });
 
   //   EXAMPLE REQUEST
   //   curl -X POST \
@@ -193,6 +238,9 @@ module.exports = function (app, options) {
 
   // CHARGES
   app.post(endpoint.version + endpoint.base + endpoint.charges + "/create", function(req, res, next) {
+      // TODO
+      // Create a request to charge
+      // If the charge is approved proceed with the charge request
       logger.debug(req.body);
       userController.getUser(req.body.userId).then(function (user) {
         logger.info('utilizing proper secret key');

@@ -88,6 +88,16 @@ var options = {
   }
 };
 
+// *****************************************************************************
+// ************************** SERVER STARTUP ***********************************
+// *****************************************************************************
+
+mongoose.connect(options.mongoconnection);
+mongoose.connection.on('error', function () {
+  console.log('Cannot connect to MongoDB');
+});
+  
+  
 // Setup API routes
 // Send the current and and options into the endpoints
 // Be sure name in package.json matches lib -> endpoint file name
