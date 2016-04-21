@@ -735,7 +735,8 @@ UserController.prototype.searchUser = function (req, res, next) {
             last_name: doc[i].last_name,
             username: doc[i].username,
             email: doc[i].email,
-            cust_id: doc[i].stripe.customerId
+            cust_id: doc[i].stripe.customerId,
+            picture: doc[i].picture.secureUrl
           }
           logger.info(doc[i]);
           usersArr.push(user);
@@ -750,19 +751,22 @@ UserController.prototype.listAllUsers = function (req, res, next) {
     var userMap = {};
     var usersArr = [];
     users.forEach(function(user) {
+      logger.info(user.picture)
       userMap[user._id] = {
         first_name: user.first_name,
         last_name: user.last_name,
         username: user.username,
         email: user.email,
-        cust_id: user.stripe.customerId
+        cust_id: user.stripe.customerId,
+        picture: user.picture.secureUrl
       }
       var user = {
         first_name: user.first_name,
         last_name: user.last_name,
         username: user.username,
         email: user.email,
-        cust_id: user.stripe.customerId
+        cust_id: user.stripe.customerId,
+        picture: user.picture.secureUrl
       }
       usersArr.push(user);
     });
