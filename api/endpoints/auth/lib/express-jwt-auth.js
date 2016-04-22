@@ -54,20 +54,21 @@ module.exports = function (app, options) {
   }
 
   var urlStrings = {
-    oAuthEndpoint:  '/auth/proton',
+    oauth:          '/v1/auth/proton',
     ping:           '/v1/user/ping', 
     register:       '/v1/register',
     login:          '/v1/login',
-    remindpassword: '/v1/remindpassword',
-    resetpassword:  '/v1/resetpassword',
+    remind:         '/v1/remindpassword',
+    reset:          '/v1/resetpassword',
     authorize:      '/v1/authorize',
     keepalive:      '/v1/keepalive',
     profile:        '/v1/profile',
     apikey:         '/v1/apikey',
-    removeaccount:  '/v1/removeaccount',
+    remove:         '/v1/removeaccount',
     billing:        '/v1/billing',
     plan:           '/v1/plan',        
-    customers:      '/v1/customers',
+    customers:      '/v1/user/customers',
+    merchants:      '/v1/user/merchants',
     search:         '/v1/user/search',
     list:           '/v1/user/list'   
   };
@@ -86,24 +87,26 @@ module.exports = function (app, options) {
    | Login with OAuth
    |--------------------------------------------------------------------------
    */
-  app.post(urlStrings.oAuthEndpoint, userController.loginOAuth);
+  app.post(urlStrings.oauth, userController.loginOAuth);
 
   // User routes
   app.post(urlStrings.ping,           userController.ping);
   app.post(urlStrings.register,       userController.register);
   app.post(urlStrings.login,          userController.login);
-  app.post(urlStrings.remindpassword, userController.remindPassword);
-  app.post(urlStrings.resetpassword,  userController.resetPassword);
+  app.post(urlStrings.remind,         userController.remindPassword);
+  app.post(urlStrings.reset,          userController.resetPassword);
   app.post(urlStrings.authorize,      userController.authorize, function (req, res) {res.send('');});
   app.post(urlStrings.keepalive,      userController.keepAlive);
   app.get(urlStrings.apikey,          userController.authorize, userController.generateApiKey);
   app.put(urlStrings.profile,         userController.authorize, userController.editProfile);
-  app.post(urlStrings.removeaccount,  userController.authorize, userController.removeAccount);
+  app.post(urlStrings.remove,         userController.authorize, userController.removeAccount);
   app.get(urlStrings.profile,         userController.authorize, userController.getProfile);
   app.post(urlStrings.billing,        userController.authorize, userController.postBilling);
   app.post(urlStrings.plan,           userController.authorize, userController.postPlan);
   app.post(urlStrings.search,         userController.searchUser);
   app.get(urlStrings.list,            userController.listAllUsers);
+  app.get(urlStrings.customers,       userController.getUserCustomers);
+  app.get(urlStrings.merchants,       userController.getUserMerchants);
 
   // See full code example here: https://gist.github.com/7109113
 

@@ -26,25 +26,33 @@ var androidDef = {
   push_state: { type: Boolean }
 }
 
-var stripeDef = {  
-  access_token: { type: String },
-  livemode: { type: Boolean },
-  refresh_token: { type: String },
-  token_type: { type: String },
-  stripe_publishable_key: { type: String },
-  stripe_user_id: { type: String },
-  scope: { type: String }
-};
-
 var tosDef = {
-  "date": { type: String },
-  "ip": { type: String }
+  date: { type: String },
+  ip: { type: String }
 }
+
 var dobDef = {
-  "day": { type: Number },
-  "month": { type: Number },
-  "year": { type: Number }
+  day: { type: Number },
+  month: { type: Number },
+  year: { type: Number }
 }
+
+var verifyDef = {
+  token: { type: String },
+  status: { type: Boolean }
+}
+
+var organizationDef = {
+  id: { type: String }
+}
+
+var desktopDef = {
+  notifications: { type: Boolean }
+}
+
+// /v1/profile/89sdf79s8d7f9ss98df79s8/producers
+// /v1/profile/89sdf79s8d7f9ss98df79s8/consumers
+// /v1/accounts/acct_1032D82eZvKYlo2C/external_accounts
 
 var UserSchema = new mongoose.Schema({
   first_name: { type: String },
@@ -57,27 +65,23 @@ var UserSchema = new mongoose.Schema({
   dob: dobDef,
   legal_entity_type: { type: String },
   role: { type: Array },
-  orgId: { type: String },
+  organization: organizationDef,
   picture: pictureDef,
-  notificationsEnabled: { type: Boolean },  
   email: { type: String, lowercase: true, trim: true, unique : true, required : true},
   display_name: { type: String },
+  desktop: desktopDef,
   ios: iosDef,
   android: androidDef,
   password: { type: String },
-  resetToken: { type: String, dropDups: true },
-  verifyToken: { type: String },
-  verified: { type: Boolean },
+  resetToken: { type: String },
+  verify: verifyDef,
   theme: { type: String },
-  stripe: stripeDef,
   plaid: plaidDef,
   env: { type: String },
-  firebaseUrl: { type: String },
-  apiUrl: { type: String },
-  redirectUri: { type: String },
+  redirect_uri: { type: String },
   token_client_id: { type: String },
   token_client_secret: { type: String },
-  token_access_token: { type: String },
+  token_access: { type: String },
   token_type: { type: String },
   token_scope: { type: String },
   token_livemode: { type: Boolean },

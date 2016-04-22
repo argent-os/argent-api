@@ -8,6 +8,7 @@ module.exports = function (app, options) {
     account: '/account',     
     balance: '/balance',               
     charges: '/charges',                         
+    history: '/history',                         
     cards: '/cards',                         
     coupons: '/coupons',                         
     customers: '/customers',                         
@@ -610,6 +611,25 @@ module.exports = function (app, options) {
           return res.json({msg: "error", err: err}).end();
       })
   });     
+
+  // HISTORY
+  app.post(endpoint.version + endpoint.base + endpoint.history, function(req, res, next) {
+      logger.debug(req.body);
+      userController.getUser(req.body.userId).then(function (user) {
+        logger.debug(user.stripe);
+        logger.debug(user);
+        var stripe = require('stripe')(user.stripe.secretKey);
+        var limit = req.body.limit
+        stripe.balance.listTransactions({ limit: limit }, function(err, transactions) {
+          if(err) {
+            logger.error(err)
+          }
+          logger.info(transactions)
+          res.json({transactions:transactions})
+          // asynchronously called
+        });
+      })       
+  });   
 
   // // EVENTS (types of events)
   // stripe.events.list([params])

@@ -19,12 +19,6 @@ var oAuthSecret = 'B21F3EFCE39FDC5BDE7EEE987D7C8';
 var log4js = require('log4js');
 var logger = log4js.getLogger();
 
-// Set up Firebase Dev and Production URLs
-var firebaseUrl;
-var firebaseSecret;
-process.env.ENVIRONMENT == 'DEV' || process.env.ENVIRONMENT == undefined ? firebaseUrl = process.env.FIREBASE_DEV_URL : '';
-process.env.ENVIRONMENT == 'PROD' ? firebaseUrl = process.env.FIREBASE_URL : firebaseUrl = process.env.FIREBASE_DEV_URL;
-
 process.env.ENVIRONMENT == 'DEV' || process.env.ENVIRONMENT == undefined ? firebaseSecret = process.env.FIREBASE_DEV_SECRET : '';
 process.env.ENVIRONMENT == 'PROD' ? firebaseSecret = process.env.FIREBASE_SECRET : '';
 
@@ -32,16 +26,10 @@ var apiUrl;
 process.env.ENVIRONMENT == 'DEV' || process.env.ENVIRONMENT == undefined ? apiUrl = process.env.API_DEV_URL : '';
 process.env.ENVIRONMENT == 'PROD' ? apiUrl = process.env.API_URL : apiUrl = process.env.API_DEV_URL;
 
-var ref = new Firebase(firebaseUrl);
-var FirebaseTokenGenerator = require("firebase-token-generator");
-var tokenGenerator = new FirebaseTokenGenerator(firebaseSecret);
-
 function UserController (req, res, next) {}
 
 UserController.prototype.register = function (req, res, next) {
   var data = req.body;
-  var userFirebase = firebaseUrl;  
-  var userApiUrl = apiUrl; 
   var link;   
   logger.trace('registering');
   logger.info('user email is', req.body.email)
@@ -91,7 +79,7 @@ UserController.prototype.register = function (req, res, next) {
               verifyToken: verifyToken,
               token_client_id: clientId,
               token_client_secret: clientSecret,
-              tok_access_token: accessToken,
+              token_access: accessToken,
               token_scope: scope,
               token_livemode: livemode,
               token_type: tokenType
@@ -275,25 +263,6 @@ UserController.prototype.removeAccount = function (req, res, next) {
     if (!err) {
       // logger.info(req.body.email);
       // logger.info(req.body.password);       
-      ref.removeUser({
-        email: email,
-        password: password
-      }, function(error) {
-        if (error) {
-          switch (error.code) {
-            case "INVALID_USER":
-              // logger.info("The specified user account does not exist.");
-              break;
-            case "INVALID_PASSWORD":
-              // logger.info("The specified user account password is incorrect.");
-              break;
-            default:
-              // logger.info("Error removing user:", error);
-          }
-        } else {
-          // logger.info("User account deleted successfully!");
-        }
-      });
       res.status(200).send({msg: 'account_removed'});
     }
     else {
@@ -348,14 +317,12 @@ UserController.prototype.editProfile = function (req, res, next) {
                 updated.push('notificationsEnabled');
                 user.notificationsEnabled = data.user.notificationsEnabled;
               }    
-              if (user.picture !== data.picture && data.picture !=null) {
+              if (user.picture !== data.picture && data.picture !== null && data.picture !== undefined) {
+                logger.debug("updating user picture")
+                logger.debug(data.picture)
                 updated.push('picture');
                 user.picture = data.picture;
               }      
-              if (user.fullname !== data.user.fullname && data.stripeToken !== null) {
-                updated.push('fullname');
-                user.fullname = data.user.fullname;
-              }    
               if (user.first_name !== data.user.first_name) {
                 updated.push('first_name');
                 user.first_name = data.user.first_name;
@@ -368,7 +335,7 @@ UserController.prototype.editProfile = function (req, res, next) {
                 updated.push('username');
                 user.username = data.user.username;
               }     
-              if (user.stripe !== data.stripe && data.stripe !== null) {
+              if (user.stripe !== data.stripe && data.stripe !== null && data.stripe !== undefined && data.stripe !== "") {
                 updated.push('stripe');
                 user.stripe = data.stripe;
               }    
@@ -751,15 +718,14 @@ UserController.prototype.listAllUsers = function (req, res, next) {
     var userMap = {};
     var usersArr = [];
     users.forEach(function(user) {
-      logger.info(user.picture)
-      userMap[user._id] = {
-        first_name: user.first_name,
-        last_name: user.last_name,
-        username: user.username,
-        email: user.email,
-        cust_id: user.stripe.customerId,
-        picture: user.picture.secureUrl
-      }
+      // userMap[user._id] = {
+      //   first_name: user.first_name,
+      //   last_name: user.last_name,
+      //   username: user.username,
+      //   email: user.email,
+      //   cust_id: user.stripe.customerId,
+      //   picture: user.picture.secureUrl
+      // }
       var user = {
         first_name: user.first_name,
         last_name: user.last_name,
@@ -772,6 +738,34 @@ UserController.prototype.listAllUsers = function (req, res, next) {
     });
     // res.send(userMap);  
     res.send({users: usersArr});  
+  });
+}
+
+UserController.prototype.getUserCustomers = function (req, res, next) {
+  User.find({}, function(err, users) {
+    var customersArr = [];
+    users.forEach(function(user) {
+      var customer = {
+        name: user.customer.name,
+        id: user.customer.id
+      }
+      customersArr.push(customer);
+    });
+    res.send({merchants: customersArr});  
+  });
+}
+
+UserController.prototype.getUserMerchants = function (req, res, next) {
+  User.find({}, function(err, users) {
+    var merchantsArr = [];
+    users.forEach(function(user) {
+      var merchant = {
+        name: user.merchant.name,
+        id: user.merchant.id
+      }
+      merchantsArr.push(merchant);
+    });
+    res.send({merchants: merchantsArr});  
   });
 }
 
