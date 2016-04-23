@@ -7,7 +7,7 @@ module.exports = function (app, options) {
     oauth: '/oauth',
     account: '/account',     
     balance: '/balance',               
-    charges: '/charges',                         
+    charge: '/charge',                         
     history: '/history',                         
     cards: '/cards',                         
     coupons: '/coupons',                         
@@ -88,23 +88,28 @@ module.exports = function (app, options) {
   //   -u sk_test_jqQvmd0K1WbTSgP25zIgIWyp: \
   //   -d '{"customer":"cus_80JM7yd0HXslf6", "amount": 54322, "currency": "usd"}' \
   //      http://192.168.1.232:5001/v1/stripe/charge
-  app.post(endpoint.version + endpoint.base + endpoint.charges, function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + endpoint.charge, function(req, res, next) {
     logger.trace('charge request received');
     var stripeToken = req.body.stripeToken;
     var amount = req.body.amount;
     var currency = req.body.currency;
     var customer = req.body.customer;
+    var source = req.body.token;
+    logger.debug('source is ', source)
     var chargeObject = {
-        amount: amount, // amount in cents, again
-        currency: currency,
+        source: source,
+        amount: "100", // amount in cents, again
+        currency: "usd",
         customer: customer
     }
-    stripe.charges.create(chargeObject).then(function(res) {
-        logger.info("charge success");
-        return res.json({msg: "success", charge: res}).end();
+
+    logger.debug('charge object is', chargeObject)
+    stripe.charges.create(chargeObject).then(function(charge) {
+        logger.info("charge success", charge);
+        return res.json({msg: "success", charge: charge})
     }, function(err) {
         logger.error(err);
-        return res.json({msg: err}).end();
+        return res.json({msg: err})
     });
   })
 
@@ -616,15 +621,13 @@ module.exports = function (app, options) {
   app.post(endpoint.version + endpoint.base + endpoint.history, function(req, res, next) {
       logger.debug(req.body);
       userController.getUser(req.body.userId).then(function (user) {
-        logger.debug(user.stripe);
-        logger.debug(user);
         var stripe = require('stripe')(user.stripe.secretKey);
         var limit = req.body.limit
         stripe.balance.listTransactions({ limit: limit }, function(err, transactions) {
           if(err) {
             logger.error(err)
           }
-          logger.info(transactions)
+          // logger.info(transactions)
           res.json({transactions:transactions})
           // asynchronously called
         });
