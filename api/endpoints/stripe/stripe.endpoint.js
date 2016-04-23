@@ -242,26 +242,42 @@ module.exports = function (app, options) {
       })
   });
 
+  // Find User by Username
+  // app.post("/finduserbyusername", function(req, res, next) {
+  //   logger.info('inside finding user by username')
+  //   userController.getUserByUsername(req.body.username).then(function (user) {
+  //     logger.info(user);
+  //     res.json(200);
+  //   })
+  // });
+
   // CHARGES
-  app.post(endpoint.version + endpoint.base + endpoint.charges + "/create", function(req, res, next) {
+  // /v1/stripe/charges/create
+  app.post(endpoint.version + endpoint.base + endpoint.charge + "/create", function(req, res, next) {
       // TODO
       // Create a request to charge
       // If the charge is approved proceed with the charge request
+
+      // Flow
+      // Create a charge with the credit card token
+      // Find the user in the database
+      // Make a delegated request on behalf of the user
       logger.debug(req.body);
-      userController.getUser(req.body.userId).then(function (user) {
-        logger.info('utilizing proper secret key');
-        var stripe = require('stripe')(user.stripe.secretKey);
+      logger.debug("got the request")
+      userController.getDelegatedUserByUsername(req.body.delegatedUser).then(function (delegateUser) {
+        logger.trace("inside delegate user, setting info for user " + delegateUser.username)
+        var stripe = require('stripe')(delegateUser.stripe.secretKey);
         var params = {
-          amount: req.body.amount,
+          amount: "100",
           currency: "usd",
-          customer: req.body.customerId,
-          description: req.body.description
+          source: req.body.token,
+          description: "testing if it works"
         }
 
         // Charge a card based on customer ID, the customer must have a linked credit card
 
         stripe.charges.create(params).then(function(charge, err) {
-            logger.info(res)
+            // logger.info(res)
             res.json({msg: "success", charge: charge}).end();
         }, function(err) {
             logger.error(err)
@@ -269,7 +285,7 @@ module.exports = function (app, options) {
         })
       }) 
   });
-  app.get(endpoint.version + endpoint.base + endpoint.charges, function(req, res, next) {
+  app.get(endpoint.version + endpoint.base + endpoint.charge, function(req, res, next) {
       var params = {"foo": "bar"}
       stripe.charges.list([params]).then(function(res) {
           logger.info(res)
@@ -279,7 +295,7 @@ module.exports = function (app, options) {
           return res.json({msg: "error", err: err}).end();
       })
   });
-  app.put(endpoint.version + endpoint.base + endpoint.charges, function(req, res, next) {
+  app.put(endpoint.version + endpoint.base + endpoint.charge, function(req, res, next) {
       var chargeId = req.body.chargeId;
       stripe.charges.retrieve(chargeId).then(function(res) {
           logger.info(res)
@@ -289,7 +305,7 @@ module.exports = function (app, options) {
           return res.json({msg: "error", err: err}).end();
       })
   });
-  app.get(endpoint.version + endpoint.base + endpoint.charges, function(req, res, next) {
+  app.get(endpoint.version + endpoint.base + endpoint.charge, function(req, res, next) {
       var params = {"foo": "bar"};
       var chargeId = req.body.chargeId;
       stripe.charges.capture(chargeId, params).then(function(res) {
@@ -300,7 +316,7 @@ module.exports = function (app, options) {
           return res.json({msg: "error", err: err}).end();
       })
   });
-  app.post(endpoint.version + endpoint.base + endpoint.charges + "/refund", function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + endpoint.charge + "/refund", function(req, res, next) {
       var params = {"foo": "bar"};
       var chargeId = req.body.chargeId;
       stripe.charges.refund(chargeId, params).then(function(res) {
@@ -311,7 +327,7 @@ module.exports = function (app, options) {
           return res.json({msg: "error", err: err}).end();
       })
   });
-  app.put(endpoint.version + endpoint.base + endpoint.charges, function(req, res, next) {
+  app.put(endpoint.version + endpoint.base + endpoint.charge, function(req, res, next) {
       var params = {"foo": "bar"};
       var chargeId = req.body.chargeId;
       stripe.charges.update(chargeId, params).then(function(res) {
@@ -322,7 +338,7 @@ module.exports = function (app, options) {
           return res.json({msg: "error", err: err}).end();
       })
   });
-  app.post(endpoint.version + endpoint.base + endpoint.charges + "/dispute/close", function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + endpoint.charge + "/dispute/close", function(req, res, next) {
       var params = {"foo": "bar"};
       var chargeId = req.body.chargeId;
       stripe.charges.closeDispute(chargeId, params).then(function(res) {
@@ -333,7 +349,7 @@ module.exports = function (app, options) {
           return res.json({msg: "error", err: err}).end();
       })
   });
-  app.post(endpoint.version + endpoint.base + endpoint.charges + "/meta", function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + endpoint.charge + "/meta", function(req, res, next) {
       var params = {"foo": "bar"};
       var chargeId = req.body.chargeId;
       stripe.charges.setMetadata(chargeId, metadataObject).then(function(res) {
@@ -344,7 +360,7 @@ module.exports = function (app, options) {
           return res.json({msg: "error", err: err}).end();
       })
   });
-  app.get(endpoint.version + endpoint.base + endpoint.charges + "/meta", function(req, res, next) {
+  app.get(endpoint.version + endpoint.base + endpoint.charge + "/meta", function(req, res, next) {
       var chargeId = req.body.chargeId;
       stripe.charges.getMetadata(chargeId).then(function(res) {
           logger.info(res)
@@ -354,7 +370,7 @@ module.exports = function (app, options) {
           return res.json({msg: "error", err: err}).end();
       })
   });
-  app.post(endpoint.version + endpoint.base + endpoint.charges + "/mark/safe", function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + endpoint.charge + "/mark/safe", function(req, res, next) {
       var chargeId = req.body.chargeId;
       stripe.charges.markAsSafe(chargeId).then(function(res) {
           logger.info(res)
@@ -364,7 +380,7 @@ module.exports = function (app, options) {
           return res.json({msg: "error", err: err}).end();
       })
   });
-  app.post(endpoint.version + endpoint.base + endpoint.charges + "/mark/fraud", function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + endpoint.charge + "/mark/fraud", function(req, res, next) {
       var chargeId = req.body.chargeId;
       stripe.charges.markAsFraudulent(chargeId).then(function(res) {
           logger.info(res)

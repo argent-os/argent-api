@@ -344,7 +344,7 @@ UserController.prototype.editProfile = function (req, res, next) {
                 user.plaid = data.plaid;
               }    
               if (user.ios !== data.ios && data.ios !== undefined && data.ios !== null && data.ios != '') {
-                updated.push('plaid');
+                updated.push('ios');
                 logger.debug(data.ios);
                 user.ios = data.ios;
               }                                                                
@@ -444,6 +444,20 @@ UserController.prototype.getUser = function (userId, cb) {
       }
     });
 };
+
+UserController.prototype.getDelegatedUserByUsername = function (username, cb) {
+  return User.findOne({ username: username }, function (err, user) {
+      if (!user) {
+        logger.info('User not found for account | username : ' + username);
+        return;
+      }
+      else {
+        logger.info('got user ' + user.username);
+        return user;
+      }
+    });
+};
+
 
 UserController.prototype.generateApiKey = function (req, res, next) {
   var errors = req.validationErrors();
