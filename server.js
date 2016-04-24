@@ -72,12 +72,12 @@ var options = {
   mailer: {
     mailerFrom    : process.env.SUPPORT_EMAIL,
     passwordResetTitle   : 'Password Reset',
-    verifyEmailTitle   : 'Verify Account for PayKloud',
-    verifyEmailLinkText   : 'Welcome to PayKloud!  Please verify your email using the following link: ',
+    verifyEmailTitle   : 'Verify Account for Proton Payments',
+    verifyEmailLinkText   : 'Welcome to Proton Payments!  Please verify your email using the following link: ',
     quoteEmailTitle: 'Quote created',  
     quoteEmailTextLink: 'Please use the following link to accept or reject proposal ',
     mailerInfo    : 'Hello! ',
-    resetPasswordText    : 'Hello from PayKloud! Please use the following link to reset your password: ',
+    resetPasswordText    : 'Hello from Proton Payments! Please use the following link to reset your password: ',
     transporter   : {
       service: 'Gmail',
       auth: {
@@ -97,7 +97,7 @@ mongoose.connection.on('error', function () {
   console.log('Cannot connect to MongoDB');
 });
   
-  
+
 // Setup API routes
 // Send the current and and options into the endpoints
 // Be sure name in package.json matches lib -> endpoint file name

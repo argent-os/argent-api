@@ -37,12 +37,12 @@ UserController.prototype.register = function (req, res, next) {
   User.findOne({ email: req.body.email }, function(err, existingUser) {
         if (existingUser) {
           logger.error('email is taken')
-          return res.status(409).send({ message: 'Email is already taken' });
+          return res.status(409).send({ message: 'Email is already taken', type: "email_exists" });
         } else {
           User.findOne({ username: req.body.username }, function(err, existingUser) {
             if(existingUser) {
               logger.error('username is taken')
-              return res.status(409).send({ message: 'Username is already taken' });
+              return res.status(409).send({ message: 'Username is already taken', type: "email_exists" });
             }    
             var verifyToken = utils.randomString(16);  
             var clientId = 'tok_'+utils.randomString(64);
@@ -55,6 +55,15 @@ UserController.prototype.register = function (req, res, next) {
             if( _date.indexOf('.') != -1 ) {
                 var parsedDate = _date.substring(0, _date.indexOf('.'));
                 logger.info("parsing date, " + parsedDate);
+            }
+            if(req.body.dob !== undefined) {
+              var dateOfBirth = {
+                "day": req.body.dob.data.day,
+                "month": req.body.dob.data.month,
+                "year": req.body.dob.data.year
+              }
+            } else {
+
             }
             var user = new User({
               first_name: req.body.first_name,
@@ -69,11 +78,7 @@ UserController.prototype.register = function (req, res, next) {
                 "ip":req.body.tos_acceptance.data.ip,
                 "date":parsedDate
               },
-              dob: {
-                "day": req.body.dob.data.day,
-                "month": req.body.dob.data.month,
-                "year": req.body.dob.data.year
-              },
+              dob: dateOfBirth,
               env: process.env.ENVIRONMENT,
               theme: "1",
               verifyToken: verifyToken,
@@ -88,35 +93,17 @@ UserController.prototype.register = function (req, res, next) {
             user.save().then(function() {
               logger.trace('inside save');
               // change to req.body.country      
-              var _firebaseToken = tokenGenerator.createToken({ uid: (user._id).toString(), username: user.username, hasTCAccess: true });   
-              // logger.info(_firebaseToken);   
-                ref.authWithCustomToken(_firebaseToken, function(error, authData) {
-                  if (error) {
-                    logger.error(error);
-                    //logger.info("Login Failed!", error);
-                    res.send(500);                    
-                  } else {
-                    // logger.info(authData);
-                    ////logger.info("Login Succeeded!", authData);
-                    // change routing on registration for prod ui and make https
-                    process.env.ENVIRONMENT == 'DEV' || process.env.ENVIRONMENT == undefined ? link = 'http://localhost:5000/verify' + '?token=' + verifyToken : '';
-                    process.env.ENVIRONMENT == 'PROD' ? link = 'https://www.paykloud.com/verify' + '?token=' + verifyToken : '';                  
-                    mailer.verifyEmail(user, link, function (err, info) {
-                      if (err) {
-                        // logger.info(err);
-                        //logger.error('Sending message error : ' + err);
-                        res.send(504);
-                      }
-                      else {
-                        // var resp = {};
-                        // resp.msg = 'verify_link_sent';
-                        // res.status(200).json(resp);
-                        // send username alongside userinfo at login
-                        res.send({ token: createJWT(user, user.username), auth: authData,  user: user });                                
-                      }
-                    });                  
-                  }
-                });         
+              process.env.ENVIRONMENT == 'DEV' || process.env.ENVIRONMENT == undefined ? link = 'http://localhost:5000/verify' + '?token=' + verifyToken : '';
+              process.env.ENVIRONMENT == 'PROD' ? link = 'https://www.protonpayments.com/verify' + '?token=' + verifyToken : '';                  
+              mailer.verifyEmail(user, link, function (err, info) {
+                if (err) {
+                  logger.error('Error occured : ' + err);
+                  res.sendStatus(504);
+                }
+                else {
+                  res.send({ token: createJWT(user, user.username),  user: user, message: "Welcome to Proton Payments" });                                
+                }
+              });      
             });                
          });
         }
@@ -161,17 +148,7 @@ UserController.prototype.login = function (req, res, next) {
       logger.debug("login data is");
       // logger.debug(user);
 
-      res.send({ token: createJWT(user), user: user });          
-      // var _firebaseToken = tokenGenerator.createToken({ uid: (user._id).toString(), username: user.username, hasTCAccess: true });
-      // ref.authWithCustomToken(_firebaseToken, function(error, authData) {
-      //   if (error) {
-      //     // logger.info("Login Failed!", error);
-      //     res.send(500);                    
-      //   } else {
-      //     // logger.info("Login Succeeded!", authData);
-      //     // res.send({ token: createJWT(user), auth: authData,  user: user });          
-      //   }
-      // });      
+      res.send({ token: createJWT(user), user: user });             
     });
   });
 };
