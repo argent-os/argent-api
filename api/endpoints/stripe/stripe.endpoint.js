@@ -636,6 +636,7 @@ module.exports = function (app, options) {
   // HISTORY
   app.post(endpoint.version + endpoint.base + endpoint.history, function(req, res, next) {
       logger.debug(req.body);
+      logger.debug("received history request");
       userController.getUser(req.body.userId).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
         var limit = req.body.limit

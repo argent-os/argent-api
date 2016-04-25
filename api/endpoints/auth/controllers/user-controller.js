@@ -290,21 +290,19 @@ UserController.prototype.editProfile = function (req, res, next) {
                 updated.push('orgId');
                 user.orgId = data.orgId;
               }      
-              if (user.notificationsEnabled !== data.user.notificationsEnabled) {
+              if (user.notificationsEnabled !== data.user.notificationsEnabled && data.user.notificationsEnabled !== null && data.user.notificationsEnabled !== undefined && data.user.notificationsEnabled !== "") {
                 updated.push('notificationsEnabled');
                 user.notificationsEnabled = data.user.notificationsEnabled;
               }    
-              if (user.picture !== data.picture && data.picture !== null && data.picture !== undefined) {
-                logger.debug("updating user picture")
-                logger.debug(data.picture)
+              if (user.picture !== data.picture && data.picture !== null && data.picture !== undefined && data.picture !== "") {
                 updated.push('picture');
                 user.picture = data.picture;
               }      
-              if (user.first_name !== data.user.first_name) {
+              if (user.first_name !== data.user.first_name && data.user.first_name !== null && data.user.first_name !== undefined && data.user.first_name !== "") {
                 updated.push('first_name');
                 user.first_name = data.user.first_name;
               }     
-              if (user.last_name !== data.user.last_name) {
+              if (user.last_name !== data.user.last_name && data.user.last_name !== null && data.user.last_name !== undefined && data.user.last_name !== "") {
                 updated.push('last_name');
                 user.last_name = data.user.last_name;
               }                                                                           
