@@ -212,16 +212,23 @@ module.exports = function (app, options) {
   });   
 
   // BALANCE
-  app.put(endpoint.version + endpoint.base + endpoint.balance, function(req, res, next) {
-      stripe.balance.retrieve().then(function(res) {
-          logger.info(res)
-          return res.json({msg: "success", res: res}).end();
-      }, function(err) {
-          logger.error(err)
-          return res.json({msg: "error", err: err}).end();
-      })
+  app.post(endpoint.version + endpoint.base + endpoint.balance, userController.authorize, function(req, res, next) {
+      logger.trace("retrieve balance called")
+      logger.debug(req.body)
+      userController.getUser(req.body.userId).then(function (user) {
+        logger.trace("user found, retrieving balance")
+        var stripe = require('stripe')(user.stripe.secretKey);
+        stripe.balance.retrieve().then(function(balance) {
+            // logger.info(balance)
+            res.json({balance:balance})
+        }, function(err) {
+            logger.error(err)
+            return res.json({msg: "error", err: err}).end();
+        })
+      })   
   });  
-  app.put(endpoint.version + endpoint.base + endpoint.balance, function(req, res, next) {
+  app.get(endpoint.version + endpoint.base + endpoint.balance, function(req, res, next) {
+      logger.info("list transaction balance called")
       var params = {"foo": "bar"}
       stripe.balance.listTransactions(params).then(function(res) {
           logger.info(res)
@@ -231,7 +238,8 @@ module.exports = function (app, options) {
           return res.json({msg: "error", err: err}).end();
       })
   }); 
-  app.put(endpoint.version + endpoint.base + endpoint.balance, function(req, res, next) {
+  app.get(endpoint.version + endpoint.base + endpoint.balance, function(req, res, next) {
+      logger.info("retrieve single transaction balance called")
       var transactionId = req.body.transactionId;
       stripe.balance.retrieveTransaction(transactionId).then(function(res) {
           logger.info(res)
@@ -634,7 +642,7 @@ module.exports = function (app, options) {
   });     
 
   // HISTORY
-  app.post(endpoint.version + endpoint.base + endpoint.history, function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + endpoint.history, userController.authorize, function(req, res, next) {
       logger.debug(req.body);
       logger.debug("received history request");
       userController.getUser(req.body.userId).then(function (user) {

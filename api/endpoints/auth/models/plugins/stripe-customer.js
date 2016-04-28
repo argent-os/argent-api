@@ -31,8 +31,11 @@ module.exports = exports = function stripeCustomer (schema, options) {
       next();
     });
     user.createStripeAccount(function(err) {
-      if (err) return next(err);
-      logger.trace('creating user stripe account');          
+      if (err) {
+        logger.error(err);
+        return next(err);
+      }
+      logger.trace('created user stripe account');          
       next();
     })
   });

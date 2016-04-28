@@ -90,7 +90,11 @@ UserController.prototype.register = function (req, res, next) {
               token_type: tokenType
             }); 
             logger.trace('about to save');
-            user.save().then(function() {
+            user.save().then(function(user, err) {
+              if(err) {
+                  logger.error(err);
+                  res.send({ message: err });                                
+              }
               logger.trace('inside save');
               // change to req.body.country      
               process.env.ENVIRONMENT == 'DEV' || process.env.ENVIRONMENT == undefined ? link = 'http://localhost:5000/verify' + '?token=' + verifyToken : '';
@@ -98,7 +102,8 @@ UserController.prototype.register = function (req, res, next) {
               mailer.verifyEmail(user, link, function (err, info) {
                 if (err) {
                   logger.error('Error occured : ' + err);
-                  res.sendStatus(504);
+                  // res.sendStatus(504);
+                  res.send({ message: "Error occured" });                                
                 }
                 else {
                   res.send({ token: createJWT(user, user.username),  user: user, message: "Welcome to Proton Payments" });                                
@@ -390,6 +395,8 @@ UserController.prototype.editProfile = function (req, res, next) {
 };
 
 UserController.prototype.getProfile = function (req, res, next) {
+  logger.trace("getting profile");
+  logger.debug(req.user);
   var errors = req.validationErrors();
   if (errors) {
     res.status(400).json(errors);
@@ -397,7 +404,7 @@ UserController.prototype.getProfile = function (req, res, next) {
   }
   User.findById(req.user._id, function (err, user) {
       if (!user) {
-        //logger.info('User not found for account update. User id : ' + req.user._id);
+        logger.info('User not found for account update. User id : ' + req.user._id);
         return;
       }
       else {
@@ -707,14 +714,6 @@ UserController.prototype.listAllUsers = function (req, res, next) {
     var userMap = {};
     var usersArr = [];
     users.forEach(function(user) {
-      // userMap[user._id] = {
-      //   first_name: user.first_name,
-      //   last_name: user.last_name,
-      //   username: user.username,
-      //   email: user.email,
-      //   cust_id: user.stripe.customerId,
-      //   picture: user.picture.secureUrl
-      // }
       var user = {
         first_name: user.first_name,
         last_name: user.last_name,

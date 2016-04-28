@@ -50,10 +50,6 @@ var desktopDef = {
   notifications: { type: Boolean }
 }
 
-// /v1/profile/89sdf79s8d7f9ss98df79s8/producers
-// /v1/profile/89sdf79s8d7f9ss98df79s8/consumers
-// /v1/accounts/acct_1032D82eZvKYlo2C/external_accounts
-
 var UserSchema = new mongoose.Schema({
   first_name: { type: String },
   last_name: { type: String },
