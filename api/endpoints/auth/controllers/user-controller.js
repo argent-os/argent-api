@@ -255,13 +255,14 @@ UserController.prototype.removeAccount = function (req, res, next) {
 
 UserController.prototype.editProfile = function (req, res, next) {
   var data = req.body;
-  logger.trace("update req received")
+  logger.debug(data);
+  logger.trace("update req received");
   // logger.info(data)
   // logger.debug(req.query);
   // logger.debug(req.body);
   // logger.debug(req.params);
-  logger.debug(req.user);
-  logger.info(data.stripe);
+  // logger.debug(req.user);
+  // logger.info(data.stripe);
   // req.assert('username', 'Username must be at least 4 characters long').len(4);
   // req.assert('email', 'Email is not valid').isEmail();
   // var errors = req.validationErrors();
@@ -281,40 +282,46 @@ UserController.prototype.editProfile = function (req, res, next) {
           else {
             logger.trace("user found in update")
             var updated = [];
+            logger.debug('requesting user is', req.user.email);
+            logger.debug('checking for ios data', data.ios);
             logger.debug(data.user);
-            if(data.user != null || data.user != undefined) {
-              if (user.email !== data.user.email && data.user.email !=null && data.user.email !== '' && data.user.email !== undefined) {
-                updated.push('email');
-                user.email = data.user.email;
+            // check that user is sent through request and not the body
+            if(req.user !== undefined) {
+              // check if user data is sent as body
+              if(data.user !== undefined) {
+                if (user.email !== data.user.email && data.user.email !== null && data.user.email !== '' && data.user.email !== undefined) {
+                  updated.push('email');
+                  user.email = data.user.email;
+                }
+                if (user.username !== data.user.username && data.user.username !== null && data.user.username !== undefined && data.user.username !== "") {
+                  updated.push('username');
+                  user.username = data.user.username;
+                }   
+                if (user.role !== data.user.role && req.user.email !=null && data.role !== '' && data.role !== undefined) {
+                  updated.push('role');
+                  user.role = data.user.role;
+                }      
+                if (user.notificationsEnabled !== data.user.notificationsEnabled && data.user.notificationsEnabled !== null && data.user.notificationsEnabled !== undefined && data.user.notificationsEnabled !== "") {
+                  updated.push('notificationsEnabled');
+                  user.notificationsEnabled = data.user.notificationsEnabled;
+                }  
+                if (user.first_name !== data.user.first_name && data.user.first_name !== null && data.user.first_name !== undefined && data.user.first_name !== "") {
+                  updated.push('first_name');
+                  user.first_name = data.user.first_name;
+                }     
+                if (user.last_name !== data.user.last_name && data.user.last_name !== null && data.user.last_name !== undefined && data.user.last_name !== "") {
+                  updated.push('last_name');
+                  user.last_name = data.user.last_name;
+                }   
               }
-              if (user.role !== data.user.role && data.user.email !=null && data.role !== '' && data.role !== undefined) {
-                updated.push('role');
-                user.role = data.user.role;
-              }      
               if (user.orgId !== data.orgId && data.orgId !=null && data.orgId !== '' && data.orgId !== undefined) {
                 updated.push('orgId');
                 user.orgId = data.orgId;
-              }      
-              if (user.notificationsEnabled !== data.user.notificationsEnabled && data.user.notificationsEnabled !== null && data.user.notificationsEnabled !== undefined && data.user.notificationsEnabled !== "") {
-                updated.push('notificationsEnabled');
-                user.notificationsEnabled = data.user.notificationsEnabled;
-              }    
+              }        
               if (user.picture !== data.picture && data.picture !== null && data.picture !== undefined && data.picture !== "") {
                 updated.push('picture');
                 user.picture = data.picture;
-              }      
-              if (user.first_name !== data.user.first_name && data.user.first_name !== null && data.user.first_name !== undefined && data.user.first_name !== "") {
-                updated.push('first_name');
-                user.first_name = data.user.first_name;
-              }     
-              if (user.last_name !== data.user.last_name && data.user.last_name !== null && data.user.last_name !== undefined && data.user.last_name !== "") {
-                updated.push('last_name');
-                user.last_name = data.user.last_name;
-              }                                                                           
-              if (user.username !== data.user.username && data.user.username !== null && data.user.username !== undefined && data.user.username !== "") {
-                updated.push('username');
-                user.username = data.user.username;
-              }     
+              }                                                                                
               if (user.stripe !== data.stripe && data.stripe !== null && data.stripe !== undefined && data.stripe !== "") {
                 updated.push('stripe');
                 user.stripe = data.stripe;
@@ -325,7 +332,7 @@ UserController.prototype.editProfile = function (req, res, next) {
               }    
               if (user.ios !== data.ios && data.ios !== undefined && data.ios !== null && data.ios != '') {
                 updated.push('ios');
-                logger.debug(data.ios);
+                logger.debug('ios data is', data.ios);
                 user.ios = data.ios;
               }                                                                
               if (user.verified !== data.verified && data.verified !== undefined && data.verified !== null && data.verified !== '') {
@@ -597,7 +604,6 @@ UserController.prototype.keepAlive = function (req, res, next) {
     res.status(400).send('Unauthorized');
   }
 }
-
 
 // Adds or updates a users card.
 
