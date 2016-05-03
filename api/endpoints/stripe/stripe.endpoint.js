@@ -1,5 +1,10 @@
 module.exports = function (app, options) {
 
+  /*  This is where the API endpoint strings are defined.
+      For example we concatonate endpoint.version + endpont.base + endpoint.ping
+      to get the endpoint http://{host}:{port}/v1/stripe/ping (host/port being either localhost, 
+      the IP of the API, or the web endpoint url)
+  */
   var endpoint = {
     version: '/v1',
     base: '/stripe',
@@ -25,6 +30,11 @@ module.exports = function (app, options) {
 
   // Set your secret key: remember to change this to your live secret key in production
   // See your keys here https://dashboard.stripe.com/account/apikeys
+  /* 
+      Here we configure the setup of the endpoint, the most part important being
+      userController which allows us to utilize our User object functions such as getUser
+      as well as things like cors and bodyParser which makes handling JSON requests easier
+  */
   var userController = require('../auth/controllers/user-controller');
   var secrets = require('../auth/config/secrets');
   var options = secrets.stripeOptions;
@@ -36,7 +46,9 @@ module.exports = function (app, options) {
   app.use(cors());
   app.use(bodyParser.json());
   app.use(expressValidator());
-      var stripe = require("stripe")(options.apiKey);
+
+  // Sets up our personal stripe with our own API key, not a delegated stripe account
+  var stripe = require("stripe")(options.apiKey);
 
   /*
    |--------------------------------------------------------------------------
@@ -50,6 +62,8 @@ module.exports = function (app, options) {
   var qs = require('querystring');
   var request = require('request');
 
+  // Configure our personal Stripe keys based on DEV or PROD environment
+  // TODO: Eventually configure this for our delegated requests as well
   process.env.ENVIRONMENT == 'DEV' || process.env.ENVIRONMENT == undefined ? CLIENT_ID = process.env.STRIPE_TEST_CLIENT_ID : '';
   process.env.ENVIRONMENT == 'PROD' ? CLIENT_ID = process.env.STRIPE_CLIENT_ID : '';
 
@@ -82,14 +96,24 @@ module.exports = function (app, options) {
     });
   });
 
-  //   EXAMPLE REQUEST
-  //   curl -X POST \
-  //   -H "Content-Type: application/json" \
-  //   -u sk_test_jqQvmd0K1WbTSgP25zIgIWyp: \
-  //   -d '{"customer":"cus_80JM7yd0HXslf6", "amount": 54322, "currency": "usd"}' \
-  //      http://192.168.1.232:5001/v1/stripe/charge
+
+
+  /* 
+      This is an example charge endpoint, currently it is under development as we use test values
+      such as "usd" to denote currency and a static value of 100 ($1.00) which will eventually
+      be made into a request variable such as req.body.amount and req.body.currency.
+
+      EXAMPLE REQUEST
+      curl -X POST \
+      -H "Content-Type: application/json" \
+      -u sk_test_jqQvmd0K1WbTSgP25zIgIWyp: \
+      -d '{"customer":"cus_80JM7yd0HXslf6", "amount": 54322, "currency": "usd"}' \
+         http://192.168.1.232:5001/v1/stripe/charge
+
+      // To use this example change the request url to your own IP and keep the port the same
+  */
   app.post(endpoint.version + endpoint.base + endpoint.charge, function(req, res, next) {
-    logger.trace('charge request received');
+    logger.trace('example charge request received');
     var stripeToken = req.body.stripeToken;
     var amount = req.body.amount;
     var currency = req.body.currency;
@@ -103,7 +127,7 @@ module.exports = function (app, options) {
         customer: customer
     }
 
-    logger.debug('charge object is', chargeObject)
+    logger.debug('example charge object is', chargeObject)
     stripe.charges.create(chargeObject).then(function(charge) {
         logger.info("charge success", charge);
         return res.json({msg: "success", charge: charge})
@@ -167,9 +191,9 @@ module.exports = function (app, options) {
           "currency": "usd"
         }
       };
-      logger.debug(cardObject);
-      logger.debug(accountId);
-      logger.debug("debugging");
+      // logger.debug(cardObject);
+      // logger.debug(accountId);
+      // logger.debug("debugging");
 
       if(accountId == "" || accountId == null || accountId == undefined) {
         logger.error("no accountId specified");
@@ -250,17 +274,29 @@ module.exports = function (app, options) {
       })
   });
 
-  // Find User by Username
-  // app.post("/finduserbyusername", function(req, res, next) {
-  //   logger.info('inside finding user by username')
-  //   userController.getUserByUsername(req.body.username).then(function (user) {
-  //     logger.info(user);
-  //     res.json(200);
-  //   })
-  // });
-
   // CHARGES
-  // /v1/stripe/charges/create
+  // Endpoint: /v1/stripe/charges/create
+  /* 
+      This is our delegated charge endpoint, it is where we make requests on behalf
+      of our users to get paid by a charge.  In order to utilize this API endpoint a 
+      credit card token must be sent with the request, this is done on the UI layer
+      and is possible to replicate using Stripe's generated card token on their 
+      API documentation (i.e. tok_17xfeeBtUid5FqMrknGVLq2k) and can be found here
+      https://stripe.com/docs/api#create_charge.
+
+      In order to create the charge we get the user in our database by the requested
+      username, and get that User's stripe secret key accordingly.  We then make the 
+      delegated request on behalf of that user to Stripe, and that user is then credited
+      the amount specified by the customer on the app.
+
+      For now we are utilizing static values of amount, currency, and description.  We utilize
+      Apple Pay on the UI to generate the card token, and that is implemented here
+      in req.body.token.
+
+      After the parameters are set we create the charge using the params object, and respond
+      with the charge in the response and send that back as JSON.  If there is an error we
+      log the error.
+  */
   app.post(endpoint.version + endpoint.base + endpoint.charge + "/create", function(req, res, next) {
       // TODO
       // Create a request to charge
@@ -279,7 +315,7 @@ module.exports = function (app, options) {
           amount: "100",
           currency: "usd",
           source: req.body.token,
-          description: "testing if it works"
+          description: "Testing charge"
         }
 
         // Charge a card based on customer ID, the customer must have a linked credit card
