@@ -484,7 +484,7 @@ module.exports = function (app, options) {
       Make delegated request to create customer (become customer) and attach
       a token using either credit card or Apple Pay
   */
-  app.post(endpoint.version + endpoint.base + endpoint.customers, function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + endpoint.customers + "/create", function(req, res, next) {
       var params = {"foo": "bar"};
       stripe.customers.create(params).then(function(res) {
           logger.info(res)
@@ -494,15 +494,23 @@ module.exports = function (app, options) {
           return res.json({msg: "error", err: err}).end();
       })
   });  
-  app.get(endpoint.version + endpoint.base + endpoint.customers, function(req, res, next) {
-      var params = {"foo": "bar"};
-      stripe.customers.list(params).then(function(res) {
-          logger.info(res)
-          return res.json({msg: "success", res: res}).end();
-      }, function(err) {
-          logger.error(err)
-          return res.json({msg: "error", err: err}).end();
-      })
+  // /v1/stripe/customers/list
+  app.post(endpoint.version + endpoint.base + endpoint.customers + "/list", function(req, res, next) {
+      // var params = { limit : req.body.limit };
+      logger.debug("received list customer request");
+      userController.getUser(req.body.userId).then(function (user) {
+        var stripe = require('stripe')(user.stripe.secretKey);
+        var params = {};
+        stripe.customers.list(params,
+          function(err, customers) {
+            // asynchronously called
+            if(err) {
+              logger.error(err)
+            }
+            res.json({ customers: customers })
+          }
+        );
+      });
   });   
   app.put(endpoint.version + endpoint.base + endpoint.customers, function(req, res, next) {
       var params = {"foo": "bar"};
@@ -684,7 +692,6 @@ module.exports = function (app, options) {
 
   // HISTORY
   app.post(endpoint.version + endpoint.base + endpoint.history, userController.authorize, function(req, res, next) {
-      logger.debug(req.body);
       logger.debug("received history request");
       userController.getUser(req.body.userId).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
@@ -702,9 +709,9 @@ module.exports = function (app, options) {
 
   // // EVENTS (types of events)
   /*
-      Get user events and display in notiications list
+      Get user events and display in notifications list
   */
-  // stripe.events.list([params])
+  
   app.post(endpoint.version + endpoint.base + endpoint.events, userController.authorize, function(req, res, next) {
       logger.debug(req.body);
       logger.debug("received event request");
@@ -721,7 +728,9 @@ module.exports = function (app, options) {
             res.json({events:events})
         });
       })       
-  }); 
+  });
+
+  // Implement retrieve single event for detail event view 
   // stripe.events.retrieve(eventId)
 
   // // INVOICEITEMS (resource invoiceItems)
@@ -742,7 +751,25 @@ module.exports = function (app, options) {
 
   // // PLANS
   // stripe.plans.create(params)
-  // stripe.plans.list([params])
+  
+  // /v1/stripe/plans/all
+  app.post(endpoint.version + endpoint.base + endpoint.plans + "/list", function(req, res, next) {
+      // var params = { limit : req.body.limit };
+      logger.debug("received list plan request");
+      userController.getUser(req.body.userId).then(function (user) {
+        var stripe = require('stripe')(user.stripe.secretKey);
+        var params = {};
+        stripe.plans.list(params,
+          function(err, plans) {
+            // asynchronously called
+            if(err) {
+              logger.error(err)
+            }
+            res.json({ plans: plans })
+          }
+        );
+      });
+  });  
   // stripe.plans.update(planId[, params])
   // stripe.plans.retrieve(planId)
   // stripe.plans.del(planId)
