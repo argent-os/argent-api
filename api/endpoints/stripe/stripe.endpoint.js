@@ -479,6 +479,11 @@ module.exports = function (app, options) {
 
 
   // CUSTOMERS
+
+  /* 
+      Make delegated request to create customer (become customer) and attach
+      a token using either credit card or Apple Pay
+  */
   app.post(endpoint.version + endpoint.base + endpoint.customers, function(req, res, next) {
       var params = {"foo": "bar"};
       stripe.customers.create(params).then(function(res) {
@@ -696,7 +701,27 @@ module.exports = function (app, options) {
   });   
 
   // // EVENTS (types of events)
+  /*
+      Get user events and display in notiications list
+  */
   // stripe.events.list([params])
+  app.post(endpoint.version + endpoint.base + endpoint.events, userController.authorize, function(req, res, next) {
+      logger.debug(req.body);
+      logger.debug("received event request");
+      userController.getUser(req.body.userId).then(function (user) {
+        var stripe = require('stripe')(user.stripe.secretKey);
+        var limit = req.body.limit
+        stripe.events.list(
+          { limit: limit },
+          function(err, events) {
+            if(err) {
+              logger.error(err)
+            }
+            // asynchronously called
+            res.json({events:events})
+        });
+      })       
+  }); 
   // stripe.events.retrieve(eventId)
 
   // // INVOICEITEMS (resource invoiceItems)
