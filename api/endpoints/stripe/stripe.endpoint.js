@@ -749,17 +749,63 @@ module.exports = function (app, options) {
   // stripe.invoices.retrieveUpcoming(customerId[, params])
   // stripe.invoices.pay(invoiceId)
 
-  // // PLANS
-  // stripe.plans.create(params)
-  
-  // /v1/stripe/plans/all
-  app.post(endpoint.version + endpoint.base + endpoint.plans + "/list", function(req, res, next) {
+  // PLANS
+
+
+  /* 
+      RESTful calls to interface with Stripe's Plans (Subscriptions) API.
+
+      STATUS: 
+        MARK: COMPLETE
+        TEST: INCOMPLETE
+
+      ENDPOINTS:
+        SINGLE: /v1/stripe/plans/:id
+        GENERIC: /v1/stripe/plans/
+  */
+
+  // Used to POST (create) a new plan
+  app.post(endpoint.version + endpoint.base + endpoint.plans, function(req, res, next) {
       // var params = { limit : req.body.limit };
       logger.debug("received list plan request");
       userController.getUser(req.body.userId).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
+        var params = {
+          id: req.body.id,          
+          amount: req.body.amount,
+          interval: req.body.interval,
+          name: req.body.name,
+          currency: req.body.currency
+        };
+        stripe.plans.create(params, function(err, plan) {
+            if(err) {
+              logger.error(err)
+            }          
+            res.json({ plan: plan })
+            // asynchronously called
+        });
+      });
+  });  
+
+  /* Used to GET a list of plans of a user
+     
+     EXAMPLE:
+        ENDPOINT: /v1/stripe/h8d0f9h8d09f8hd9fg08a0hs0j795df46s/plans?limit=10
+
+     NOTES: 
+        - Use req.params to retrieve the inner value of a url such as /:uid/plans
+        - /:uid sets the url parameter variable name to uid, and is retrieved through
+          req.params.uid
+        - Use req.url to retrieve the query variables such as ?limit=10
+  */
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.plans, function(req, res, next) {
+      logger.debug(req.params)
+      var user_id = req.params.uid
+      logger.debug("received list plan request");
+      userController.getUser(user_id).then(function (user) {
+        var stripe = require('stripe')(user.stripe.secretKey);
         var params = {};
-        stripe.plans.list(params,
+        stripe.plans.list({ limit: req.url.limit },
           function(err, plans) {
             // asynchronously called
             if(err) {
@@ -770,9 +816,60 @@ module.exports = function (app, options) {
         );
       });
   });  
-  // stripe.plans.update(planId[, params])
-  // stripe.plans.retrieve(planId)
-  // stripe.plans.del(planId)
+
+  // Used to POST (update) a plan
+  app.post(endpoint.version + endpoint.base + endpoint.plans + "/:id", function(req, res, next) {
+      logger.debug("received update plan request");
+      var id = req.params.id;
+      userController.getUser(req.body.userId).then(function (user) {
+        var stripe = require('stripe')(user.stripe.secretKey);
+        var params = {
+          amount: req.body.amount,
+          interval: req.body.interval,
+          name: req.body.name,
+          currency: req.body.currency
+        };
+        stripe.plans.update(id, params, function(err, plan) {
+            if(err) {
+              logger.error(err)
+            }          
+            res.json({ plan: plan })
+            // asynchronously called
+        });
+      });
+  }); 
+
+  // Used to GET (retrieve) a single plan
+  app.get(endpoint.version + endpoint.base + endpoint.plans + "/:id", function(req, res, next) {
+      logger.debug("received update plan request");
+      var id = req.params.id;
+      userController.getUser(req.body.userId).then(function (user) {
+        var stripe = require('stripe')(user.stripe.secretKey);
+        stripe.plans.retrieve(id, function(err, plan) {
+            if(err) {
+              logger.error(err)
+            }          
+            res.json({ plan: plan })
+            // asynchronously called
+        });
+      });
+  }); 
+
+  // Used to DELETE a single plan
+  app.get(endpoint.version + endpoint.base + endpoint.plans + "/:id", function(req, res, next) {
+      logger.debug("received update plan request");
+      var id = req.params.id;
+      userController.getUser(req.body.userId).then(function (user) {
+        var stripe = require('stripe')(user.stripe.secretKey);
+        stripe.plans.del(id, function(err, confirmation) {
+            if(err) {
+              logger.error(err)
+            }          
+            res.json({ confirmation: confirmation })
+            // asynchronously called
+        });
+      });
+  }); 
 
   // // PRODUCTS
   // stripe.products.create(params)
