@@ -1,7 +1,7 @@
 module.exports = function (app, options) {
 
   /*  This is where the API endpoint strings are defined.
-      For example we concatonate endpoint.version + endpont.base + endpoint.ping
+      For example we concatonate endpoint.version + endpoint.base + "/:uid/" + endpoint.ping
       to get the endpoint http://{host}:{port}/v1/stripe/ping (host/port being either localhost, 
       the IP of the API, or the web endpoint url)
   */
@@ -47,7 +47,7 @@ module.exports = function (app, options) {
   app.use(bodyParser.json());
   app.use(expressValidator());
 
-  // Sets up our personal stripe with our own API key, not a delegated stripe account
+  // Sets up our personal stripe with our own API key, not a delegated stripe account made in the RESTful requests
   var stripe = require("stripe")(options.apiKey);
 
   /*
@@ -73,7 +73,7 @@ module.exports = function (app, options) {
   process.env.ENVIRONMENT == 'PROD' ? stripePublishableKey = process.env.STRIPE_PUB_KEY : '';
 
   // /v1/stripe/oauth/callback
-  app.get(endpoint.version + endpoint.base + endpoint.oauth + '/callback', userController.authorize, function(req, res) {
+  app.get(endpoint.version + endpoint.base + "/:uid/" + endpoint.oauth + '/callback', userController.authorize, function(req, res) {
     var code = req.query.code;
     // console.log('received code', code);
     // Make /oauth/token endpoint POST request
@@ -99,7 +99,7 @@ module.exports = function (app, options) {
 
 
   /* 
-      This is an example charge endpoint, currently it is under development as we use test values
+      This is an example charge endpoint, currently we use test values
       such as "usd" to denote currency and a static value of 100 ($1.00) which will eventually
       be made into a request variable such as req.body.amount and req.body.currency.
 
@@ -112,7 +112,7 @@ module.exports = function (app, options) {
 
       // To use this example change the request url to your own IP and keep the port the same
   */
-  app.post(endpoint.version + endpoint.base + endpoint.charge, function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid/" + endpoint.charge, function(req, res, next) {
     logger.trace('example charge request received');
     var stripeToken = req.body.stripeToken;
     var amount = req.body.amount;
@@ -139,50 +139,24 @@ module.exports = function (app, options) {
 
   // TODO: Reinforce API
   // ACCOUNT
-  app.get(endpoint.version + endpoint.base + endpoint.account, function(req, res, next) {
-      var accountId = req.body.accountId;
-      stripe.account.retrieve(accountId).then(function(res) {
-          logger.info(res)
-          return res.json({msg: "success", res: res}).end();
-      }, function(err) {
-          logger.error(err)
-          return res.json({msg: "error", err: err}).end();
-      })
+  app.get(endpoint.version + endpoint.base + "/:uid/" + endpoint.account, function(req, res, next) {
+      stripe.account.retrieve(accountId)
   });
-  app.post(endpoint.version + endpoint.base + endpoint.account, function(req, res, next) {
-      stripe.account.create([params]).then(function(res) {
-          logger.info(res)
-          return res.json({msg: "success", res: res}).end();
-      }, function(err) {
-          logger.error(err)
-          return res.json({msg: "error", err: err}).end();
-      })
+  app.post(endpoint.version + endpoint.base + "/:uid/" + endpoint.account, function(req, res, next) {
+      stripe.account.create([params])
   }); 
-  app.get(endpoint.version + endpoint.base + endpoint.account, function(req, res, next) {
-      stripe.account.list([params]).then(function(res) {
-          logger.info(res)
-          return res.json({msg: "success", res: res}).end();
-      }, function(err) {
-          logger.error(err)
-          return res.json({msg: "error", err: err}).end();
-      })
+  app.get(endpoint.version + endpoint.base + "/:uid/" + endpoint.account, function(req, res, next) {
+      stripe.account.list([params])
   }); 
-  app.put(endpoint.version + endpoint.base + endpoint.account, function(req, res, next) {
-      stripe.account.update([params]).then(function(res) {
-          logger.info(res)
-          return res.json({msg: "success", res: res}).end();
-      }, function(err) {
-          logger.error(err)
-          return res.json({msg: "error", err: err}).end();
-      })
+  app.put(endpoint.version + endpoint.base + "/:uid/" + endpoint.account, function(req, res, next) {
+      stripe.account.update([params])
   });
   
   // EXTERNAL ACCOUNTS
   // Endpoint /v1/stripe/account/cards
-  app.post(endpoint.version + endpoint.base + endpoint.account + endpoint.cards, function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid/" + endpoint.account + endpoint.cards, function(req, res, next) {
       logger.trace("request received | add account external card")
-      var accountId = req.body.accountId;
-      var cardObject = {
+      var card_obj = {
         card: {
           "number": req.body.number,
           "exp_month": req.body.exp_month,
@@ -191,55 +165,54 @@ module.exports = function (app, options) {
           "currency": "usd"
         }
       };
-      // logger.debug(cardObject);
-      // logger.debug(accountId);
-      // logger.debug("debugging");
+      var user_id = req.params.uid
+      userController.getUser(user_id).then(function (user) {
+        // First create a tokenized card based on the request
+        var stripe = require('stripe')(user.stripe.secretKey);        
+        stripe.tokens.create(card_obj, function(err, token) {
+            logger.debug(token);
+            // asynchronously called
+            if(err) {
+              logger.error(err);
+              next();
+            }
+            var tokenObj = {
+              external_account: token.id
+            }
+            // Then add the source to Stripe using the token
+            stripe.accounts.createExternalAccount(accountId, tokenObj, function(err, card) {
+                // asynchronously called
+                if(err) {
+                  logger.error(err);
+                  next();
+                }
+                return res.json({msg:"card added!"}).end();
+              }
+            );          
+        });
+      });
+  });   
 
-      if(accountId == "" || accountId == null || accountId == undefined) {
-        logger.error("no accountId specified");
-        return res.json({msg:"no accountId specified"}).end();
-      }
-      // First create a tokenized card based on the request
-      stripe.tokens.create(cardObject, function(err, token) {
-          logger.debug(token);
-          // asynchronously called
+  app.get(endpoint.version + endpoint.base + "/:uid/" + endpoint.account + endpoint.cards, function(req, res, next) {
+      logger.trace("request received | get credit card");
+      var user_id = req.params.uid
+      userController.getUser(user_id).then(function (user) {
+        // First create a tokenized card based on the request
+        var stripe = require('stripe')(user.stripe.secretKey);  
+        stripe.accounts.listExternalAccounts(accountId, {object: "card"}, function(err, cards) {
           if(err) {
             logger.error(err);
             next();
           }
-          var tokenObj = {
-            external_account: token.id
-          }
-          // Then add the source to Stripe using the token
-          stripe.accounts.createExternalAccount(accountId, tokenObj, function(err, card) {
-              // asynchronously called
-              if(err) {
-                logger.error(err);
-                next();
-              }
-              return res.json({msg:"card added!"}).end();
-            }
-          );          
-      });
-  });   
-
-  app.post(endpoint.version + endpoint.base + endpoint.account + endpoint.cards + "/list/", function(req, res, next) {
-      logger.trace("request received | get credit card");
-      var accountId = req.body.accountId;
-      stripe.accounts.listExternalAccounts(accountId, {object: "card"}, function(err, cards) {
-        if(err) {
-          logger.error(err);
-          next();
-        }
-        return res.json({cards:cards}).end();
+          return res.json({cards:cards}).end();
+        });
       });
   });   
 
   // BALANCE
-  app.post(endpoint.version + endpoint.base + endpoint.balance, userController.authorize, function(req, res, next) {
-      logger.trace("retrieve balance called")
-      logger.debug(req.body)
-      userController.getUser(req.body.userId).then(function (user) {
+  app.post(endpoint.version + endpoint.base + "/:uid/" + endpoint.balance, userController.authorize, function(req, res, next) {
+      var user_id = req.params.uid
+      userController.getUser(user_id).then(function (user) {
         logger.trace("user found, retrieving balance")
         var stripe = require('stripe')(user.stripe.secretKey);
         stripe.balance.retrieve().then(function(balance) {
@@ -251,27 +224,12 @@ module.exports = function (app, options) {
         })
       })   
   });  
-  app.get(endpoint.version + endpoint.base + endpoint.balance, function(req, res, next) {
-      logger.info("list transaction balance called")
+  app.get(endpoint.version + endpoint.base + "/:uid/" + endpoint.balance, function(req, res, next) {
       var params = {"foo": "bar"}
-      stripe.balance.listTransactions(params).then(function(res) {
-          logger.info(res)
-          return res.json({msg: "success", res: res}).end();
-      }, function(err) {
-          logger.error(err)
-          return res.json({msg: "error", err: err}).end();
-      })
+      stripe.balance.listTransactions(params)
   }); 
-  app.get(endpoint.version + endpoint.base + endpoint.balance, function(req, res, next) {
-      logger.info("retrieve single transaction balance called")
-      var transactionId = req.body.transactionId;
-      stripe.balance.retrieveTransaction(transactionId).then(function(res) {
-          logger.info(res)
-          return res.json({msg: "success", res: res}).end();
-      }, function(err) {
-          logger.error(err)
-          return res.json({msg: "error", err: err}).end();
-      })
+  app.get(endpoint.version + endpoint.base + "/:uid/" + endpoint.balance, function(req, res, next) {
+      stripe.balance.retrieveTransaction(transactionId)
   });
 
   // CHARGES
@@ -297,7 +255,7 @@ module.exports = function (app, options) {
       with the charge in the response and send that back as JSON.  If there is an error we
       log the error.
   */
-  app.post(endpoint.version + endpoint.base + endpoint.charge + "/create", function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid/" + endpoint.charge + "/create", function(req, res, next) {
       // TODO
       // Create a request to charge
       // If the charge is approved proceed with the charge request
@@ -329,152 +287,94 @@ module.exports = function (app, options) {
         })
       }) 
   });
-  app.get(endpoint.version + endpoint.base + endpoint.charge, function(req, res, next) {
-      var params = {"foo": "bar"}
-      stripe.charges.list([params]).then(function(res) {
-          logger.info(res)
-          return res.json({msg: "success", res: res}).end();
-      }, function(err) {
-          logger.error(err)
-          return res.json({msg: "error", err: err}).end();
-      })
+  app.get(endpoint.version + endpoint.base + "/:uid/" + endpoint.charge, function(req, res, next) {
+      var user_id = req.params.uid;
+      var params = { limit: 10 }
+      userController.getUser(user_id).then(function (user) {
+        var stripe = require('stripe')(user.stripe.secretKey);      
+        stripe.charges.list(params, function(err, charges) {
+          // asynchronously called
+            if(err) {
+              logger.error(err)
+            }
+            res.json({ charges: charges })          
+        });    
+      });     
   });
-  app.put(endpoint.version + endpoint.base + endpoint.charge, function(req, res, next) {
-      var chargeId = req.body.chargeId;
-      stripe.charges.retrieve(chargeId).then(function(res) {
-          logger.info(res)
-          return res.json({msg: "success", res: res}).end();
-      }, function(err) {
-          logger.error(err)
-          return res.json({msg: "error", err: err}).end();
-      })
+  app.put(endpoint.version + endpoint.base + "/:uid/" + endpoint.charge + "/:charge_id", function(req, res, next) {
+      var user_id = req.params.uid;
+      var charge_id = req.params.charge_id;
+      userController.getUser(user_id).then(function (user) {
+        var stripe = require('stripe')(user.stripe.secretKey);      
+        stripe.charges.retrieve(charge_id, function(err, charge) {
+          // asynchronously called
+            if(err) {
+              logger.error(err)
+            }
+            res.json({ charge: charge })          
+        });        
+      });
   });
-  app.get(endpoint.version + endpoint.base + endpoint.charge, function(req, res, next) {
+  app.get(endpoint.version + endpoint.base + "/:uid/" + endpoint.charge + "/:charge_id", function(req, res, next) {
       var params = {"foo": "bar"};
-      var chargeId = req.body.chargeId;
-      stripe.charges.capture(chargeId, params).then(function(res) {
-          logger.info(res)
-          return res.json({msg: "success", res: res}).end();
-      }, function(err) {
-          logger.error(err)
-          return res.json({msg: "error", err: err}).end();
-      })
+      var user_id = req.params.uid;
+      var charge_id = req.params.charge_id;
+      userController.getUser(user_id).then(function (user) {
+        var stripe = require('stripe')(user.stripe.secretKey);      
+        stripe.charges.capture(charge_id, function(err, charge) {
+          // asynchronously called
+            if(err) {
+              logger.error(err)
+            }
+            res.json({ charge: charge })          
+        });        
+      });      
   });
-  app.post(endpoint.version + endpoint.base + endpoint.charge + "/refund", function(req, res, next) {
-      var params = {"foo": "bar"};
-      var chargeId = req.body.chargeId;
-      stripe.charges.refund(chargeId, params).then(function(res) {
-          logger.info(res)
-          return res.json({msg: "success", res: res}).end();
-      }, function(err) {
-          logger.error(err)
-          return res.json({msg: "error", err: err}).end();
-      })
+  app.post(endpoint.version + endpoint.base + "/:uid/" + endpoint.charge + "/:charge_id", function(req, res, next) {
+      var params = { 
+        description: "foobar"
+      };
+      var user_id = req.params.uid;
+      var charge_id = req.params.charge_id;
+      userController.getUser(user_id).then(function (user) {
+        var stripe = require('stripe')(user.stripe.secretKey);      
+        stripe.charges.update(charge_id, params, function(err, charge) {
+          // asynchronously called
+            if(err) {
+              logger.error(err)
+            }
+            res.json({ charge: charge })          
+        });        
+      });        
   });
-  app.put(endpoint.version + endpoint.base + endpoint.charge, function(req, res, next) {
-      var params = {"foo": "bar"};
-      var chargeId = req.body.chargeId;
-      stripe.charges.update(chargeId, params).then(function(res) {
-          logger.info(res)
-          return res.json({msg: "success", res: res}).end();
-      }, function(err) {
-          logger.error(err)
-          return res.json({msg: "error", err: err}).end();
-      })
+  app.post(endpoint.version + endpoint.base + "/:uid/" + endpoint.charge, function(req, res, next) {
+      stripe.charges.closeDispute(chargeId, params)
   });
-  app.post(endpoint.version + endpoint.base + endpoint.charge + "/dispute/close", function(req, res, next) {
-      var params = {"foo": "bar"};
-      var chargeId = req.body.chargeId;
-      stripe.charges.closeDispute(chargeId, params).then(function(res) {
-          logger.info(res)
-          return res.json({msg: "success", res: res}).end();
-      }, function(err) {
-          logger.error(err)
-          return res.json({msg: "error", err: err}).end();
-      })
+  app.post(endpoint.version + endpoint.base + "/:uid/" + endpoint.charge, function(req, res, next) {
+      stripe.charges.setMetadata(chargeId, metadataObject)
   });
-  app.post(endpoint.version + endpoint.base + endpoint.charge + "/meta", function(req, res, next) {
-      var params = {"foo": "bar"};
-      var chargeId = req.body.chargeId;
-      stripe.charges.setMetadata(chargeId, metadataObject).then(function(res) {
-          logger.info(res)
-          return res.json({msg: "success", res: res}).end();
-      }, function(err) {
-          logger.error(err)
-          return res.json({msg: "error", err: err}).end();
-      })
+  app.get(endpoint.version + endpoint.base + "/:uid/" + endpoint.charge, function(req, res, next) {
+      stripe.charges.getMetadata(chargeId)
   });
-  app.get(endpoint.version + endpoint.base + endpoint.charge + "/meta", function(req, res, next) {
-      var chargeId = req.body.chargeId;
-      stripe.charges.getMetadata(chargeId).then(function(res) {
-          logger.info(res)
-          return res.json({msg: "success", res: res}).end();
-      }, function(err) {
-          logger.error(err)
-          return res.json({msg: "error", err: err}).end();
-      })
+  app.post(endpoint.version + endpoint.base + "/:uid/" + endpoint.charge, function(req, res, next) {
+      stripe.charges.markAsSafe(chargeId)
   });
-  app.post(endpoint.version + endpoint.base + endpoint.charge + "/mark/safe", function(req, res, next) {
-      var chargeId = req.body.chargeId;
-      stripe.charges.markAsSafe(chargeId).then(function(res) {
-          logger.info(res)
-          return res.json({msg: "success", res: res}).end();
-      }, function(err) {
-          logger.error(err)
-          return res.json({msg: "error", err: err}).end();
-      })
-  });
-  app.post(endpoint.version + endpoint.base + endpoint.charge + "/mark/fraud", function(req, res, next) {
-      var chargeId = req.body.chargeId;
-      stripe.charges.markAsFraudulent(chargeId).then(function(res) {
-          logger.info(res)
-          return res.json({msg: "success", res: res}).end();
-      }, function(err) {
-          logger.error(err)
-          return res.json({msg: "error", err: err}).end();
-      })
+  app.post(endpoint.version + endpoint.base + "/:uid/" + endpoint.charge, function(req, res, next) {
+      stripe.charges.markAsFraudulent(chargeId)
   });
 
   // COUPONS
-  app.post(endpoint.version + endpoint.base + endpoint.coupons, function(req, res, next) {
-      var params = {"foo": "bar"};
-      stripe.coupons.create(params).then(function(res) {
-          logger.info(res)
-          return res.json({msg: "success", res: res}).end();
-      }, function(err) {
-          logger.error(err)
-          return res.json({msg: "error", err: err}).end();
-      })
+  app.post(endpoint.version + endpoint.base + "/:uid/" + endpoint.coupons, function(req, res, next) {
+      stripe.coupons.create(params)
   });
-  app.post(endpoint.version + endpoint.base + endpoint.coupons, function(req, res, next) {
-      var params = {"foo": "bar"};
-      stripe.coupons.list([params]).then(function(res) {
-          logger.info(res)
-          return res.json({msg: "success", res: res}).end();
-      }, function(err) {
-          logger.error(err)
-          return res.json({msg: "error", err: err}).end();
-      })
+  app.post(endpoint.version + endpoint.base + "/:uid/" + endpoint.coupons, function(req, res, next) {
+      stripe.coupons.list([params])
   });
-  app.post(endpoint.version + endpoint.base + endpoint.coupons, function(req, res, next) {
-      var chargeId = req.body.chargeId;
-      stripe.coupons.retrieve(chargeId).then(function(res) {
-          logger.info(res)
-          return res.json({msg: "success", res: res}).end();
-      }, function(err) {
-          logger.error(err)
-          return res.json({msg: "error", err: err}).end();
-      })
+  app.post(endpoint.version + endpoint.base + "/:uid/" + endpoint.coupons, function(req, res, next) {
+      stripe.coupons.retrieve(chargeId)
   });
-  app.post(endpoint.version + endpoint.base + endpoint.coupons, function(req, res, next) {
-      var chargeId = req.body.chargeId;
-      stripe.coupons.del(chargeId).then(function(res) {
-          logger.info(res)
-          return res.json({msg: "success", res: res}).end();
-      }, function(err) {
-          logger.error(err)
-          return res.json({msg: "error", err: err}).end();
-      })
+  app.post(endpoint.version + endpoint.base + "/:uid/" + endpoint.coupons, function(req, res, next) {
+      stripe.coupons.del(chargeId)
   });
 
 
@@ -484,25 +384,33 @@ module.exports = function (app, options) {
       Make delegated request to create customer (become customer) and attach
       a token using either credit card or Apple Pay
   */
-  app.post(endpoint.version + endpoint.base + endpoint.customers + "/create", function(req, res, next) {
-      var params = {"foo": "bar"};
-      stripe.customers.create(params).then(function(res) {
-          logger.info(res)
-          return res.json({msg: "success", res: res}).end();
-      }, function(err) {
-          logger.error(err)
-          return res.json({msg: "error", err: err}).end();
-      })
+  // Create customer
+  app.post(endpoint.version + endpoint.base + "/:uid/" + endpoint.customers, function(req, res, next) {
+      var user_id = req.params.uid;
+      var params = {
+        email: req.body.email,
+        description: req.body.description,
+        source: req.body.token
+      };
+      userController.getUser(user_id).then(function (user) {
+        var stripe = require('stripe')(user.stripe.secretKey);
+        stripe.customers.create(params, function(err, customer) {
+            // asynchronously called
+            if(err) {
+              logger.error(err)
+            }
+            res.json({ customer: customer })
+          }
+        );
+      });
   });  
-  // /v1/stripe/customers/list
-  app.post(endpoint.version + endpoint.base + endpoint.customers + "/list", function(req, res, next) {
-      // var params = { limit : req.body.limit };
-      logger.debug("received list customer request");
-      userController.getUser(req.body.userId).then(function (user) {
+  // List customers /v1/stripe/:uid/customers/
+  app.get(endpoint.version + endpoint.base + "/:uid/" + endpoint.customers, function(req, res, next) {
+      var user_id = req.params.uid;
+      userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
         var params = {};
-        stripe.customers.list(params,
-          function(err, customers) {
+        stripe.customers.list({ limit: req.url.limit }, function(err, customers) {
             // asynchronously called
             if(err) {
               logger.error(err)
@@ -511,189 +419,132 @@ module.exports = function (app, options) {
           }
         );
       });
-  });   
-  app.put(endpoint.version + endpoint.base + endpoint.customers, function(req, res, next) {
-      var params = {"foo": "bar"};
-      var customerId = req.body.customerId;
-      stripe.customers.update(customerId, params).then(function(res) {
-          logger.info(res)
-          return res.json({msg: "success", res: res}).end();
-      }, function(err) {
-          logger.error(err)
-          return res.json({msg: "error", err: err}).end();
-      })
   });  
-  app.get(endpoint.version + endpoint.base + endpoint.customers, function(req, res, next) {
-      var customerId = req.body.customerId;
-      stripe.customers.retrieve(customerId).then(function(res) {
-          logger.info(res)
-          return res.json({msg: "success", res: res}).end();
-      }, function(err) {
-          logger.error(err)
-          return res.json({msg: "error", err: err}).end();
-      })
+  // Update customer 
+  app.post(endpoint.version + endpoint.base + "/:uid/" + endpoint.customers + "/:cust_id", function(req, res, next) {
+      var user_id = req.params.uid;
+      var customer_id = req.params.cust_id
+      userController.getUser(user_id).then(function (user) {
+        var stripe = require('stripe')(user.stripe.secretKey);
+        stripe.customers.update(customer_id, {
+          description: "Customer for test@example.com"
+        }, function(err, customer) {
+          // asynchronously called
+            if(err) {
+              logger.error(err)
+            }
+            res.json({ customer: customer })          
+        });        
+      });    
+  });  
+  // Retrieve single customer
+  app.get(endpoint.version + endpoint.base + "/:uid/" + endpoint.customers + "/:cust_id", function(req, res, next) {
+      var user_id = req.params.uid;
+      var customer_id = req.params.cust_id;      
+      userController.getUser(user_id).then(function (user) {
+        var stripe = require('stripe')(user.stripe.secretKey);
+        var customer_id = req.body.customerId;
+        stripe.customers.retrieve(customer_id, function(err, customer) {
+          // asynchronously called
+            if(err) {
+              logger.error(err)
+            }
+            res.json({ customer: customer })          
+        });        
+      });       
   });   
-  app.delete(endpoint.version + endpoint.base + endpoint.customers, function(req, res, next) {
-      var customerId = req.body.customerId;
-      stripe.customers.del(customerId).then(function(res) {
-          logger.info(res)
-          return res.json({msg: "success", res: res}).end();
-      }, function(err) {
-          logger.error(err)
-          return res.json({msg: "error", err: err}).end();
-      })
-  });          
-  app.post(endpoint.version + endpoint.base + endpoint.customers, function(req, res, next) {
-      var customerId = req.body.customerId;
-      var metadataObject = req.body.metadataObject;
-      stripe.customers.setMetadata(customerId, metadataObject).then(function(res) {
-          logger.info(res)
-          return res.json({msg: "success", res: res}).end();
-      }, function(err) {
-          logger.error(err)
-          return res.json({msg: "error", err: err}).end();
-      })
-  });         
-  app.get(endpoint.version + endpoint.base + endpoint.customers, function(req, res, next) {
-      var customerId = req.body.customerId;
-      stripe.customers.getMetadata(customerId).then(function(res) {
-          logger.info(res)
-          return res.json({msg: "success", res: res}).end();
-      }, function(err) {
-          logger.error(err)
-          return res.json({msg: "error", err: err}).end();
-      })
+  // Delete customer
+  app.delete(endpoint.version + endpoint.base + "/:uid/" + endpoint.customers + "/:cust_id", function(req, res, next) {
+      var user_id = req.params.uid;
+      var customer_id = req.params.cust_id;      
+      userController.getUser(user_id).then(function (user) {
+        var stripe = require('stripe')(user.stripe.secretKey);
+        var customer_id = req.body.customerId;
+        stripe.customers.del(customer_id, function(err, customer) {
+          // asynchronously called
+            if(err) {
+              logger.error(err)
+            }
+            res.json({ customer: customer })          
+        });        
+      });     
+  });    
+  // Set customer metadata      
+  app.post(endpoint.version + endpoint.base + "/:uid/" + endpoint.customers + "/:cust_id", function(req, res, next) {
+      var metadata_obj = req.body.metadataObject;
+      var user_id = req.params.uid;
+      var customer_id = req.params.cust_id;      
+      userController.getUser(user_id).then(function (user) {
+        var stripe = require('stripe')(user.stripe.secretKey);
+        var customer_id = req.body.customerId;
+        stripe.customers.retrieve(customer_id, metadata_obj, function(err, customer) {
+          // asynchronously called
+            if(err) {
+              logger.error(err)
+            }
+            res.json({ customer: customer })          
+        });        
+      }); 
+  });    
+  // Get customer metadata     
+  app.get(endpoint.version + endpoint.base + "/:uid/" + endpoint.customers + "/:cust_id", function(req, res, next) {
+      var user_id = req.params.uid;
+      var customer_id = req.params.cust_id;      
+      userController.getUser(user_id).then(function (user) {
+        var stripe = require('stripe')(user.stripe.secretKey);
+        var customer_id = req.body.customerId;
+        stripe.customers.getMetadata(customer_id, function(err, customer) {
+          // asynchronously called
+            if(err) {
+              logger.error(err)
+            }
+            res.json({ customer: customer })          
+        });        
+      }); 
   });        
 
+  // STATUS: IN PROGRESS
   // SUBSCRIPTIONS
-  app.post(endpoint.version + endpoint.base + endpoint.subscriptions, function(req, res, next) {
-      var params = {"foo": "bar"};
-      var customerId = req.body.customerId;
-      stripe.subscriptions.createSubscription(customerId, params).then(function(res) {
-          logger.info(res)
-          return res.json({msg: "success", res: res}).end();
-      }, function(err) {
-          logger.error(err)
-          return res.json({msg: "error", err: err}).end();
-      })
+  app.post(endpoint.version + endpoint.base + "/:uid/" + endpoint.subscriptions, function(req, res, next) {
+      stripe.subscriptions.createSubscription(customerId, params)
   });   
-  app.put(endpoint.version + endpoint.base + endpoint.subscriptions, function(req, res, next) {
-      var params = {"foo": "bar"};
-      var customerId = req.body.customerId;
-      var subscriptionId = req.body.subscriptionId;
-        stripe.subscriptions.updateSubscription(customerId, subscriptionId, params).then(function(res) {
-          logger.info(res)
-          return res.json({msg: "success", res: res}).end();
-      }, function(err) {
-          logger.error(err)
-          return res.json({msg: "error", err: err}).end();
-      })
+  app.put(endpoint.version + endpoint.base + "/:uid/" + endpoint.subscriptions, function(req, res, next) {
+      stripe.subscriptions.updateSubscription(customerId, subscriptionId, params)
   });   
-  app.post(endpoint.version + endpoint.base + endpoint.subscriptions, function(req, res, next) {
-      var params = {"foo": "bar"};
-      var customerId = req.body.customerId;
-      var subscriptionId = req.body.subscriptionId;
-      stripe.subscriptions.cancelSubscription(customerId, subscriptionId, params).then(function(res) {
-          logger.info(res)
-          return res.json({msg: "success", res: res}).end();
-      }, function(err) {
-          logger.error(err)
-          return res.json({msg: "error", err: err}).end();
-      })
+  app.post(endpoint.version + endpoint.base + "/:uid/" + endpoint.subscriptions, function(req, res, next) {
+      stripe.subscriptions.cancelSubscription(customerId, subscriptionId, params)
   });   
-  app.get(endpoint.version + endpoint.base + endpoint.subscriptions, function(req, res, next) {
-      var params = {"foo": "bar"};
-      stripe.subscriptions.listSubscriptions(params).then(function(res) {
-          logger.info(res)
-          return res.json({msg: "success", res: res}).end();
-      }, function(err) {
-          logger.error(err)
-          return res.json({msg: "error", err: err}).end();
-      })
+  app.get(endpoint.version + endpoint.base + "/:uid/" + endpoint.subscriptions, function(req, res, next) {
+      stripe.subscriptions.listSubscriptions(params)
   });   
-  app.get(endpoint.version + endpoint.base + endpoint.subscriptions, function(req, res, next) {
-      var customerId = req.body.customerId;
-      var subscriptionId = req.body.subscriptionId;
-      stripe.subscriptions.retrieveSubscription(customerId, subscriptionId).then(function(res) {
-          logger.info(res)
-          return res.json({msg: "success", res: res}).end();
-      }, function(err) {
-          logger.error(err)
-          return res.json({msg: "error", err: err}).end();
-      })
+  app.get(endpoint.version + endpoint.base + "/:uid/" + endpoint.subscriptions, function(req, res, next) {
+      stripe.subscriptions.retrieveSubscription(customerId, subscriptionId)
   });   
 
   // CARDS
-  app.post(endpoint.version + endpoint.base + endpoint.cards, function(req, res, next) {
-      var params = {"foo": "bar"};
-      var customerId = req.body.customerId;
-      stripe.cards.createSource(customerId, params).then(function(res) {
-          logger.info(res)
-          return res.json({msg: "success", res: res}).end();
-      }, function(err) {
-          logger.error(err)
-          return res.json({msg: "error", err: err}).end();
-      })
+  app.post(endpoint.version + endpoint.base + "/:uid/" + endpoint.cards, function(req, res, next) {
+      stripe.cards.createSource(customerId, params)
   });   
-  app.get(endpoint.version + endpoint.base + endpoint.cards, function(req, res, next) {
-      var customerId = req.body.customerId;
-      stripe.cards.listCards(customerId).then(function(res) {
-          logger.info(res)
-          return res.json({msg: "success", res: res}).end();
-      }, function(err) {
-          logger.error(err)
-          return res.json({msg: "error", err: err}).end();
-      })
+  app.get(endpoint.version + endpoint.base + "/:uid/" + endpoint.cards, function(req, res, next) {
+      stripe.cards.listCards(customerId)
   });   
-  app.get(endpoint.version + endpoint.base + endpoint.cards, function(req, res, next) {
-      var customerId = req.body.customerId;
-      var cardId = req.body.cardId;
-      stripe.cards.retrieveCard(customerId, cardId).then(function(res) {
-          logger.info(res)
-          return res.json({msg: "success", res: res}).end();
-      }, function(err) {
-          logger.error(err)
-          return res.json({msg: "error", err: err}).end();
-      })
+  app.get(endpoint.version + endpoint.base + "/:uid/" + endpoint.cards, function(req, res, next) {
+      stripe.cards.retrieveCard(customerId, cardId)
   });   
-  app.put(endpoint.version + endpoint.base + endpoint.cards, function(req, res, next) {
-      var params = {"foo": "bar"};
-      var customerId = req.body.customerId;
-      var cardId = req.body.cardId;
-      stripe.cards.updateCard(customerId, cardId, params).then(function(res) {
-          logger.info(res)
-          return res.json({msg: "success", res: res}).end();
-      }, function(err) {
-          logger.error(err)
-          return res.json({msg: "error", err: err}).end();
-      })
+  app.put(endpoint.version + endpoint.base + "/:uid/" + endpoint.cards, function(req, res, next) {
+      stripe.cards.updateCard(customerId, cardId, params)
   });   
-  app.delete(endpoint.version + endpoint.base + endpoint.cards, function(req, res, next) {
-      var customerId = req.body.customerId;
-      var cardId = req.body.cardId;
-      stripe.cards.deleteCard(customerId, cardId).then(function(res) {
-          logger.info(res)
-          return res.json({msg: "success", res: res}).end();
-      }, function(err) {
-          logger.error(err)
-          return res.json({msg: "error", err: err}).end();
-      })
+  app.delete(endpoint.version + endpoint.base + "/:uid/" + endpoint.cards, function(req, res, next) {
+      stripe.cards.deleteCard(customerId, cardId)
   });   
-  app.delete(endpoint.version + endpoint.base + endpoint.cards, function(req, res, next) {
-      var customerId = req.body.customerId;
-      stripe.cards.deleteDiscount(customerId).then(function(res) {
-          logger.info(res)
-          return res.json({msg: "success", res: res}).end();
-      }, function(err) {
-          logger.error(err)
-          return res.json({msg: "error", err: err}).end();
-      })
+  app.delete(endpoint.version + endpoint.base + "/:uid/" + endpoint.cards, function(req, res, next) {
+      stripe.cards.deleteDiscount(customerId)
   });     
 
   // HISTORY
-  app.post(endpoint.version + endpoint.base + endpoint.history, userController.authorize, function(req, res, next) {
-      logger.debug("received history request");
-      userController.getUser(req.body.userId).then(function (user) {
+  app.post(endpoint.version + endpoint.base + "/:uid/" + endpoint.history, userController.authorize, function(req, res, next) {
+      var user_id = req.params.uid
+      userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
         var limit = req.body.limit
         stripe.balance.listTransactions({ limit: limit }, function(err, transactions) {
@@ -711,11 +562,9 @@ module.exports = function (app, options) {
   /*
       Get user events and display in notifications list
   */
-  
-  app.post(endpoint.version + endpoint.base + endpoint.events, userController.authorize, function(req, res, next) {
-      logger.debug(req.body);
-      logger.debug("received event request");
-      userController.getUser(req.body.userId).then(function (user) {
+  app.post(endpoint.version + endpoint.base + "/:uid/" + endpoint.events, userController.authorize, function(req, res, next) {
+      var user_id = req.params.uid
+      userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
         var limit = req.body.limit
         stripe.events.list(
@@ -750,8 +599,6 @@ module.exports = function (app, options) {
   // stripe.invoices.pay(invoiceId)
 
   // PLANS
-
-
   /* 
       RESTful calls to interface with Stripe's Plans (Subscriptions) API.
 
@@ -763,12 +610,10 @@ module.exports = function (app, options) {
         SINGLE: /v1/stripe/plans/:id
         GENERIC: /v1/stripe/plans/
   */
-
   // Used to POST (create) a new plan
-  app.post(endpoint.version + endpoint.base + endpoint.plans, function(req, res, next) {
-      // var params = { limit : req.body.limit };
-      logger.debug("received list plan request");
-      userController.getUser(req.body.userId).then(function (user) {
+  app.post(endpoint.version + endpoint.base + "/:uid/" + endpoint.plans, function(req, res, next) {
+      var user_id = req.params.uid
+      userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
         var params = {
           id: req.body.id,          
@@ -791,6 +636,7 @@ module.exports = function (app, options) {
      
      EXAMPLE:
         ENDPOINT: /v1/stripe/h8d0f9h8d09f8hd9fg08a0hs0j795df46s/plans?limit=10
+        ENDPOINT_SINGLE: /v1/stripe/h8d0f9h8d09f8hd9fg08a0hs0j795df46s/plans/gold
 
      NOTES: 
         - Use req.params to retrieve the inner value of a url such as /:uid/plans
@@ -801,7 +647,6 @@ module.exports = function (app, options) {
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.plans, function(req, res, next) {
       logger.debug(req.params)
       var user_id = req.params.uid
-      logger.debug("received list plan request");
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
         var params = {};
@@ -818,10 +663,10 @@ module.exports = function (app, options) {
   });  
 
   // Used to POST (update) a plan
-  app.post(endpoint.version + endpoint.base + endpoint.plans + "/:id", function(req, res, next) {
-      logger.debug("received update plan request");
-      var id = req.params.id;
-      userController.getUser(req.body.userId).then(function (user) {
+  app.post(endpoint.version + endpoint.base + "/:uid/" + endpoint.plans + "/:plan_id", function(req, res, next) {
+      var plan_id = req.params.plan_id;
+      var user_id = req.params.uid;
+      userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
         var params = {
           amount: req.body.amount,
@@ -829,7 +674,7 @@ module.exports = function (app, options) {
           name: req.body.name,
           currency: req.body.currency
         };
-        stripe.plans.update(id, params, function(err, plan) {
+        stripe.plans.update(plan_id, params, function(err, plan) {
             if(err) {
               logger.error(err)
             }          
@@ -840,12 +685,12 @@ module.exports = function (app, options) {
   }); 
 
   // Used to GET (retrieve) a single plan
-  app.get(endpoint.version + endpoint.base + endpoint.plans + "/:id", function(req, res, next) {
-      logger.debug("received update plan request");
-      var id = req.params.id;
-      userController.getUser(req.body.userId).then(function (user) {
+  app.get(endpoint.version + endpoint.base + "/:uid/" + endpoint.plans + "/:plan_id", function(req, res, next) {
+      var plan_id = req.params.plan_id;
+      var user_id = req.params.uid;
+      userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
-        stripe.plans.retrieve(id, function(err, plan) {
+        stripe.plans.retrieve(plan_id, function(err, plan) {
             if(err) {
               logger.error(err)
             }          
@@ -856,12 +701,12 @@ module.exports = function (app, options) {
   }); 
 
   // Used to DELETE a single plan
-  app.get(endpoint.version + endpoint.base + endpoint.plans + "/:id", function(req, res, next) {
-      logger.debug("received update plan request");
-      var id = req.params.id;
-      userController.getUser(req.body.userId).then(function (user) {
+  app.get(endpoint.version + endpoint.base + "/:uid/" + endpoint.plans + "/:plan_id", function(req, res, next) {
+      var plan_id = req.params.plan_id;
+      var user_id = req.params.uid;    
+      userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
-        stripe.plans.del(id, function(err, confirmation) {
+        stripe.plans.del(plan_id, function(err, confirmation) {
             if(err) {
               logger.error(err)
             }          
