@@ -612,7 +612,9 @@ module.exports = function (app, options) {
   */
   // Used to POST (create) a new plan
   app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.plans, function(req, res, next) {
-      var user_id = req.params.uid
+      logger.trace("creating user plan");
+      logger.trace(req.body);
+      var user_id = req.params.uid;
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
         var params = {
