@@ -1,7 +1,7 @@
 module.exports = function (app, options) {
 
   /*  This is where the API endpoint strings are defined.
-      For example we concatonate endpoint.version + endpoint.base + "/:uid/" + endpoint.ping
+      For example we concatonate endpoint.version + endpoint.base + "/:uid" + endpoint.ping
       to get the endpoint http://{host}:{port}/v1/stripe/ping (host/port being either localhost, 
       the IP of the API, or the web endpoint url)
   */
@@ -11,7 +11,8 @@ module.exports = function (app, options) {
     ping: '/ping',
     oauth: '/oauth',
     account: '/account',     
-    balance: '/balance',               
+    balance: '/balance', 
+    transactions: '/transactions',              
     charge: '/charge',                         
     history: '/history',                         
     cards: '/cards',                         
@@ -73,7 +74,7 @@ module.exports = function (app, options) {
   process.env.ENVIRONMENT == 'PROD' ? stripePublishableKey = process.env.STRIPE_PUB_KEY : '';
 
   // /v1/stripe/oauth/callback
-  app.get(endpoint.version + endpoint.base + "/:uid/" + endpoint.oauth + '/callback', userController.authorize, function(req, res) {
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.oauth + '/callback', userController.authorize, function(req, res) {
     var code = req.query.code;
     // console.log('received code', code);
     // Make /oauth/token endpoint POST request
@@ -112,7 +113,7 @@ module.exports = function (app, options) {
 
       // To use this example change the request url to your own IP and keep the port the same
   */
-  app.post(endpoint.version + endpoint.base + "/:uid/" + endpoint.charge, function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge, function(req, res, next) {
     logger.trace('example charge request received');
     var stripeToken = req.body.stripeToken;
     var amount = req.body.amount;
@@ -139,22 +140,22 @@ module.exports = function (app, options) {
 
   // TODO: Reinforce API
   // ACCOUNT
-  app.get(endpoint.version + endpoint.base + "/:uid/" + endpoint.account, function(req, res, next) {
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.account, function(req, res, next) {
       stripe.account.retrieve(accountId)
   });
-  app.post(endpoint.version + endpoint.base + "/:uid/" + endpoint.account, function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.account, function(req, res, next) {
       stripe.account.create([params])
   }); 
-  app.get(endpoint.version + endpoint.base + "/:uid/" + endpoint.account, function(req, res, next) {
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.account, function(req, res, next) {
       stripe.account.list([params])
   }); 
-  app.put(endpoint.version + endpoint.base + "/:uid/" + endpoint.account, function(req, res, next) {
+  app.put(endpoint.version + endpoint.base + "/:uid" + endpoint.account, function(req, res, next) {
       stripe.account.update([params])
   });
   
   // EXTERNAL ACCOUNTS
   // Endpoint /v1/stripe/account/cards
-  app.post(endpoint.version + endpoint.base + "/:uid/" + endpoint.account + endpoint.cards, function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.account + endpoint.cards, function(req, res, next) {
       logger.trace("request received | add account external card")
       var card_obj = {
         card: {
@@ -193,7 +194,7 @@ module.exports = function (app, options) {
       });
   });   
 
-  app.get(endpoint.version + endpoint.base + "/:uid/" + endpoint.account + endpoint.cards, function(req, res, next) {
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.account + endpoint.cards, function(req, res, next) {
       logger.trace("request received | get credit card");
       var user_id = req.params.uid
       userController.getUser(user_id).then(function (user) {
@@ -210,25 +211,38 @@ module.exports = function (app, options) {
   });   
 
   // BALANCE
-  app.post(endpoint.version + endpoint.base + "/:uid/" + endpoint.balance, userController.authorize, function(req, res, next) {
-      var user_id = req.params.uid
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.balance, userController.authorize, function(req, res, next) {
+      logger.trace("getting user balance")      
+      var user_id = req.params.uid;
       userController.getUser(user_id).then(function (user) {
-        logger.trace("user found, retrieving balance")
         var stripe = require('stripe')(user.stripe.secretKey);
-        stripe.balance.retrieve().then(function(balance) {
-            // logger.info(balance)
+        stripe.balance.retrieve(function(err, balance) {
+            if(err) {
+                logger.error(err)
+            }
             res.json({balance:balance})
-        }, function(err) {
-            logger.error(err)
-            return res.json({msg: "error", err: err}).end();
         })
       })   
   });  
-  app.get(endpoint.version + endpoint.base + "/:uid/" + endpoint.balance, function(req, res, next) {
-      var params = {"foo": "bar"}
-      stripe.balance.listTransactions(params)
-  }); 
-  app.get(endpoint.version + endpoint.base + "/:uid/" + endpoint.balance, function(req, res, next) {
+  // HISTORY
+  // Get user balance transactions history
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.balance + endpoint.transactions, userController.authorize, function(req, res, next) {
+      logger.trace("getting user transaction history")
+      var user_id = req.params.uid
+      userController.getUser(user_id).then(function (user) {
+        var stripe = require('stripe')(user.stripe.secretKey);
+        var limit = req.body.limit
+        stripe.balance.listTransactions({ limit: limit }, function(err, transactions) {
+          if(err) {
+            logger.error(err)
+          }
+          // logger.info(transactions)
+          res.json({transactions:transactions})
+          // asynchronously called
+        });
+      })       
+  });     
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.balance + endpoint.transactions, function(req, res, next) {
       stripe.balance.retrieveTransaction(transactionId)
   });
 
@@ -255,7 +269,7 @@ module.exports = function (app, options) {
       with the charge in the response and send that back as JSON.  If there is an error we
       log the error.
   */
-  app.post(endpoint.version + endpoint.base + "/:uid/" + endpoint.charge + "/create", function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/create", function(req, res, next) {
       // TODO
       // Create a request to charge
       // If the charge is approved proceed with the charge request
@@ -287,7 +301,7 @@ module.exports = function (app, options) {
         })
       }) 
   });
-  app.get(endpoint.version + endpoint.base + "/:uid/" + endpoint.charge, function(req, res, next) {
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.charge, function(req, res, next) {
       var user_id = req.params.uid;
       var params = { limit: 10 }
       userController.getUser(user_id).then(function (user) {
@@ -301,7 +315,7 @@ module.exports = function (app, options) {
         });    
       });     
   });
-  app.put(endpoint.version + endpoint.base + "/:uid/" + endpoint.charge + "/:charge_id", function(req, res, next) {
+  app.put(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/:charge_id", function(req, res, next) {
       var user_id = req.params.uid;
       var charge_id = req.params.charge_id;
       userController.getUser(user_id).then(function (user) {
@@ -315,7 +329,7 @@ module.exports = function (app, options) {
         });        
       });
   });
-  app.get(endpoint.version + endpoint.base + "/:uid/" + endpoint.charge + "/:charge_id", function(req, res, next) {
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/:charge_id", function(req, res, next) {
       var params = {"foo": "bar"};
       var user_id = req.params.uid;
       var charge_id = req.params.charge_id;
@@ -330,7 +344,7 @@ module.exports = function (app, options) {
         });        
       });      
   });
-  app.post(endpoint.version + endpoint.base + "/:uid/" + endpoint.charge + "/:charge_id", function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/:charge_id", function(req, res, next) {
       var params = { 
         description: "foobar"
       };
@@ -347,33 +361,33 @@ module.exports = function (app, options) {
         });        
       });        
   });
-  app.post(endpoint.version + endpoint.base + "/:uid/" + endpoint.charge, function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge, function(req, res, next) {
       stripe.charges.closeDispute(chargeId, params)
   });
-  app.post(endpoint.version + endpoint.base + "/:uid/" + endpoint.charge, function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge, function(req, res, next) {
       stripe.charges.setMetadata(chargeId, metadataObject)
   });
-  app.get(endpoint.version + endpoint.base + "/:uid/" + endpoint.charge, function(req, res, next) {
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.charge, function(req, res, next) {
       stripe.charges.getMetadata(chargeId)
   });
-  app.post(endpoint.version + endpoint.base + "/:uid/" + endpoint.charge, function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge, function(req, res, next) {
       stripe.charges.markAsSafe(chargeId)
   });
-  app.post(endpoint.version + endpoint.base + "/:uid/" + endpoint.charge, function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge, function(req, res, next) {
       stripe.charges.markAsFraudulent(chargeId)
   });
 
   // COUPONS
-  app.post(endpoint.version + endpoint.base + "/:uid/" + endpoint.coupons, function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.coupons, function(req, res, next) {
       stripe.coupons.create(params)
   });
-  app.post(endpoint.version + endpoint.base + "/:uid/" + endpoint.coupons, function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.coupons, function(req, res, next) {
       stripe.coupons.list([params])
   });
-  app.post(endpoint.version + endpoint.base + "/:uid/" + endpoint.coupons, function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.coupons, function(req, res, next) {
       stripe.coupons.retrieve(chargeId)
   });
-  app.post(endpoint.version + endpoint.base + "/:uid/" + endpoint.coupons, function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.coupons, function(req, res, next) {
       stripe.coupons.del(chargeId)
   });
 
@@ -385,7 +399,7 @@ module.exports = function (app, options) {
       a token using either credit card or Apple Pay
   */
   // Create customer
-  app.post(endpoint.version + endpoint.base + "/:uid/" + endpoint.customers, function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.customers, function(req, res, next) {
       var user_id = req.params.uid;
       var params = {
         email: req.body.email,
@@ -405,7 +419,8 @@ module.exports = function (app, options) {
       });
   });  
   // List customers /v1/stripe/:uid/customers/
-  app.get(endpoint.version + endpoint.base + "/:uid/" + endpoint.customers, function(req, res, next) {
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.customers, function(req, res, next) {
+      logger.trace('getting user customers');
       var user_id = req.params.uid;
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
@@ -419,9 +434,10 @@ module.exports = function (app, options) {
           }
         );
       });
-  });  
+  });   
+
   // Update customer 
-  app.post(endpoint.version + endpoint.base + "/:uid/" + endpoint.customers + "/:cust_id", function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.customers + "/:cust_id", function(req, res, next) {
       var user_id = req.params.uid;
       var customer_id = req.params.cust_id
       userController.getUser(user_id).then(function (user) {
@@ -438,7 +454,7 @@ module.exports = function (app, options) {
       });    
   });  
   // Retrieve single customer
-  app.get(endpoint.version + endpoint.base + "/:uid/" + endpoint.customers + "/:cust_id", function(req, res, next) {
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.customers + "/:cust_id", function(req, res, next) {
       var user_id = req.params.uid;
       var customer_id = req.params.cust_id;      
       userController.getUser(user_id).then(function (user) {
@@ -454,7 +470,7 @@ module.exports = function (app, options) {
       });       
   });   
   // Delete customer
-  app.delete(endpoint.version + endpoint.base + "/:uid/" + endpoint.customers + "/:cust_id", function(req, res, next) {
+  app.delete(endpoint.version + endpoint.base + "/:uid" + endpoint.customers + "/:cust_id", function(req, res, next) {
       var user_id = req.params.uid;
       var customer_id = req.params.cust_id;      
       userController.getUser(user_id).then(function (user) {
@@ -470,7 +486,7 @@ module.exports = function (app, options) {
       });     
   });    
   // Set customer metadata      
-  app.post(endpoint.version + endpoint.base + "/:uid/" + endpoint.customers + "/:cust_id", function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.customers + "/:cust_id", function(req, res, next) {
       var metadata_obj = req.body.metadataObject;
       var user_id = req.params.uid;
       var customer_id = req.params.cust_id;      
@@ -487,7 +503,7 @@ module.exports = function (app, options) {
       }); 
   });    
   // Get customer metadata     
-  app.get(endpoint.version + endpoint.base + "/:uid/" + endpoint.customers + "/:cust_id", function(req, res, next) {
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.customers + "/:cust_id", function(req, res, next) {
       var user_id = req.params.uid;
       var customer_id = req.params.cust_id;      
       userController.getUser(user_id).then(function (user) {
@@ -505,64 +521,48 @@ module.exports = function (app, options) {
 
   // STATUS: IN PROGRESS
   // SUBSCRIPTIONS
-  app.post(endpoint.version + endpoint.base + "/:uid/" + endpoint.subscriptions, function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.subscriptions, function(req, res, next) {
       stripe.subscriptions.createSubscription(customerId, params)
   });   
-  app.put(endpoint.version + endpoint.base + "/:uid/" + endpoint.subscriptions, function(req, res, next) {
+  app.put(endpoint.version + endpoint.base + "/:uid" + endpoint.subscriptions, function(req, res, next) {
       stripe.subscriptions.updateSubscription(customerId, subscriptionId, params)
   });   
-  app.post(endpoint.version + endpoint.base + "/:uid/" + endpoint.subscriptions, function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.subscriptions, function(req, res, next) {
       stripe.subscriptions.cancelSubscription(customerId, subscriptionId, params)
   });   
-  app.get(endpoint.version + endpoint.base + "/:uid/" + endpoint.subscriptions, function(req, res, next) {
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.subscriptions, function(req, res, next) {
       stripe.subscriptions.listSubscriptions(params)
   });   
-  app.get(endpoint.version + endpoint.base + "/:uid/" + endpoint.subscriptions, function(req, res, next) {
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.subscriptions, function(req, res, next) {
       stripe.subscriptions.retrieveSubscription(customerId, subscriptionId)
   });   
 
   // CARDS
-  app.post(endpoint.version + endpoint.base + "/:uid/" + endpoint.cards, function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.cards, function(req, res, next) {
       stripe.cards.createSource(customerId, params)
   });   
-  app.get(endpoint.version + endpoint.base + "/:uid/" + endpoint.cards, function(req, res, next) {
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.cards, function(req, res, next) {
       stripe.cards.listCards(customerId)
   });   
-  app.get(endpoint.version + endpoint.base + "/:uid/" + endpoint.cards, function(req, res, next) {
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.cards, function(req, res, next) {
       stripe.cards.retrieveCard(customerId, cardId)
   });   
-  app.put(endpoint.version + endpoint.base + "/:uid/" + endpoint.cards, function(req, res, next) {
+  app.put(endpoint.version + endpoint.base + "/:uid" + endpoint.cards, function(req, res, next) {
       stripe.cards.updateCard(customerId, cardId, params)
   });   
-  app.delete(endpoint.version + endpoint.base + "/:uid/" + endpoint.cards, function(req, res, next) {
+  app.delete(endpoint.version + endpoint.base + "/:uid" + endpoint.cards, function(req, res, next) {
       stripe.cards.deleteCard(customerId, cardId)
   });   
-  app.delete(endpoint.version + endpoint.base + "/:uid/" + endpoint.cards, function(req, res, next) {
+  app.delete(endpoint.version + endpoint.base + "/:uid" + endpoint.cards, function(req, res, next) {
       stripe.cards.deleteDiscount(customerId)
   });     
-
-  // HISTORY
-  app.post(endpoint.version + endpoint.base + "/:uid/" + endpoint.history, userController.authorize, function(req, res, next) {
-      var user_id = req.params.uid
-      userController.getUser(user_id).then(function (user) {
-        var stripe = require('stripe')(user.stripe.secretKey);
-        var limit = req.body.limit
-        stripe.balance.listTransactions({ limit: limit }, function(err, transactions) {
-          if(err) {
-            logger.error(err)
-          }
-          // logger.info(transactions)
-          res.json({transactions:transactions})
-          // asynchronously called
-        });
-      })       
-  });   
 
   // // EVENTS (types of events)
   /*
       Get user events and display in notifications list
   */
-  app.post(endpoint.version + endpoint.base + "/:uid/" + endpoint.events, userController.authorize, function(req, res, next) {
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.events, userController.authorize, function(req, res, next) {
+      logger.trace('getting user events history');
       var user_id = req.params.uid
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
@@ -611,7 +611,7 @@ module.exports = function (app, options) {
         GENERIC: /v1/stripe/plans/
   */
   // Used to POST (create) a new plan
-  app.post(endpoint.version + endpoint.base + "/:uid/" + endpoint.plans, function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.plans, function(req, res, next) {
       var user_id = req.params.uid
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
@@ -645,7 +645,7 @@ module.exports = function (app, options) {
         - Use req.url to retrieve the query variables such as ?limit=10
   */
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.plans, function(req, res, next) {
-      logger.debug(req.params)
+      logger.debug('getting user plans')
       var user_id = req.params.uid
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
@@ -663,7 +663,7 @@ module.exports = function (app, options) {
   });  
 
   // Used to POST (update) a plan
-  app.post(endpoint.version + endpoint.base + "/:uid/" + endpoint.plans + "/:plan_id", function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.plans + "/:plan_id", function(req, res, next) {
       var plan_id = req.params.plan_id;
       var user_id = req.params.uid;
       userController.getUser(user_id).then(function (user) {
@@ -685,7 +685,7 @@ module.exports = function (app, options) {
   }); 
 
   // Used to GET (retrieve) a single plan
-  app.get(endpoint.version + endpoint.base + "/:uid/" + endpoint.plans + "/:plan_id", function(req, res, next) {
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.plans + "/:plan_id", function(req, res, next) {
       var plan_id = req.params.plan_id;
       var user_id = req.params.uid;
       userController.getUser(user_id).then(function (user) {
@@ -701,7 +701,7 @@ module.exports = function (app, options) {
   }); 
 
   // Used to DELETE a single plan
-  app.get(endpoint.version + endpoint.base + "/:uid/" + endpoint.plans + "/:plan_id", function(req, res, next) {
+  app.delete(endpoint.version + endpoint.base + "/:uid" + endpoint.plans + "/:plan_id", function(req, res, next) {
       var plan_id = req.params.plan_id;
       var user_id = req.params.uid;    
       userController.getUser(user_id).then(function (user) {

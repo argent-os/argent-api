@@ -402,8 +402,8 @@ UserController.prototype.editProfile = function (req, res, next) {
 };
 
 UserController.prototype.getProfile = function (req, res, next) {
-  logger.trace("getting profile");
-  logger.debug(req.user);
+  // logger.trace("getting profile");
+  // logger.debug(req.user);
   var errors = req.validationErrors();
   if (errors) {
     res.status(400).json(errors);
@@ -428,7 +428,6 @@ UserController.prototype.getUser = function (userId, cb) {
         return;
       }
       else {
-        logger.info('got user');
         return user;
       }
     });
@@ -441,7 +440,6 @@ UserController.prototype.getDelegatedUserByUsername = function (username, cb) {
         return;
       }
       else {
-        logger.info('got user ' + user.username);
         return user;
       }
     });
@@ -562,7 +560,7 @@ UserController.prototype.authorize = function (req, res, next) {
 
   var payload = null;
   try {
-    logger.debug('decoding jwt, token is', token);
+    // logger.debug('decoding jwt, token is', token);
     payload = jwt.decode(token, tokenSecret);
   }
   catch (err) {
@@ -572,8 +570,8 @@ UserController.prototype.authorize = function (req, res, next) {
   if (payload.exp <= moment().unix()) {
     return res.status(401).send({ message: 'Token has expired' });
   }
-  logger.debug('payload user is', payload.user);
-  logger.debug('payload is', payload);
+  // logger.debug('payload user is', payload.user);
+  // logger.debug('payload is', payload);
   req.user = payload.user;
   next();
 }
@@ -786,13 +784,13 @@ function createApiKey(user) {
 
 function createJWT(user, data) {
   user = _.pick(user, '_id', 'email', 'username');  
-  logger.debug("user jwt is");
-  logger.debug(user);
-  logger.debug(data);
-  logger.debug('the data for the user is');
+  // logger.debug("user jwt is");
+  // logger.debug(user);
+  // logger.debug(data);
+  // logger.debug('the data for the user is');
   // logger.debug(user._id);
-  logger.debug(user.email);
-  logger.debug(user.username);
+  // logger.debug(user.email);
+  // logger.debug(user.username);
 
   var payload = {
     user: {
@@ -803,7 +801,6 @@ function createJWT(user, data) {
     iat: new Date().getTime(),
     exp: moment().add(7, 'days').valueOf()
   };
-  logger.debug(payload);
   return jwt.encode(payload, tokenSecret);
 }
 
