@@ -723,8 +723,22 @@ module.exports = function (app, options) {
   // stripe.products.retrieve(productId)
   // stripe.products.del(productId)
 
-  // THis is a test for posting a change *******
-  
+  // Used to create a product
+  app.get(endpoint.version + endpoint.base + "/:uid/" + endpoint.products + "/:product_id", function(req, res, next) {
+      var product_id = req.params.product_id;
+      var user_id = req.params.uid;    
+      userController.getUser(user_id).then(function (user) {
+        var stripe = require('stripe')(user.stripe.secretKey);
+        stripe.plans.create(product_id, function(err, confirmation) {
+            if(err) {
+              logger.error(err)
+            }          
+            res.json({ confirmation: confirmation })
+            // asynchronously called
+        });
+      });
+  }); 
+
   // // RECIPIENTS
   // stripe.recipients.create(params)
   // stripe.recipients.list([params])
