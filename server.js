@@ -50,19 +50,6 @@ process.env.ENVIRONMENT == 'PROD' ? stripePublishableKey = process.env.STRIPE_PU
 
 console.log('Utilizing Stripe Key in ' + process.env.ENVIRONMENT + ' mode');
 
-var firebaseUrl;
-var firebaseSecret;
-process.env.ENVIRONMENT == 'DEV' || process.env.ENVIRONMENT == undefined ? firebaseUrl = process.env.FIREBASE_DEV_URL : '';
-process.env.ENVIRONMENT == 'PROD' ? firebaseUrl = process.env.FIREBASE_URL : '';
-process.env.ENVIRONMENT == 'DEV' || process.env.ENVIRONMENT == undefined ? firebaseSecret = process.env.FIREBASE_DEV_SECRET : '';
-process.env.ENVIRONMENT == 'PROD' ? firebaseSecret = process.env.FIREBASE_SECRET : '';
-
-var apiUrl;
-process.env.ENVIRONMENT == 'DEV' || process.env.ENVIRONMENT == undefined ? apiUrl = process.env.API_DEV_URL : '';
-process.env.ENVIRONMENT == 'PROD' ? apiUrl = process.env.API_URL : apiUrl = process.env.API_DEV_URL;
-
-console.log('API URL ' + apiUrl + ' in ' + process.env.ENVIRONMENT + ' mode');
-
 var options = {
   //mongoconnection: localMongo || mongooseUri,
   mongoconnection: mongooseUri,
@@ -93,10 +80,29 @@ var options = {
 // *****************************************************************************
 
 mongoose.connect(options.mongoconnection);
-mongoose.connection.on('error', function () {
-  console.log('Cannot connect to MongoDB');
+// CONNECTION EVENTS
+// When successfully connected
+mongoose.connection.on('connected', function () {  
+  console.log('Mongoose default connection open');
+}); 
+
+// If the connection throws an error
+mongoose.connection.on('error',function (err) {  
+  console.log('Mongoose default connection error: ' + err);
+}); 
+
+// When the connection is disconnected
+mongoose.connection.on('disconnected', function () {  
+  console.log('Mongoose default connection disconnected'); 
 });
-  
+
+// If the Node process ends, close the Mongoose connection 
+process.on('SIGINT', function() {  
+  mongoose.connection.close(function () { 
+    console.log('Mongoose default connection disconnected through app termination'); 
+    process.exit(0); 
+  }); 
+}); 
 
 // Setup API routes
 // Send the current and and options into the endpoints
@@ -201,7 +207,7 @@ var expressSession = require('express-session')
 if(process.env.HOST_ENV === 'LOCAL') {
   require('dns').lookup(require('os').hostname(), function (err, address, fam) {
     var server = http.createServer(app).listen(port, address);
-    logger.info("Running app on port " + port + " address: " + address)
+    logger.info("Running app on " + address + ":" + port)
     server.on("close", function() {
       process.exit();
     });
