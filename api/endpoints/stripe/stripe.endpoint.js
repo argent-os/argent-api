@@ -612,9 +612,7 @@ module.exports = function (app, options) {
   */
   // Used to POST (create) a new plan
   app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.plans, function(req, res, next) {
-      logger.trace("creating user plan");
-      logger.trace(req.body);
-      var user_id = req.params.uid;
+      var user_id = req.params.uid
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
         var params = {
@@ -720,18 +718,69 @@ module.exports = function (app, options) {
 
   // // PRODUCTS
   // stripe.products.create(params)
+    app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.products, function(req, res, next) {
+      var user_id = req.params.uid
+      userController.getUser(user_id).then(function (user) {
+        var stripe = require('stripe')(user.stripe.secretKey);
+        var params = {
+          name: req.body.name,          
+          description: req.body.description,
+          attributes: req.body.attributes
+        };
+        stripe.products.create(params, function(err, product) {
+            if(err) {
+              logger.error(err)
+            }          
+            res.json({ product: product })
+            // asynchronously called
+        });
+      });
+  }); 
   // stripe.products.list([params])
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.products, function(req, res, next) {
+      logger.debug('getting products')
+      var user_id = req.params.uid
+      userController.getUser(user_id).then(function (user) {
+        var stripe = require('stripe')(user.stripe.secretKey);
+        var params = {};
+        stripe.products.list({ limit: req.url.limit },
+          function(err, products) {
+            // asynchronously called
+            if(err) {
+              logger.error(err)
+            }
+            res.json({ products: products })
+          }
+        );
+      });
+  });  
   // stripe.products.update(productId[, params])
   // stripe.products.retrieve(productId)
   // stripe.products.del(productId)
 
-  // Used to create a product
-  app.get(endpoint.version + endpoint.base + "/:uid/" + endpoint.products + "/:product_id", function(req, res, next) {
+  // Used to GET (retrieve) a single product
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.plans + "/:product_id", function(req, res, next) {
+      var product_id = req.params.product_id;
+      var user_id = req.params.uid;
+      userController.getUser(user_id).then(function (user) {
+        var stripe = require('stripe')(user.stripe.secretKey);
+        stripe.plans.retrieve(product_id, function(err, product) {
+            if(err) {
+              logger.error(err)
+            }          
+            res.json({ product: product })
+            // asynchronously called
+        });
+      });
+  });
+
+  // Used to delete a product
+  app.delete(endpoint.version + endpoint.base + "/:uid/" + endpoint.products + "/:product_id", function(req, res, next) {
       var product_id = req.params.product_id;
       var user_id = req.params.uid;    
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
-        stripe.plans.create(product_id, function(err, confirmation) {
+        stripe.plans.del(product_id, function(err, confirmation) {
             if(err) {
               logger.error(err)
             }          
@@ -776,27 +825,6 @@ module.exports = function (app, options) {
 
   // // BITCOIN (resource bitcoinReceivers)
   // stripe.bitcoinReceivers.create(params)
-  // Bitcoin payment through creating receiver
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.bitcoin, function(req, res, next) {
-      var user_id = req.params.uid;
-      userController.getUser(user_id).then(function (user) {
-        var stripe = require('stripe')(user.stripe.secretKey);
-        var params = {
-          amount: req.body.amount,
-          currency: "usd",
-          description: "Bitcoin reciever for user " + user.username,
-          email: user.email        
-        };
-        logger.debug(params);
-        stripe.bitcoinReceivers.create(params, function(err, receiver) {
-            if(err) {
-              logger.error(err)
-            }          
-            res.json({ receiver: receiver })
-            // asynchronously called
-        });
-      });
-  });   
   // stripe.bitcoinReceivers.retrieve(receiverId)
   // stripe.bitcoinReceivers.list([params])
   // stripe.bitcoinReceivers.getMetadata(receiverId)
