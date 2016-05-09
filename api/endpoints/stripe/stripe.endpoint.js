@@ -849,6 +849,26 @@ module.exports = function (app, options) {
 
   // // BITCOIN (resource bitcoinReceivers)
   // stripe.bitcoinReceivers.create(params)
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.bitcoin, function(req, res, next) {
+      var user_id = req.params.uid;
+      userController.getUser(user_id).then(function (user) {
+        var stripe = require('stripe')(user.stripe.secretKey);
+        var params = {
+          amount: req.body.amount,
+          currency: "usd",
+          description: "Bitcoin reciever for user " + user.username,
+          email: user.email        
+        };
+        logger.debug(params);
+        stripe.bitcoinReceivers.create(params, function(err, receiver) {
+            if(err) {
+              logger.error(err)
+            }          
+            res.json({ receiver: receiver })
+            // asynchronously called
+        });
+      });
+  });  
   // stripe.bitcoinReceivers.retrieve(receiverId)
   // stripe.bitcoinReceivers.list([params])
   // stripe.bitcoinReceivers.getMetadata(receiverId)
