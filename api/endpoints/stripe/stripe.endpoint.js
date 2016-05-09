@@ -720,11 +720,14 @@ module.exports = function (app, options) {
   // stripe.products.create(params)
     app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.products, function(req, res, next) {
       var user_id = req.params.uid
+      logger.info(req.body.attributes);
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
         var params = {
+          id: req.body.id,
           name: req.body.name,          
           description: req.body.description,
+          metadata: req.body.metadata,
           attributes: req.body.attributes
         };
         stripe.products.create(params, function(err, product) {
@@ -755,16 +758,35 @@ module.exports = function (app, options) {
       });
   });  
   // stripe.products.update(productId[, params])
-  // stripe.products.retrieve(productId)
-  // stripe.products.del(productId)
-
-  // Used to GET (retrieve) a single product
-  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.plans + "/:product_id", function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.products + "/:product_id", function(req, res, next) {
       var product_id = req.params.product_id;
       var user_id = req.params.uid;
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
-        stripe.plans.retrieve(product_id, function(err, product) {
+        var params = {
+          active:req.body.active,
+          description: req.body.description,
+          name: req.body.name,
+          metadata: req.body.metadata,
+          attributes: req.body.attributes
+        };
+        stripe.products.update(product_id, params, function(err, product) {
+            if(err) {
+              logger.error(err)
+            }          
+            res.json({ product: product })
+            // asynchronously called
+        });
+      });
+  }); 
+
+  // Used to GET (retrieve) a single product
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.products + "/:product_id", function(req, res, next) {
+      var product_id = req.params.product_id;
+      var user_id = req.params.uid;
+      userController.getUser(user_id).then(function (user) {
+        var stripe = require('stripe')(user.stripe.secretKey);
+        stripe.products.retrieve(product_id, function(err, product) {
             if(err) {
               logger.error(err)
             }          
@@ -774,16 +796,22 @@ module.exports = function (app, options) {
       });
   });
 
-  // Used to delete a product
-  app.delete(endpoint.version + endpoint.base + "/:uid/" + endpoint.products + "/:product_id", function(req, res, next) {
+
+  // Used to delete a single product
+  app.delete(endpoint.version + endpoint.base + "/:uid" + endpoint.products + "/:product_id", function(req, res, next) {
+      //logger.info("deleting")
       var product_id = req.params.product_id;
       var user_id = req.params.uid;    
       userController.getUser(user_id).then(function (user) {
+        //logger.trace('found user' + user.username)
         var stripe = require('stripe')(user.stripe.secretKey);
-        stripe.plans.del(product_id, function(err, confirmation) {
+        //logger.debug(product_id)
+        stripe.products.del(product_id, function(err, confirmation) {
+            //logger.info('inside product del')
             if(err) {
               logger.error(err)
-            }          
+            }      
+            logger.info(confirmation)    
             res.json({ confirmation: confirmation })
             // asynchronously called
         });
