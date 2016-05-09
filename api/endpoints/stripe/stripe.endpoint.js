@@ -113,7 +113,7 @@ module.exports = function (app, options) {
 
       // To use this example change the request url to your own IP and keep the port the same
   */
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge, function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/example", function(req, res, next) {
     logger.trace('example charge request received');
     var stripeToken = req.body.stripeToken;
     var amount = req.body.amount;
@@ -123,7 +123,7 @@ module.exports = function (app, options) {
     logger.debug('source is ', source)
     var chargeObject = {
         source: source,
-        amount: "100", // amount in cents, again
+        amount: "0", // amount in cents, again
         currency: "usd",
         customer: customer
     }
@@ -269,7 +269,7 @@ module.exports = function (app, options) {
       with the charge in the response and send that back as JSON.  If there is an error we
       log the error.
   */
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/create", function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge, function(req, res, next) {
       // TODO
       // Create a request to charge
       // If the charge is approved proceed with the charge request
@@ -278,27 +278,23 @@ module.exports = function (app, options) {
       // Create a charge with the credit card token
       // Find the user in the database
       // Make a delegated request on behalf of the user
-      logger.debug(req.body);
-      logger.debug("got the request")
+      var user_id = req.params.uid;
       userController.getDelegatedUserByUsername(req.body.delegatedUser).then(function (delegateUser) {
-        logger.trace("inside delegate user, setting info for user " + delegateUser.username)
-        var stripe = require('stripe')(delegateUser.stripe.secretKey);
-        var params = {
-          amount: "100",
-          currency: "usd",
-          source: req.body.token,
-          description: "Testing charge"
-        }
-
-        // Charge a card based on customer ID, the customer must have a linked credit card
-
-        stripe.charges.create(params).then(function(charge, err) {
-            // logger.info(res)
-            res.json({msg: "success", charge: charge}).end();
-        }, function(err) {
-            logger.error(err)
-            res.json({msg: "error", err: err}).end();
-        })
+          var stripe = require('stripe')(delegateUser.stripe.secretKey);
+          var params = {
+            amount: req.body.amount,
+            currency: "usd",
+            source: req.body.token,
+            description: "New charge"
+          }
+          // Charge a card based on customer ID, the customer must have a linked credit card
+          stripe.charges.create(params).then(function(charge, err) {
+              // logger.info(res)
+              res.json({msg: "success", charge: charge}).end();
+          }, function(err) {
+              logger.error(err)
+              res.json({msg: "error", err: err}).end();
+          });
       }) 
   });
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.charge, function(req, res, next) {
@@ -361,19 +357,19 @@ module.exports = function (app, options) {
         });        
       });        
   });
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge, function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/close/dispute", function(req, res, next) {
       stripe.charges.closeDispute(chargeId, params)
   });
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge, function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/set/metadata", function(req, res, next) {
       stripe.charges.setMetadata(chargeId, metadataObject)
   });
-  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.charge, function(req, res, next) {
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/get/metadata", function(req, res, next) {
       stripe.charges.getMetadata(chargeId)
   });
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge, function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/mark/safe", function(req, res, next) {
       stripe.charges.markAsSafe(chargeId)
   });
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge, function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/mark/fraud", function(req, res, next) {
       stripe.charges.markAsFraudulent(chargeId)
   });
 
