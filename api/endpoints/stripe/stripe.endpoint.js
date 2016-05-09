@@ -799,15 +799,15 @@ module.exports = function (app, options) {
 
   // Used to delete a single product
   app.delete(endpoint.version + endpoint.base + "/:uid" + endpoint.products + "/:product_id", function(req, res, next) {
-      logger.info("deleting")
+      //logger.info("deleting")
       var product_id = req.params.product_id;
       var user_id = req.params.uid;    
       userController.getUser(user_id).then(function (user) {
-        logger.trace('found user' + user.username)
+        //logger.trace('found user' + user.username)
         var stripe = require('stripe')(user.stripe.secretKey);
-        logger.debug(product_id)
+        //logger.debug(product_id)
         stripe.products.del(product_id, function(err, confirmation) {
-            logger.info('inside product del')
+            //logger.info('inside product del')
             if(err) {
               logger.error(err)
             }      
