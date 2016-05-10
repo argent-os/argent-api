@@ -10,7 +10,8 @@ module.exports = function (app, options) {
     base: '/stripe',
     ping: '/ping',
     oauth: '/oauth',
-    account: '/account',     
+    account: '/account',
+    external_account: '/external_account',     
     balance: '/balance', 
     transactions: '/transactions',              
     charge: '/charge',                         
@@ -155,6 +156,7 @@ module.exports = function (app, options) {
   
   // EXTERNAL ACCOUNTS
   // Endpoint /v1/stripe/account/cards
+  // Add credit card external account
   app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.account + endpoint.cards, function(req, res, next) {
       logger.trace("request received | add account external card")
       var card_obj = {
@@ -191,6 +193,26 @@ module.exports = function (app, options) {
               }
             );          
         });
+      });
+  });   
+
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.external_account, function(req, res, next) {
+      logger.trace("request received | add external account")
+      var user_id = req.params.uid
+      var token = req.body.external_account;
+      userController.getUser(user_id).then(function (user) {
+        // First create a tokenized card based on the request
+        var stripe = require('stripe')(user.stripe.secretKey); 
+        logger.trace('adding')       
+        stripe.accounts.createExternalAccount(user.stripe.accountId, { external_account: token }, function(err, externalAccount) {
+            // asynchronously called
+            if(err) {
+              logger.error(err);
+            }
+            logger.trace('done')
+            res.json({msg:"external account added!", external_account: externalAccount})
+          }
+        );   
       });
   });   
 

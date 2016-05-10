@@ -654,13 +654,12 @@ module.exports = function (app, options) {
 	// /v1/plaid/:uid/exchange_token
 	// TODO: Add JWT authorization
 	app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.exchange + "_token", function(req, res, next) {
-		logger.trace('req plaid exchangeToken received');
+		logger.trace('req plaid exchange token received');
 		// Used for Plaid Link
 		// The public_token is the access token returned by plaid link
 		var user_id = req.params.uid
+		var public_token = req.body.public_token;
       	userController.getUser(user_id).then(function (user) { 
-      		logger.trace('got user')
-			var public_token = req.body.public_token;
 			// Exchange a public_token and account_id for a Plaid access_token
   			// and a Stripe bank account token
 			plaidClient.exchangeToken(public_token, "QPO8Jo8vdDHMepg41PBwckXm4KdK1yUdmXOwK", function(err, tokenResponse) {
