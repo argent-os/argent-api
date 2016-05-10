@@ -662,7 +662,8 @@ module.exports = function (app, options) {
       	userController.getUser(user_id).then(function (user) { 
 			// Exchange a public_token and account_id for a Plaid access_token
   			// and a Stripe bank account token
-			plaidClient.exchangeToken(public_token, "QPO8Jo8vdDHMepg41PBwckXm4KdK1yUdmXOwK", function(err, tokenResponse) {
+  			var plaid_acct_id = "QPO8Jo8vdDHMepg41PBwckXm4KdK1yUdmXOwK";
+			plaidClient.exchangeToken(public_token, plaid_acct_id, function(err, tokenResponse) {
 			  if (err != null) {
 			  	logger.error(err);
 			    res.json({error: 'Unable to exchange public_token'});
