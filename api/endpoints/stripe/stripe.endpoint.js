@@ -25,7 +25,8 @@ module.exports = function (app, options) {
     recipients: '/recipients',             
     skus: '/skus',             
     tokens: '/tokens',             
-    bitcoin: '/bitcoin',  
+    bitcoin: '/bitcoin',
+    transfers: '/transfers',  
     external: '/external'                  
   };
 
@@ -489,7 +490,7 @@ module.exports = function (app, options) {
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
         var customer_id = req.body.customerId;
-        stripe.customers.retrieve(customer_id, metadata_obj, function(err, customer) {
+        stripe.customers.setMetadata(customer_id, metadata_obj, function(err, customer) {
           // asynchronously called
             if(err) {
               logger.error(err)
@@ -816,6 +817,7 @@ module.exports = function (app, options) {
 
   // // RECIPIENTS
   // stripe.recipients.create(params)
+
   // stripe.recipients.list([params])
   // stripe.recipients.update(recipientId[, params])
   // stripe.recipients.retrieve(recipientId)
@@ -837,9 +839,81 @@ module.exports = function (app, options) {
 
   // // TRANSFERS
   // stripe.transfers.create(params)
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.transfers, function(req, res, next) {
+      //logger.debug('creating transfer...');
+      var user_id = req.params.uid
+      //logger.debug('in transfer create')
+      userController.getUser(user_id).then(function (user) {
+        var stripe = require('stripe')(user.stripe.secretKey);
+        var params = {
+          amount: req.body.amount,
+          currency: req.body.currency,          
+          destination: req.body.destination,
+          description: req.body.description
+        };
+        stripe.transfers.create(params, function(err, transfer) {
+            if(err) {
+              logger.error(err)
+            }          
+            res.json({ transfer: transfer })
+            // asynchronously called
+        });
+      });
+  }); 
   // stripe.transfers.list([params])
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.transfers, function(req, res, next) {
+      logger.debug('getting transfers')
+      var user_id = req.params.uid
+      userController.getUser(user_id).then(function (user) {
+        var stripe = require('stripe')(user.stripe.secretKey);
+        var params = {};
+        stripe.transfers.list({ limit: req.url.limit },
+          function(err, transfers) {
+            // asynchronously called
+            if(err) {
+              logger.error(err)
+            }
+            res.json({ transfers: transfers })
+          }
+        );
+      });
+  });  
+
   // stripe.transfers.retrieve(transferId)
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.transfers + "/:transferId", function(req, res, next) {
+      var product_id = req.params.transfer_id;
+      var user_id = req.params.uid;
+      userController.getUser(user_id).then(function (user) {
+        var stripe = require('stripe')(user.stripe.secretKey);
+        stripe.transfers.retrieve(transfer_id, function(err, transfer) {
+            if(err) {
+              logger.error(err)
+            }          
+            res.json({ transfer: transfer })
+            // asynchronously called
+        });
+      });
+  });
+  */
   // stripe.transfers.update(transferId[, params])
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.transfers + "/:transferId", function(req, res, next) {
+      var transferId = req.params.transferId;
+      var user_id = req.params.uid;
+      userController.getUser(user_id).then(function (user) {
+        var stripe = require('stripe')(user.stripe.secretKey);
+        var params = {
+          description: req.body.description,
+          metadata: req.body.metadata
+        };
+        stripe.products.update(transferId, params, function(err, transfer) {
+            if(err) {
+              logger.error(err)
+            }          
+            res.json({ transfer: transfer })
+            // asynchronously called
+        });
+      });
+  }); 
   // stripe.transfers.reverse(transferId[, params])
   // stripe.transfers.cancel(transferId) (Deprecated -- use reverse)
   // stripe.transfers.listTransactions(transferId[, params])
