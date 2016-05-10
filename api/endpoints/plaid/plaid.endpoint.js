@@ -15,6 +15,7 @@ module.exports = function (app, options) {
 		longtail: '/longtail'  		     
 	};
 
+  	var userController = require('../auth/controllers/user-controller');
 	var log4js = require('log4js');
 	var logger = log4js.getLogger();
 	var cors = require('cors');
@@ -66,7 +67,7 @@ module.exports = function (app, options) {
 	// 	  }
 	// 	});
 	// });
-  
+
 	// Example MFA Auth (unsecured) local
 
 	// ** Be sure the quotes are straight, not curly
@@ -649,20 +650,36 @@ module.exports = function (app, options) {
 			}  
 		})
 	});
-	app.get(endpoint.version + endpoint.base + endpoint.exchange, function(req, res, next) {
-		logger.trace('req exchangeToken received');
+
+	// /v1/plaid/:uid/exchange_token
+	// TODO: Add JWT authorization
+	app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.exchange + "_token", function(req, res, next) {
+		logger.trace('req plaid exchange token received');
 		// Used for Plaid Link
-		// exchangeToken(String, Function)
-		// plaidClient.exchangeToken(public_token, callback);
-		var public_token = req.query.public_token;
-		var account_id = req.query.account_id;
-		plaidClient.exchangeToken(public_token, function(err, tokenResponse) {
-		  if (err != null) {
-		    res.json({error: 'Unable to exchange public_token'});
-		  } else {
-		    var access_token = tokenResponse.access_token;
-		  }
-		});
+		// The public_token is the access token returned by plaid link
+		var user_id = req.params.uid
+		var public_token = req.body.public_token;
+      	userController.getUser(user_id).then(function (user) { 
+			// Exchange a public_token and account_id for a Plaid access_token
+  			// and a Stripe bank account token
+			plaidClient.exchangeToken(public_token, "QPO8Jo8vdDHMepg41PBwckXm4KdK1yUdmXOwK", function(err, tokenResponse) {
+			  if (err != null) {
+			  	logger.error(err);
+			    res.json({error: 'Unable to exchange public_token'});
+			  } else {
+				// This is your Plaid access token - store somewhere persistent
+				// The access_token can be used to make Plaid API calls to
+				// retrieve accounts and transactions
+				var access_token = tokenResponse.access_token;
+
+				// This is your Stripe bank account token - store somewhere
+				// persistent. The token can be used to move money via
+				// Stripe's ACH API.
+				var bank_account_token = tokenResponse.stripe_bank_account_token;
+			    res.json({ response: tokenResponse })
+			  }
+			});
+      	})
 	})
 	app.get(endpoint.version + endpoint.base + endpoint.longtail, function(req, res, next) {
 		logger.trace('req getLongtailInstitutions received');
