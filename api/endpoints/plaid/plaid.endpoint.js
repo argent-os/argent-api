@@ -626,28 +626,31 @@ module.exports = function (app, options) {
 			return res.json({response: response}).end();	  
 		})
 	});
-	app.post(endpoint.version + endpoint.base + endpoint.upgrade, function(req, res, next) {
-		logger.trace('req upgradeUser received');
+	app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.upgrade, function(req, res, next) {
+		logger.trace('req upgrade plaid user received');
 		// upgradeUser(String, String, Object?, Function)
-		var access_token = req.body.access_token || req.query.access_token || req.params.access_token;
+		var user_id = req.params.uid;
 		var upgrade_to = req.body.upgrade_to;
-		var options = req.body.options;
-		plaidClient.upgradeUser(access_token, upgrade_to, options, function callback(err, mfaResponse, response) {
-		  // err can be a network error or a Plaid API error (i.e. invalid credentials)
-		  // mfaResponse can be any type of Plaid MFA flow
-			logger.error(err);
-			logger.info(mfaResponse);
-			logger.info(response);		
+		var options = req.body.options || {};
+		userController.getUser(user_id).then(function (user) { 
+			var access_token = user.plaid.access_token			
+			plaidClient.upgradeUser(access_token, upgrade_to, options, function callback(err, mfaResponse, response) {
+				// err can be a network error or a Plaid API error (i.e. invalid credentials)
+				// mfaResponse can be any type of Plaid MFA flow
+				// logger.error(err);
+				// logger.info(mfaResponse);
+				// logger.info(response);		
 
-			if(err) {
-				return res.json({err: err}).end();
-			}
+				if(err) {
+					return res.json({err: err}).end();
+				}
 
-			if(mfaResponse) {
-				return res.json({mfa: mfaResponse, response: response}).end();
-			} else {
-				return res.json({response: response}).end();	  
-			}  
+				if(mfaResponse) {
+					return res.json({mfa: mfaResponse, response: response}).end();
+				} else {
+					return res.json({response: response}).end();	  
+				}  
+			})
 		})
 	});
 
