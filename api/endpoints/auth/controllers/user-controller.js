@@ -106,7 +106,7 @@ UserController.prototype.register = function (req, res, next) {
                   res.send({ message: "Error occured" });                                
                 }
                 else {
-                  res.send({ token: createJWT(user, user.username),  user: user, message: "Welcome to Proton Payments" });                                
+                  res.send({ token: createJWT(user, user.username),  user: user, message: "Welcome to Argent" });                                
                 }
               });      
             });                
