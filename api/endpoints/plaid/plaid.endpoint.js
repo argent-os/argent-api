@@ -637,18 +637,28 @@ module.exports = function (app, options) {
 			plaidClient.upgradeUser(access_token, upgrade_to, options, function callback(err, mfaResponse, response) {
 				// err can be a network error or a Plaid API error (i.e. invalid credentials)
 				// mfaResponse can be any type of Plaid MFA flow
-				// logger.error(err);
 				// logger.info(mfaResponse);
 				// logger.info(response);		
 
 				if(err) {
+					logger.error(err);					
 					return res.json({err: err}).end();
 				}
 
 				if(mfaResponse) {
 					return res.json({mfa: mfaResponse, response: response}).end();
 				} else {
-					return res.json({response: response}).end();	  
+					var calcRiskArray = [];
+					var totalRiskScore = 0;
+					for(var i = 0; i<response.accounts.length; i++) {
+						logger.info(response.accounts[i].risk.score);
+						totalRiskScore += response.accounts[i].risk.score;
+						calcRiskArray.push(response.accounts[i].risk.score)
+					}
+					logger.debug(calcRiskArray);
+					var weightedAverageRiskScore = totalRiskScore/response.accounts.length;
+					logger.debug(weightedAverageRiskScore)
+					return res.json({score: weightedAverageRiskScore}).end();	  
 				}  
 			})
 		})
