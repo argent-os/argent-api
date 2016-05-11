@@ -158,8 +158,8 @@ module.exports = function (app, options) {
   // EXTERNAL ACCOUNTS
   // Endpoint /v1/stripe/account/cards
   // Add credit card external account
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.account + endpoint.cards, function(req, res, next) {
-      logger.trace("request received | add account external card")
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.external_account, function(req, res, next) {
+      logger.trace("request received | add account external account")
       var card_obj = {
         card: {
           "number": req.body.number,
@@ -217,18 +217,20 @@ module.exports = function (app, options) {
       });
   });   
 
-  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.account + endpoint.cards, function(req, res, next) {
-      logger.trace("request received | get credit card");
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.external_account, function(req, res, next) {
+      logger.trace("request received | list external accounts.");
       var user_id = req.params.uid
       userController.getUser(user_id).then(function (user) {
         // First create a tokenized card based on the request
         var stripe = require('stripe')(user.stripe.secretKey);  
-        stripe.accounts.listExternalAccounts(accountId, {object: "card"}, function(err, cards) {
+        var acct_id = user.stripe.accountId;
+        stripe.accounts.listExternalAccounts(acct_id, function(err, externalAccounts) {
+          logger.trace("accounts: " + externalAccounts);
           if(err) {
             logger.error(err);
             next();
           }
-          return res.json({cards:cards}).end();
+          return res.json({external_accounts:externalAccounts}).end();
         });
       });
   });   
@@ -901,12 +903,13 @@ module.exports = function (app, options) {
       });
   });  
 
-  // stripe.transfers.retrieve(transferId)
-  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.transfers + "/:transferId", function(req, res, next) {
-      var product_id = req.params.transfer_id;
+  // stripe.transfers.retrieve(transferI_id)
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.transfers + "/:transfer_id", function(req, res, next) {
+      var transfer_id = req.params.transfer_id;
       var user_id = req.params.uid;
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
+        //logger.debug(transfer_id);
         stripe.transfers.retrieve(transfer_id, function(err, transfer) {
             if(err) {
               logger.error(err)
@@ -916,10 +919,10 @@ module.exports = function (app, options) {
         });
       });
   });
-  */
+  
   // stripe.transfers.update(transferId[, params])
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.transfers + "/:transferId", function(req, res, next) {
-      var transferId = req.params.transferId;
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.transfers + "/:transfer_id", function(req, res, next) {
+      var transfer_id = req.params.transfer_id;
       var user_id = req.params.uid;
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
@@ -927,7 +930,7 @@ module.exports = function (app, options) {
           description: req.body.description,
           metadata: req.body.metadata
         };
-        stripe.products.update(transferId, params, function(err, transfer) {
+        stripe.transfers.update(transfer_id, params, function(err, transfer) {
             if(err) {
               logger.error(err)
             }          
