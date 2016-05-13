@@ -59,12 +59,12 @@ var options = {
   mailer: {
     mailerFrom    : process.env.SUPPORT_EMAIL,
     passwordResetTitle   : 'Password Reset',
-    verifyEmailTitle   : 'Verify Account for Proton Payments',
-    verifyEmailLinkText   : 'Welcome to Proton Payments!  Please verify your email using the following link: ',
+    verifyEmailTitle   : 'Verify Account for Argent',
+    verifyEmailLinkText   : 'Welcome to Argent!  Please verify your email using the following link: ',
     quoteEmailTitle: 'Quote created',  
     quoteEmailTextLink: 'Please use the following link to accept or reject proposal ',
     mailerInfo    : 'Hello! ',
-    resetPasswordText    : 'Hello from Proton Payments! Please use the following link to reset your password: ',
+    resetPasswordText    : 'Hello from Argent! Please use the following link to reset your password: ',
     transporter   : {
       service: 'Gmail',
       auth: {
@@ -189,7 +189,7 @@ app.use(function(err, req, res, next) {
 });
 
 app.get('/', function(req, res, next) {
-  res.json({message: "Welcome to the Proton Payments API!", info: "To download our app please visit www.protonpayments.com"})
+  res.json({message: "Welcome to the Argent API!", info: "To download our app please visit www.protonpayments.com"})
 })
 
 app.get('/ping', function(req, res) {

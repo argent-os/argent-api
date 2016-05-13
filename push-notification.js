@@ -58,7 +58,7 @@
 // function pushNotificationToMany() {
 //     console.log("Sending the same notification each of the devices with one call to pushNotification.");
 //     var note = new apn.notification();
-//     note.setAlertText("Hello, welcome to Proton Payments!");
+//     note.setAlertText("Hello, welcome to Argent!");
 //     note.badge = 1;
 //     note.sound = "chime2.caf";
 //     note.alert = "\uD83D\uDCE7 \u2709 You have a new message";

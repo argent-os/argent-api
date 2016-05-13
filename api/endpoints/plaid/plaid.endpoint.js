@@ -626,28 +626,41 @@ module.exports = function (app, options) {
 			return res.json({response: response}).end();	  
 		})
 	});
-	app.post(endpoint.version + endpoint.base + endpoint.upgrade, function(req, res, next) {
-		logger.trace('req upgradeUser received');
+	app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.upgrade, function(req, res, next) {
+		logger.trace('req upgrade plaid user received');
 		// upgradeUser(String, String, Object?, Function)
-		var access_token = req.body.access_token || req.query.access_token || req.params.access_token;
+		var user_id = req.params.uid;
 		var upgrade_to = req.body.upgrade_to;
-		var options = req.body.options;
-		plaidClient.upgradeUser(access_token, upgrade_to, options, function callback(err, mfaResponse, response) {
-		  // err can be a network error or a Plaid API error (i.e. invalid credentials)
-		  // mfaResponse can be any type of Plaid MFA flow
-			logger.error(err);
-			logger.info(mfaResponse);
-			logger.info(response);		
+		var options = req.body.options || {};
+		userController.getUser(user_id).then(function (user) { 
+			var access_token = user.plaid.access_token			
+			plaidClient.upgradeUser(access_token, upgrade_to, options, function callback(err, mfaResponse, response) {
+				// err can be a network error or a Plaid API error (i.e. invalid credentials)
+				// mfaResponse can be any type of Plaid MFA flow
+				// logger.info(mfaResponse);
+				// logger.info(response);		
 
-			if(err) {
-				return res.json({err: err}).end();
-			}
+				if(err) {
+					logger.error(err);					
+					return res.json({err: err}).end();
+				}
 
-			if(mfaResponse) {
-				return res.json({mfa: mfaResponse, response: response}).end();
-			} else {
-				return res.json({response: response}).end();	  
-			}  
+				if(mfaResponse) {
+					return res.json({mfa: mfaResponse, response: response}).end();
+				} else {
+					var calcRiskArray = [];
+					var totalRiskScore = 0;
+					for(var i = 0; i<response.accounts.length; i++) {
+						logger.info(response.accounts[i].risk.score);
+						totalRiskScore += response.accounts[i].risk.score;
+						calcRiskArray.push(response.accounts[i].risk.score)
+					}
+					logger.debug(calcRiskArray);
+					var weightedAverageRiskScore = totalRiskScore/response.accounts.length;
+					logger.debug(weightedAverageRiskScore)
+					return res.json({score: weightedAverageRiskScore}).end();	  
+				}  
+			})
 		})
 	});
 
@@ -662,7 +675,8 @@ module.exports = function (app, options) {
       	userController.getUser(user_id).then(function (user) { 
 			// Exchange a public_token and account_id for a Plaid access_token
   			// and a Stripe bank account token
-			plaidClient.exchangeToken(public_token, "QPO8Jo8vdDHMepg41PBwckXm4KdK1yUdmXOwK", function(err, tokenResponse) {
+  			var plaid_acct_id = "QPO8Jo8vdDHMepg41PBwckXm4KdK1yUdmXOwK";
+			plaidClient.exchangeToken(public_token, plaid_acct_id, function(err, tokenResponse) {
 			  if (err != null) {
 			  	logger.error(err);
 			    res.json({error: 'Unable to exchange public_token'});

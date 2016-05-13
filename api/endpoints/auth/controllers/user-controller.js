@@ -106,7 +106,7 @@ UserController.prototype.register = function (req, res, next) {
                   res.send({ message: "Error occured" });                                
                 }
                 else {
-                  res.send({ token: createJWT(user, user.username),  user: user, message: "Welcome to Proton Payments" });                                
+                  res.send({ token: createJWT(user, user.username),  user: user, message: "Welcome to Argent" });                                
                 }
               });      
             });                
@@ -255,65 +255,47 @@ UserController.prototype.removeAccount = function (req, res, next) {
 
 UserController.prototype.editProfile = function (req, res, next) {
   var data = req.body;
-  logger.debug(data);
   logger.trace("update req received");
-  // logger.info(data)
-  // logger.debug(req.query);
-  // logger.debug(req.body);
-  // logger.debug(req.params);
-  // logger.debug(req.user);
-  // logger.info(data.stripe);
-  // req.assert('username', 'Username must be at least 4 characters long').len(4);
-  // req.assert('email', 'Email is not valid').isEmail();
-  // var errors = req.validationErrors();
-  // if (errors) {
-  //   res.status(400).json(errors);
-  //   return false;
-  // }
+  var user_id = req.params.uid;
   userHelper.checkIfUserExists(req.user, data, function (result) {
-    logger.trace("checking if user exists")
     if (result === 'user_uniq') {
-      User.findOne({_id: req.user._id}, function (err, user) {
+      User.findOne({_id: user_id}, function (err, user) {
           if (!user) {
             logger.info('User not found for account update. User id : ' + req.user._id);
             res.status(404).json({msg: 'User not found, could not update'})
             return;
           }
           else {
-            logger.trace("user found in update")
             var updated = [];
+            logger.trace("user found in update")
             logger.debug('requesting user is', req.user.email);
-            logger.debug('checking for ios data', data.ios);
-            logger.debug(data.user);
             // check that user is sent through request and not the body
             if(req.user !== undefined) {
               // check if user data is sent as body
-              if(data.user !== undefined) {
-                if (user.email !== data.user.email && data.user.email !== null && data.user.email !== '' && data.user.email !== undefined) {
-                  updated.push('email');
-                  user.email = data.user.email;
-                }
-                if (user.username !== data.user.username && data.user.username !== null && data.user.username !== undefined && data.user.username !== "") {
-                  updated.push('username');
-                  user.username = data.user.username;
-                }   
-                if (user.role !== data.user.role && req.user.email !=null && data.role !== '' && data.role !== undefined) {
-                  updated.push('role');
-                  user.role = data.user.role;
-                }      
-                if (user.notificationsEnabled !== data.user.notificationsEnabled && data.user.notificationsEnabled !== null && data.user.notificationsEnabled !== undefined && data.user.notificationsEnabled !== "") {
-                  updated.push('notificationsEnabled');
-                  user.notificationsEnabled = data.user.notificationsEnabled;
-                }  
-                if (user.first_name !== data.user.first_name && data.user.first_name !== null && data.user.first_name !== undefined && data.user.first_name !== "") {
-                  updated.push('first_name');
-                  user.first_name = data.user.first_name;
-                }     
-                if (user.last_name !== data.user.last_name && data.user.last_name !== null && data.user.last_name !== undefined && data.user.last_name !== "") {
-                  updated.push('last_name');
-                  user.last_name = data.user.last_name;
-                }   
+              if (user.email !== data.email && data.email !== null && data.email !== '' && data.email !== undefined) {
+                updated.push('email');
+                user.email = data.email;
               }
+              if (user.username !== data.username && data.username !== null && data.username !== undefined && data.username !== "") {
+                updated.push('username');
+                user.username = data.username;
+              }   
+              if (user.role !== data.role && req.user.email !=null && data.role !== '' && data.role !== undefined) {
+                updated.push('role');
+                user.role = data.role;
+              }      
+              if (user.notificationsEnabled !== data.notificationsEnabled && data.notificationsEnabled !== null && data.notificationsEnabled !== undefined && data.notificationsEnabled !== "") {
+                updated.push('notificationsEnabled');
+                user.notificationsEnabled = data.notificationsEnabled;
+              }  
+              if (user.first_name !== data.first_name && data.first_name !== null && data.first_name !== undefined && data.first_name !== "") {
+                updated.push('first_name');
+                user.first_name = data.first_name;
+              }     
+              if (user.last_name !== data.last_name && data.last_name !== null && data.last_name !== undefined && data.last_name !== "") {
+                updated.push('last_name');
+                user.last_name = data.last_name;
+              }   
               if (user.orgId !== data.orgId && data.orgId !=null && data.orgId !== '' && data.orgId !== undefined) {
                 updated.push('orgId');
                 user.orgId = data.orgId;
