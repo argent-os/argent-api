@@ -45,7 +45,7 @@ module.exports = function (app, options) {
 		            	secure_url: picture.secure_url
 		            }
 		            updateUserPicture(userId, pic);
-				}, { transformation: [{ width: 250, height: 250, crop: "fit", gravity: "face" }] }
+				}, { transformation: [{ width: 500, height: 500, crop: "fit", gravity: "face" }] }
 			);
 	    } else {
 	        logger.error("error");
