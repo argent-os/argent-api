@@ -9,7 +9,8 @@ var Schema   = mongoose.Schema;
 
 var pictureDef = { 
   id: { type: String },
-  secureUrl: { type: String }
+  url: { type: String },
+  secure_url: { type: String }
 };
 
 var plaidDef = {

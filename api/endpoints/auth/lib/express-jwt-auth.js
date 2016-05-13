@@ -94,8 +94,10 @@ module.exports = function (app, options) {
   app.post(urlStrings.authorize,        userController.authorize, function (req, res) {res.send('');});
   app.post(urlStrings.keepalive,        userController.keepAlive);
   app.get(urlStrings.apikey,            userController.authorize, userController.generateApiKey);
-  app.put(urlStrings.profile + "/:uid", userController.authorize, userController.editProfile);
   app.post(urlStrings.remove,           userController.authorize, userController.removeAccount);
+  // TODO: Endpoint duplication removal
+  app.put(urlStrings.profile + "/:uid", userController.authorize, userController.editProfile);
+  app.put(urlStrings.profile,           userController.authorize, userController.editProfile);
   app.get(urlStrings.profile + "/:uid", userController.authorize, userController.getProfile);
   app.get(urlStrings.profile,           userController.authorize, userController.getProfile);
   app.post(urlStrings.billing,          userController.authorize, userController.postBilling);

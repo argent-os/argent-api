@@ -35,7 +35,6 @@ var compress       = require('compression');
 
 var app = express();
 
-
 // Key Stripe and Firebase Handlers for DEV vs PROD
 process.env.ENVIRONMENT == 'DEV' ? mongooseUri = process.env.MONGOLAB_URI_DEV : '';
 process.env.ENVIRONMENT == 'PROD' ? mongooseUri =process.env.MONGOLAB_URI : '';
@@ -115,6 +114,7 @@ var prot_company = require('./api/endpoints/company')(app, options);
 var notification = require('./api/endpoints/notification')(app, options);
 var stripe       = require('./api/endpoints/stripe/stripe.endpoint')(app, options);
 var plaid        = require('./api/endpoints/plaid/plaid.endpoint')(app, options);
+var cloudinary   = require('./api/endpoints/cloudinary/cloudinary.endpoint')(app, options);
 var quote        = require('./api/endpoints/quote')(app, options);
 
 // app.use(express.static(path.join(__dirname, 'api/web')));

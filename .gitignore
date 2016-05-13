@@ -1,5 +1,6 @@
 node_modules/
 bower_components/
+images/
 data/
 .sass-cache/
 .tmp/

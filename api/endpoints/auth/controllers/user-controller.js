@@ -10,7 +10,6 @@ var nconf       = require('nconf');
 var moment      = require('moment');
 var logger      = require('../lib/logger')();
 var request     = require('request');
-var Firebase    = require('firebase');
 
 var tokenSecret = process.env.JWT_SECRET;
 var facebookSecret   = process.env.FACEBOOK_SECRET;
@@ -18,9 +17,6 @@ var oAuthSecret = 'B21F3EFCE39FDC5BDE7EEE987D7C8';
 
 var log4js = require('log4js');
 var logger = log4js.getLogger();
-
-process.env.ENVIRONMENT == 'DEV' || process.env.ENVIRONMENT == undefined ? firebaseSecret = process.env.FIREBASE_DEV_SECRET : '';
-process.env.ENVIRONMENT == 'PROD' ? firebaseSecret = process.env.FIREBASE_SECRET : '';
 
 var apiUrl;
 process.env.ENVIRONMENT == 'DEV' || process.env.ENVIRONMENT == undefined ? apiUrl = process.env.API_DEV_URL : '';
@@ -259,7 +255,7 @@ UserController.prototype.editProfile = function (req, res, next) {
   var user_id = req.params.uid;
   userHelper.checkIfUserExists(req.user, data, function (result) {
     if (result === 'user_uniq') {
-      User.findOne({_id: user_id}, function (err, user) {
+      User.findOne({ $or: [ { _id: user_id }, { email: req.user.email } ] }, function (err, user) {
           if (!user) {
             logger.info('User not found for account update. User id : ' + req.user._id);
             res.status(404).json({msg: 'User not found, could not update'})
@@ -427,6 +423,26 @@ UserController.prototype.getDelegatedUserByUsername = function (username, cb) {
     });
 };
 
+UserController.prototype.editUserPicture = function (userId, picture) {
+  return User.findById(userId, function (err, user) {
+      if (!user) {
+        logger.info('User not found for account | User id : ' + userId);
+        return;
+      }
+      else {
+        // logger.debug('got user, updating picture ' + picture)
+        user.picture = picture;
+        user.save(function(err) {
+            if (err) {
+              logger.error('Error updating user picture. User: ' + userId);
+            }
+            else {
+              logger.info("saved user picture")
+            }
+        });
+      }
+    });
+};
 
 UserController.prototype.generateApiKey = function (req, res, next) {
   var errors = req.validationErrors();
@@ -451,17 +467,8 @@ UserController.prototype.remindPassword = function(req, res) {
   var url;
   process.env.ENVIRONMENT == "DEV" ? url = "http://localhost:5000/reset" : "";
   // process.env.ENVIRONMENT == "PROD" ? url = "https://www.paykloud.com/reset" : "";
-  process.env.ENVIRONMENT == "PROD" ? url = "http://paykloud-www-dev.us-east-1.elasticbeanstalk.com/reset" : "";
+  process.env.ENVIRONMENT == "PROD" ? url = "http://argent-www-dev.us-east-1.elasticbeanstalk.com/reset" : "";
   
-  logger.info('reminding');
-  // if (email === '' || !email) {
-  //   res.status(400).json([{msg: 'Email cannot be empty', param: 'email'}]);
-  //   return;
-  // }
-  // if (url === '' || !url) {
-  //   res.status(400).json([{msg: 'Url for reset password link is not specified', param: 'url'}]);
-  //   return;
-  // }
   User.findOne({ $or: [ { email: req.body.email }, { username: req.body.username } ] }, function(err, user) {
     if (!user) {
       logger.info("user not found");
@@ -635,16 +642,6 @@ UserController.prototype.postPlan = function(req, res, next){
     return;
   }
 
-  // if(req.body.stripeToken){
-  //   stripeToken = req.body.stripeToken;
-  // }
-
-  // if(!req.body.user.stripe.last4 && !req.body.stripeToken){
-  //   // req.flash('errors', {msg: 'Please add a card to your account before choosing a plan.'});
-  //   // return res.redirect(req.redirect.failure);
-  //   ////logger.info('please add card to account before choosing plan');
-  // }
-
   User.findById(req.body.user._id, function (err, user) {
     if (err) return next(err);
     user.setPlan(_plan, function (err, response) {
@@ -684,8 +681,7 @@ UserController.prototype.searchUser = function (req, res, next) {
             last_name: doc[i].last_name,
             username: doc[i].username,
             email: doc[i].email,
-            cust_id: doc[i].stripe.customerId,
-            picture: doc[i].picture.secureUrl
+            picture: doc[i].picture.secure_url
           }
           logger.info(doc[i]);
           usersArr.push(user);
@@ -705,41 +701,12 @@ UserController.prototype.listAllUsers = function (req, res, next) {
         last_name: user.last_name,
         username: user.username,
         email: user.email,
-        cust_id: user.stripe.customerId,
-        picture: user.picture.secureUrl
+        picture: user.picture.secure_url
       }
       usersArr.push(user);
     });
     // res.send(userMap);  
     res.send({users: usersArr});  
-  });
-}
-
-UserController.prototype.getUserCustomers = function (req, res, next) {
-  User.find({}, function(err, users) {
-    var customersArr = [];
-    users.forEach(function(user) {
-      var customer = {
-        name: user.customer.name,
-        id: user.customer.id
-      }
-      customersArr.push(customer);
-    });
-    res.send({merchants: customersArr});  
-  });
-}
-
-UserController.prototype.getUserMerchants = function (req, res, next) {
-  User.find({}, function(err, users) {
-    var merchantsArr = [];
-    users.forEach(function(user) {
-      var merchant = {
-        name: user.merchant.name,
-        id: user.merchant.id
-      }
-      merchantsArr.push(merchant);
-    });
-    res.send({merchants: merchantsArr});  
   });
 }
 
@@ -766,14 +733,6 @@ function createApiKey(user) {
 
 function createJWT(user, data) {
   user = _.pick(user, '_id', 'email', 'username');  
-  // logger.debug("user jwt is");
-  // logger.debug(user);
-  // logger.debug(data);
-  // logger.debug('the data for the user is');
-  // logger.debug(user._id);
-  // logger.debug(user.email);
-  // logger.debug(user.username);
-
   var payload = {
     user: {
       _id: user["_id"],
