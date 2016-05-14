@@ -51,8 +51,8 @@ module.exports = function (app, options) {
   }
 
   var urlStrings = {
-    notification: '/v1/notification',
-    onenotification: '/v1/notification/:id',
+    notification: '/v1/system/notifications',
+    onenotification: '/v1/system/notifications/:id',
   };
 
   if (options.urlStrings) {
