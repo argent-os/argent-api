@@ -256,7 +256,7 @@ module.exports = function (app, options) {
       var user_id = req.params.uid
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
-        var limit = req.body.limit
+        var limit = req.query.limit
         stripe.balance.listTransactions({ limit: limit }, function(err, transactions) {
           if(err) {
             logger.error(err)
