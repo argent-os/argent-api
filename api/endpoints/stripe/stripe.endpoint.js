@@ -587,7 +587,7 @@ module.exports = function (app, options) {
       var user_id = req.params.uid
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
-        var limit = req.body.limit
+        var limit = req.query.limit
         stripe.events.list(
           { limit: limit },
           function(err, events) {
