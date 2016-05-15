@@ -430,7 +430,7 @@ UserController.prototype.editUserPicture = function (userId, picture) {
         return;
       }
       else {
-        // logger.debug('got user, updating picture ' + picture)
+        logger.debug('got user, updating picture ' + JSON.stringify(picture))
         user.picture = picture;
         user.save(function(err) {
             if (err) {

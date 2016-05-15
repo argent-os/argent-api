@@ -158,7 +158,7 @@ module.exports = function (app, options) {
   // EXTERNAL ACCOUNTS
   // Endpoint /v1/stripe/account/cards
   // Add credit card external account
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.external_account, function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.external_account + "/card", function(req, res, next) {
       logger.trace("request received | add account external account")
       var card_obj = {
         card: {

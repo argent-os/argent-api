@@ -79,30 +79,30 @@ module.exports = function (app, options) {
 	// curl -X POST -i -H "Content-Type: application/json" -d '{"institution_type": "bofa", "credentials":{"username":"plaid_test", "password": "plaid_good"}}' http://proton-api-dev.us-east-1.elasticbeanstalk.com/v1/plaid/auth	   
 
 	// AUTH
-	app.post(endpoint.version + endpoint.base + endpoint.auth, function(req, res, next) {
-		logger.trace('req addAuthUser received');
-		// addAuthUser(String, Object, Object?, Function)
-		var institution_type = req.body.institution_type;
-		var credentials = req.body.credentials;
-		var options = req.body.options;
-		plaidClient.addAuthUser(institution_type, credentials, options, function callback(err, mfaResponse, response) {
-		  // err can be a network error or a Plaid API error (i.e. invalid credentials)
-		  // mfaResponse can be any type of Plaid MFA flow
-			logger.error(err);
-			logger.info(mfaResponse);
-			logger.info(response);
+	// app.post(endpoint.version + endpoint.base + endpoint.auth, function(req, res, next) {
+	// 	logger.trace('req addAuthUser received');
+	// 	// addAuthUser(String, Object, Object?, Function)
+	// 	var institution_type = req.body.institution_type;
+	// 	var credentials = req.body.credentials;
+	// 	var options = req.body.options;
+	// 	plaidClient.addAuthUser(institution_type, credentials, options, function callback(err, mfaResponse, response) {
+	// 	  // err can be a network error or a Plaid API error (i.e. invalid credentials)
+	// 	  // mfaResponse can be any type of Plaid MFA flow
+	// 		logger.error(err);
+	// 		logger.info(mfaResponse);
+	// 		logger.info(response);
 
-			if(err) {
-				return res.json({err: err}).end();
-			}
+	// 		if(err) {
+	// 			return res.json({err: err}).end();
+	// 		}
 
-			if(mfaResponse) {
-				return res.json({mfa: mfaResponse, response: response}).end();
-			} else {
-				return res.json({response: response}).end();	  
-			}  
-		});
-	});
+	// 		if(mfaResponse) {
+	// 			return res.json({mfa: mfaResponse, response: response}).end();
+	// 		} else {
+	// 			return res.json({response: response}).end();	  
+	// 		}  
+	// 	});
+	// });
 	app.post(endpoint.version + endpoint.base + endpoint.auth, function(req, res, next) {
 		logger.trace('req stepAuthUser received');
 		// stepAuthUser(String, String, Object?, Function)
@@ -129,21 +129,24 @@ module.exports = function (app, options) {
 	});
 
 	// curl -X GET -i -H "Content-Type: application/json" -d '{"access_token": "test_bofa"}' http://192.168.1.232:5001/v1/plaid/auth
-	app.get(endpoint.version + endpoint.base + endpoint.auth, function(req, res, next) {
+	app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.auth, function(req, res, next) {
 		logger.trace('req getAuthUser received');
 		// getAuthUser(String, Object?, Function)
-		var access_token = req.body.access_token || req.query.access_token || req.params.access_token;
-		var options = req.body.access_token || req.query.access_token || req.params.access_token;
-		plaidClient.getAuthUser(access_token, options, function callback(err, response) {
-		  // err can be a network error or a Plaid API error (i.e. invalid credentials)
-			logger.error(err);
-			logger.info(response);
+		var user_id = req.params.uid;
+		var options = req.body.access_token || req.query.access_token || req.params.access_token;		
+		userController.getUser(user_id).then(function (user) { 
+			var access_token = user.plaid.access_token			
+			plaidClient.getAuthUser(access_token, options, function callback(err, response) {
+			  // err can be a network error or a Plaid API error (i.e. invalid credentials)
+				logger.error(err);
+				logger.info(response);
 
-			if(err) {
-				return res.json({err: err}).end();
-			}
-			return res.json({response: response}).end();
-		})
+				if(err) {
+					return res.json({err: err}).end();
+				}
+				return res.json({response: response}).end();
+			})
+		});
 	});
 	app.patch(endpoint.version + endpoint.base + endpoint.auth, function(req, res, next) {
 		logger.trace('req patchAuthUser received');
@@ -651,13 +654,10 @@ module.exports = function (app, options) {
 					var calcRiskArray = [];
 					var totalRiskScore = 0;
 					for(var i = 0; i<response.accounts.length; i++) {
-						logger.info(response.accounts[i].risk.score);
 						totalRiskScore += response.accounts[i].risk.score;
 						calcRiskArray.push(response.accounts[i].risk.score)
 					}
-					logger.debug(calcRiskArray);
 					var weightedAverageRiskScore = totalRiskScore/response.accounts.length;
-					logger.debug(weightedAverageRiskScore)
 					return res.json({score: weightedAverageRiskScore}).end();	  
 				}  
 			})

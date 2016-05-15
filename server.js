@@ -122,6 +122,13 @@ var quote        = require('./api/endpoints/quote')(app, options);
 // app.use('/bower_components',  express.static('bower_components'));
 // app.use('/', home);
 
+// file cleaner, deletes image file periodically
+var FileCleaner = require('cron-file-cleaner').FileCleaner;
+ 
+var fileWatcher = new FileCleaner(__dirname + '/images', 600000,  '* */01 * * * *', {
+  start: true
+});
+
 app.use(h5bp({ root: __dirname + '/src' }));
 app.use(compress());
 

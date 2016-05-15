@@ -28,24 +28,34 @@ module.exports = function (app, options) {
 	// TODO: Secure endpoints with JWT Authentication middleware
 
 	function deleteFileInCloudinary(pictureId) {
-		cloudinary.uploader.destroy(pictureId, function(result) { logger.info(result) });
+		// logger.debug(pictureId);
+		if(pictureId != undefined) {
+			cloudinary.uploader.destroy(pictureId, function(result) { 
+				// logger.info(result) 
+			});
+		}
 	}
 
 	function uploadFileInCloudinary(path, userId, callback) {
+		// logger.debug("uploading")
 	    if(path && (path != undefined)) {
+	    	// logger.debug(path)
 			cloudinary.uploader.upload(path, 
 				function(picture, err) { 
-		            if(err) {
+		            if(err != undefined) {
 		            	logger.error(err);
 		            }
+		            // logger.error(err);
+		            // logger.debug(picture);
 		            // logger.info("successfully uploaded image");
 		            var pic = {
 		            	id: picture.public_id,
 		            	url: picture.url,
 		            	secure_url: picture.secure_url
 		            }
+		            // logger.debug(pic)
 		            updateUserPicture(userId, pic);
-				}, { transformation: [{ width: 500, height: 500, crop: "fit", gravity: "face" }] }
+				}, { transformation: [{ width: 500, height: 500, crop: "thumb", gravity: "face" }] }
 			);
 	    } else {
 	        logger.error("error");
@@ -62,8 +72,10 @@ module.exports = function (app, options) {
 	    // logger.info(req.file);
 	    // pass in a path to upload to cloudinary, remove existing user image first!
 	    var user_id = req.params.uid;
+	    // logger.debug("got request")
 		userController.getUser(user_id).then(function (user) { 
-			if(user.picture != undefined) {
+			// logger.info(user.picture);
+			if(user.picture != undefined || user.picture != {}) {
 				deleteFileInCloudinary(user.picture.id)
 			}
 		    uploadFileInCloudinary(req.file.path, user_id);
