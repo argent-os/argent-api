@@ -633,6 +633,7 @@ module.exports = function (app, options) {
   */
   // Used to POST (create) a new plan
   app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.plans, function(req, res, next) {
+      logger.info("creating new plan");
       var user_id = req.params.uid
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
@@ -640,9 +641,13 @@ module.exports = function (app, options) {
           id: req.body.id,          
           amount: req.body.amount,
           interval: req.body.interval,
+          interval_count: req.body.interval_count,
           name: req.body.name,
-          currency: req.body.currency
+          currency: req.body.currency,
+          trial_period_days: req.body.trial_period_days,
+          statement_descriptor: req.body.statement_descriptor
         };
+        logger.debug(params);
         stripe.plans.create(params, function(err, plan) {
             if(err) {
               logger.error(err)
