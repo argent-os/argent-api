@@ -271,6 +271,81 @@ module.exports = function (app, options) {
       stripe.balance.retrieveTransaction(transactionId)
   });
 
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.history, function(req, res, next) {
+      logger.trace("getting user transaction history arrays")
+      var user_id = req.params.uid
+      var currentTime = Math.floor(Date.now() / 1000)
+      // 1 day in seconds 
+      var oneDayAgo =86400
+      // 2 weeks in seconds 
+      var twoWeeksAgo = 1209600
+      // 1 months in seconds 
+      var oneMonthAgo = 2629746
+      // 3 months in seconds 
+      var threeMonthsAgo = 7889238
+      // 6 months in seconds 
+      var sixMonthsAgo = 15778476
+      // 1 year in seconds
+      var oneYearAgo = 31556952
+      // 5 years in seconds
+      var fiveYearsAgo = 157784760
+
+      var array1d=[]
+      var array2w=[]
+      var array1m=[]
+      var array3m=[]
+      var array6m=[]
+      var array1y=[]
+      var array5y=[]
+      userController.getUser(user_id).then(function (user) {
+        var stripe = require('stripe')(user.stripe.secretKey);
+        var limit = req.query.limit || 100
+        stripe.balance.listTransactions({ limit: limit }, function(err, transactions) {
+          if(err) {
+            logger.error(err)
+          }
+
+          // if the day the transaction was created was less than one day ago
+          // put the value into the 1d array
+
+          // for example, today's timestamp is 1463516647 and there are 86400 seconds in a day
+          // to calculate if the date range is within today do 1463516647-86400
+          // if the timestamp of the transaction creation is greater than this number
+          // it falls within the one day ago range
+          for(var i=0;i<transactions.data.length;i++) {
+            var date = transactions.data[i].created
+            var now = Date().now
+            if(date > currentTime-oneDayAgo) {
+              array1d.push(transactions.data[i].amount)
+            } else if(date > currentTime-twoWeeksAgo) {
+              array2w.push(transactions.data[i].amount)              
+            } else if(date > currentTime-oneMonthAgo) {
+              array1m.push(transactions.data[i].amount)              
+            } else if(date > currentTime-threeMonthsAgo) {
+              array3m.push(transactions.data[i].amount)
+            } else if(date > currentTime-sixMonthsAgo) {
+              array6m.push(transactions.data[i].amount)
+            } else if(date > currentTime-oneYearAgo) {
+              array1y.push(transactions.data[i].amount)
+            } else if(date > currentTime-fiveYearsAgo) {
+              array5y.push(transactions.data[i].amount)
+            }
+          }
+          res.json({
+            history: {
+              "1D":array1d,
+              "2W":array2w,
+              "1M":array1m,
+              "3M":array3m,
+              "6M":array6m,
+              "1Y":array1y,
+              "5Y":array5y
+            }
+          })
+        });
+      })   
+  })
+
   // CHARGES
   // Endpoint: /v1/stripe/charges/create
   /* 
