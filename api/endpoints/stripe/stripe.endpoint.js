@@ -650,9 +650,11 @@ module.exports = function (app, options) {
         logger.debug(params);
         stripe.plans.create(params, function(err, plan) {
             if(err) {
-              logger.error(err)
-            }          
-            res.json({ plan: plan })
+              // logger.error(err)
+              res.status(400).json({ error: err })
+            } else {
+              res.json({ plan: plan })
+            }
             // asynchronously called
         });
       });
