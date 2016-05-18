@@ -276,7 +276,9 @@ module.exports = function (app, options) {
       var user_id = req.params.uid
       var currentTime = Math.floor(Date.now() / 1000)
       // 1 day in seconds 
-      var oneDayAgo =86400
+      var oneDayAgo = 86400
+      // 1 week in seconds
+      var oneWeekAgo = 604800
       // 2 weeks in seconds 
       var twoWeeksAgo = 1209600
       // 1 months in seconds 
@@ -291,6 +293,7 @@ module.exports = function (app, options) {
       var fiveYearsAgo = 157784760
 
       var array1d=[]
+      var array1w=[]
       var array2w=[]
       var array1m=[]
       var array3m=[]
@@ -317,6 +320,8 @@ module.exports = function (app, options) {
             var now = Date().now
             if(date > currentTime-oneDayAgo) {
               array1d.push(transactions.data[i].amount)
+            } if(date > currentTime-oneWeekAgo) {
+              array1w.push(transactions.data[i].amount)
             } else if(date > currentTime-twoWeeksAgo) {
               array2w.push(transactions.data[i].amount)              
             } else if(date > currentTime-oneMonthAgo) {
@@ -334,6 +339,7 @@ module.exports = function (app, options) {
           res.json({
             history: {
               "1D":array1d,
+              "1W":array1d,
               "2W":array2w,
               "1M":array1m,
               "3M":array3m,
