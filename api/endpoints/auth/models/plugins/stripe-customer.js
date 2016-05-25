@@ -66,17 +66,18 @@ module.exports = exports = function stripeCustomer (schema, options) {
     // logger.debug(user.email);
     // logger.debug(user.country);
     logger.trace('inside create stripe account');
+    logger.info(user.legal_entity);
     stripe.accounts.create(
       {
         managed: true,
         legal_entity: {
-          first_name: user.first_name,
-          last_name: user.last_name,
-          type: user.legal_entity_type,
+          first_name: user.legal_entity.first_name,
+          last_name: user.legal_entity.last_name,
+          type: user.legal_entity.type,
           dob: {
-            day: user.dob.day,
-            month: user.dob.month,
-            year: user.dob.year
+            day: user.legal_entity.dob.day,
+            month: user.legal_entity.dob.month,
+            year: user.legal_entity.dob.year
           }
         },        
         tos_acceptance: {

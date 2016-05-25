@@ -54,13 +54,18 @@ UserController.prototype.register = function (req, res, next) {
             }
             if(req.body.dob !== undefined) {
               var dateOfBirth = {
-                "day": req.body.dob.data.day,
-                "month": req.body.dob.data.month,
-                "year": req.body.dob.data.year
+                "day": req.body.dob.day,
+                "month": req.body.dob.month,
+                "year": req.body.dob.year
               }
-            } else {
+            } else {}
 
+            if(req.body.legal_entity !== undefined) {
+              var type = legal_entity.type
+            } else {
+              var type = req.body.legal_entity_type
             }
+
             var user = new User({
               first_name: req.body.first_name,
               last_name: req.body.last_name,
@@ -69,12 +74,16 @@ UserController.prototype.register = function (req, res, next) {
               phone_number: req.body.phone_number,
               password: req.body.password,
               country: req.body.country,
-              legal_entity_type: req.body.legal_entity_type,
+              legal_entity: {
+                "first_name": req.body.first_name,
+                "last_name": req.body.last_name,
+                "type": type,
+                "dob": dateOfBirth,
+              },
               tos_acceptance: {
                 "ip":req.body.tos_acceptance.data.ip,
                 "date":parsedDate
               },
-              dob: dateOfBirth,
               env: process.env.ENVIRONMENT,
               theme: "1",
               verifyToken: verifyToken,
@@ -251,7 +260,7 @@ UserController.prototype.removeAccount = function (req, res, next) {
 
 UserController.prototype.editProfile = function (req, res, next) {
   var data = req.body;
-  logger.trace("update req received");
+  logger.trace("update profile req received");
   var user_id = req.params.uid;
   userHelper.checkIfUserExists(req.user, data, function (result) {
     if (result === 'user_uniq') {
@@ -364,6 +373,7 @@ UserController.prototype.editProfile = function (req, res, next) {
                 else {
                   logger.info("saving user update")
                   var newToken = createJWT(user);
+                  logger.info("user saved", user)
                   res.json({token: newToken, user: user});
                 }
               });

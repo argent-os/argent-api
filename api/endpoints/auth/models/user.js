@@ -38,6 +38,25 @@ var dobDef = {
   year: { type: Number }
 }
 
+var addressDef = {
+  "city": { type: String },
+  "country": { type: String },
+  "line1": { type: String },
+  "line2": { type: String },
+  "postal_code": { type: Number },
+  "state": { type: String }
+}
+
+var legalEntityDef = {
+  "first_name": { type: String },
+  "last_name": { type: String },
+  "business_name": { type: String },
+  "dob": dobDef,
+  "type": { type: String },
+  "additional_owners" : { type: Array },
+  "address": addressDef
+}
+
 var verifyDef = {
   token: { type: String },
   status: { type: Boolean }
@@ -59,8 +78,7 @@ var UserSchema = new mongoose.Schema({
   phone_number: { type: String, trim: true },
   country: { type: String },
   tos_acceptance: tosDef,
-  dob: dobDef,
-  legal_entity_type: { type: String },
+  legal_entity: legalEntityDef,
   role: { type: Array },
   organization: organizationDef,
   picture: pictureDef,

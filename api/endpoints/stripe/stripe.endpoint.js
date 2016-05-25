@@ -141,10 +141,22 @@ module.exports = function (app, options) {
     });
   })
 
-  // TODO: Reinforce API
+  // TODO: Complete API
   // ACCOUNT
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.account, function(req, res, next) {
-      stripe.account.retrieve(accountId)
+      logger.trace("request received | get account")
+      var user_id = req.params.uid
+      userController.getUser(user_id).then(function (user) {
+        var stripe = require('stripe')(user.stripe.secretKey); 
+        stripe.account.retrieve(user.stripe.accountId, function(err, account) {
+            // asynchronously called
+            if(err) {
+              logger.error(err);
+            }
+            res.json({account: account})
+          }
+        );   
+      });
   });
   app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.account, function(req, res, next) {
       stripe.account.create([params])
@@ -153,7 +165,20 @@ module.exports = function (app, options) {
       stripe.account.list([params])
   }); 
   app.put(endpoint.version + endpoint.base + "/:uid" + endpoint.account, function(req, res, next) {
-      stripe.account.update([params])
+      logger.trace("request received | update stripe account")
+      var user_id = req.params.uid;
+      var params = req.body;
+      userController.getUser(user_id).then(function (user) {
+        var stripe = require('stripe')(user.stripe.secretKey); 
+        stripe.account.update(user.stripe.accountId, params, function(err, account) {
+            // asynchronously called
+            if(err) {
+              logger.error(err);
+            }
+            res.json({account: account})
+          }
+        );   
+      });
   });
   
   // EXTERNAL ACCOUNTS
@@ -318,29 +343,7 @@ module.exports = function (app, options) {
           // to calculate if the date range is within today do 1463516647-86400
           // if the timestamp of the transaction creation is greater than this number
           // it falls within the one day ago range
-          /*
-          for(var i=0;i<transactions.data.length;i++) {
-            var date = transactions.data[i].created
-            var now = Date().now
-            if(date > currentTime-oneDayAgo) {
-              array1d.push(transactions.data[i].amount)
-            } if(date > currentTime-oneWeekAgo) {
-              array1w.push(transactions.data[i].amount)
-            } else if(date > currentTime-twoWeeksAgo) {
-              array2w.push(transactions.data[i].amount)              
-            } else if(date > currentTime-oneMonthAgo) {
-              array1m.push(transactions.data[i].amount)              
-            } else if(date > currentTime-threeMonthsAgo) {
-              array3m.push(transactions.data[i].amount)
-            } else if(date > currentTime-sixMonthsAgo) {
-              array6m.push(transactions.data[i].amount)
-            } else if(date > currentTime-oneYearAgo) {
-              array1y.push(transactions.data[i].amount)
-            } else if(date > currentTime-fiveYearsAgo) {
-              array5y.push(transactions.data[i].amount)
-            }
-          }
-          */
+
           var totalDay = 0;
           var totalWeek1 = 0;
           var totalWeek2 = 0;
@@ -366,7 +369,6 @@ module.exports = function (app, options) {
           var totalYear3 = 0;
           var totalYear4 = 0;
           var totalYear5 = 0;
-
 
           var startOfDay1 = moment().startOf('day').toDate().getTime();
           
@@ -404,7 +406,6 @@ module.exports = function (app, options) {
           var startOfMonth1 = moment().startOf('month').toDate().getTime();
           var endOfMonth1 = moment().endOf('month').toDate().getTime();
 
-          
           var startOfYear5 = moment().subtract(4, 'years').startOf('isoYear').toDate().getTime();
           var endOfYear5 = moment().subtract(4, 'years').endOf('isoYear').toDate().getTime();
           var startOfYear4 = moment().subtract(3, 'years').startOf('isoYear').toDate().getTime();
@@ -415,13 +416,6 @@ module.exports = function (app, options) {
           var endOfYear2 = moment().subtract(1, 'years').endOf('isoYear').toDate().getTime();
           var startOfYear1 = moment().startOf('year').toDate().getTime();
           var endOfYear1 = moment().endOf('year').toDate().getTime();
-
-
-          //logger.debug(startOfMonth1);
-          //logger.debug(endOfWeek1);
-          //logger.debug(startOfWeek2);
-          //logger.debug(startOfDay1);
-          
 
           for(var i=0;i<transactions.data.length;i++) {
             var date = transactions.data[i].created
@@ -509,17 +503,6 @@ module.exports = function (app, options) {
 
           }
 
-/*
-{
-  "1D":[x,x,x,x,x...],
-  "2W":[x,x],
-  "1M":[x,x,x,x],
-  "3M":[x,x,x],
-  "6M":[x,x,x,x,x,x],
-  "1Y":[x,x,x,x,x,x,x,x,x,x],
-  "5Y":[x,x,x,x,x],
-}
-*/
           res.json({
             history: {
               "1D":array1d,
@@ -531,7 +514,7 @@ module.exports = function (app, options) {
               "5Y":[totalYear5,totalYear4,totalYear3,totalYear2,totalYear1],
             }
           })
-        });
+        })
       })   
   })
 
