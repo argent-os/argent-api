@@ -103,7 +103,7 @@ UserController.prototype.register = function (req, res, next) {
               logger.trace('inside save');
               // change to req.body.country      
               process.env.ENVIRONMENT == 'DEV' || process.env.ENVIRONMENT == undefined ? link = 'http://localhost:5000/verify' + '?token=' + verifyToken : '';
-              process.env.ENVIRONMENT == 'PROD' ? link = 'https://www.protonpayments.com/verify' + '?token=' + verifyToken : '';                  
+              process.env.ENVIRONMENT == 'PROD' ? link = 'https://api.argent.cloud/verify' + '?token=' + verifyToken : '';                  
               mailer.verifyEmail(user, link, function (err, info) {
                 if (err) {
                   logger.error('Error occured : ' + err);
@@ -477,7 +477,7 @@ UserController.prototype.remindPassword = function(req, res) {
   var url;
   process.env.ENVIRONMENT == "DEV" ? url = "http://localhost:5000/reset" : "";
   // process.env.ENVIRONMENT == "PROD" ? url = "https://www.paykloud.com/reset" : "";
-  process.env.ENVIRONMENT == "PROD" ? url = "http://argent-www-dev.us-east-1.elasticbeanstalk.com/reset" : "";
+  process.env.ENVIRONMENT == "PROD" ? url = "https://api.argent.cloud/reset" : "";
   
   User.findOne({ $or: [ { email: req.body.email }, { username: req.body.username } ] }, function(err, user) {
     if (!user) {
@@ -690,10 +690,10 @@ UserController.prototype.searchUser = function (req, res, next) {
             first_name: doc[i].first_name,
             last_name: doc[i].last_name,
             username: doc[i].username,
-            email: doc[i].email,
+            country: doc[i].country,
             picture: doc[i].picture.secure_url
           }
-          logger.info(doc[i]);
+          // logger.info(doc[i]);
           usersArr.push(user);
     }
 
@@ -710,7 +710,7 @@ UserController.prototype.listAllUsers = function (req, res, next) {
         first_name: user.first_name,
         last_name: user.last_name,
         username: user.username,
-        email: user.email,
+        country: user.country,
         picture: user.picture.secure_url
       }
       usersArr.push(user);

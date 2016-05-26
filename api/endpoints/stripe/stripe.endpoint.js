@@ -167,14 +167,16 @@ module.exports = function (app, options) {
   app.put(endpoint.version + endpoint.base + "/:uid" + endpoint.account, function(req, res, next) {
       logger.trace("request received | update stripe account")
       var user_id = req.params.uid;
-      var params = req.body;
+      var parameters = req.body;
+      logger.info(parameters)
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey); 
-        stripe.account.update(user.stripe.accountId, params, function(err, account) {
+        stripe.account.update(user.stripe.accountId, parameters, function(err, account) {
             // asynchronously called
             if(err) {
               logger.error(err);
             }
+            logger.info("updated stripe account")
             res.json({account: account})
           }
         );   

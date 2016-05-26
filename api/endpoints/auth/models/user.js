@@ -39,22 +39,22 @@ var dobDef = {
 }
 
 var addressDef = {
-  "city": { type: String },
-  "country": { type: String },
-  "line1": { type: String },
-  "line2": { type: String },
-  "postal_code": { type: Number },
-  "state": { type: String }
+  city: { type: String },
+  country: { type: String },
+  line1: { type: String },
+  line2: { type: String },
+  postal_code: { type: Number },
+  state: { type: String }
 }
 
 var legalEntityDef = {
-  "first_name": { type: String },
-  "last_name": { type: String },
-  "business_name": { type: String },
-  "dob": dobDef,
-  "type": { type: String },
-  "additional_owners" : { type: Array },
-  "address": addressDef
+  first_name: { type: String },
+  last_name: { type: String },
+  business_name: { type: String },
+  dob: dobDef,
+  type: { type: String },
+  additional_owners: { type: Array },
+  address: addressDef
 }
 
 var verifyDef = {
