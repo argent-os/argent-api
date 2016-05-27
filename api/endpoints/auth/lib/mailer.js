@@ -59,12 +59,14 @@ exports.contactSupport = function(user, subject, message, callback) {
     callback(null, user, null);
   }
   else {
+    var hat = require('hat');
+    var rack = hat.rack(); 
     var transporter = nodemailer.createTransport(config.transporter);
     var mailOptions = {
       from: user.email,
       to: config.supportEmails,
-      subject: subject,
-      html: message
+      subject: subject + " id_"+rack(),
+      html: "sender: " + user.email + " \n\n" + message
     };
     transporter.sendMail(mailOptions, function (error,info) {
       callback(error, info);
