@@ -2,7 +2,8 @@ module.exports = function (app, options) {
 
 	var endpoint = {
 		version: '/v1',
-		base: '/message'	     
+		base: '/message',	     
+		user: '/user'	     
 	};
 
   	var userController = require('../auth/controllers/user-controller');
@@ -38,5 +39,30 @@ module.exports = function (app, options) {
 			});
 		});
 	});
+
+		// curl -X GET -i -H "Content-Type: application/json" -d '{"message": "foobar"}' http://192.168.1.232:5001/v1/message/6a4sh02hicnxmf28
+	app.post(endpoint.version + endpoint.base + endpoint.user + "/:username", function(req, res, next) {
+		logger.trace('send message received');
+		var username = req.params.username;
+		var message = req.body.message;
+		userController.getDelegatedUserByUsername(username).then(function (user, err) { 
+			if(err) {
+				logger.error(err);
+				res.json({err: err})
+			}
+			logger.info('got user')
+			mailer.messageUser(user, message, function (err, info) {
+				if (err) {
+				  res.status(401).json({msg: 'error_sending_message', error: err});
+				  logger.error(err);
+				}
+				else {
+				  var msg = 'message_sent';
+				  res.json({status: msg, info: info});
+				}
+			});
+		});
+	});
+
 	return;
 };
