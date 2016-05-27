@@ -53,7 +53,7 @@ var options = {
   //mongoconnection: localMongo || mongooseUri,
   mongoconnection: mongooseUri,
   logFile: path.join(__dirname, 'authlogger.log'),
-  corsDomains: ['*', 'http://localhost:5000', 'http://paykloud.herokuapp.com', 'https://paykloud.herokuapp.com', 'https://www.paykloud.com'],
+  corsDomains: ['*', 'http://localhost:5000'],
   // Nodemailer settings, used for resetting password
   mailer: {
     mailerFrom    : process.env.SUPPORT_EMAIL,
@@ -69,8 +69,8 @@ var options = {
     transporter   : {
       service: 'Gmail',
       auth: {
-        user: process.env.PAYKLOUD_GMAIL,
-        pass: process.env.PAYKLOUD_GMAIL_PW
+        user: process.env.APP_GMAIL,
+        pass: process.env.APP_GMAIL_PW
       }
     }
   }

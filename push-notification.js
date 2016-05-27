@@ -1,6 +1,5 @@
 // Example Push Notification API, for production use a seperate server for push notificaitons!
 // To test this example get your device token after registering for notifications, and enter the command 'node push-notification.js'
-// Production push notification server: https://github.com/praxicorp/paykloud-push-server
 // "use strict";
 
 // var apn  = require ('apn');
@@ -74,7 +73,6 @@
 //     console.log("Sending a tailored notification to %d devices", tokens.length);
 //     tokens.forEach(function(token, i) {
 //         var note = new apn.notification();
-//         note.setAlertText("Hello, from PayKloud! You are number: " + i);
 //         note.badge = 1;
 //         note.sound = "chime2.caf";
 //         note.alert = "You have a new message";

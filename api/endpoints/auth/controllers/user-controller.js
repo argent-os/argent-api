@@ -476,7 +476,7 @@ UserController.prototype.remindPassword = function(req, res) {
 
   var url;
   process.env.ENVIRONMENT == "DEV" ? url = "http://localhost:5000/reset" : "";
-  // process.env.ENVIRONMENT == "PROD" ? url = "https://www.paykloud.com/reset" : "";
+  // process.env.ENVIRONMENT == "PROD" ? url = "https://www.argentapp.com/reset" : "";
   process.env.ENVIRONMENT == "PROD" ? url = "https://api.argent.cloud/reset" : "";
   
   User.findOne({ $or: [ { email: req.body.email }, { username: req.body.username } ] }, function(err, user) {
