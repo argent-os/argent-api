@@ -341,6 +341,8 @@ module.exports = function (app, options) {
             }
           }
           */
+          var currentWeek = moment().isoWeek();
+          logger.debug("Current week: ", currentWeek);
           var totalDay = 0;
           var totalWeek1 = 0;
           var totalWeek2 = 0;
@@ -509,17 +511,17 @@ module.exports = function (app, options) {
 
           }
 
-/*
-{
-  "1D":[x,x,x,x,x...],
-  "2W":[x,x],
-  "1M":[x,x,x,x],
-  "3M":[x,x,x],
-  "6M":[x,x,x,x,x,x],
-  "1Y":[x,x,x,x,x,x,x,x,x,x],
-  "5Y":[x,x,x,x,x],
-}
-*/
+          /* Format
+          {
+            "1D":[x,x,x,x,x...],
+            "2W":[x,x],
+            "1M":[x,x,x,x],
+            "3M":[x,x,x],
+            "6M":[x,x,x,x,x,x],
+            "1Y":[x,x,x,x,x,x,x,x,x,x],
+            "5Y":[x,x,x,x,x],
+          }
+          */
           res.json({
             history: {
               "1D":array1d,
