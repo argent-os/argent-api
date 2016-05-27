@@ -134,7 +134,7 @@ module.exports = function (app, options) {
 		// getAuthUser(String, Object?, Function)
 		var user_id = req.params.uid;
 		var options = req.body.access_token || req.query.access_token || req.params.access_token;		
-		userController.getUser(user_id).then(function (user) { 
+		userController.getUser(user_id).then(function (user, err) { 
 			var access_token = user.plaid.access_token			
 			plaidClient.getAuthUser(access_token, options, function callback(err, response) {
 			  // err can be a network error or a Plaid API error (i.e. invalid credentials)
@@ -635,7 +635,7 @@ module.exports = function (app, options) {
 		var user_id = req.params.uid;
 		var upgrade_to = req.body.upgrade_to;
 		var options = req.body.options || {};
-		userController.getUser(user_id).then(function (user) { 
+		userController.getUser(user_id).then(function (user, err) { 
 			var access_token = user.plaid.access_token			
 			plaidClient.upgradeUser(access_token, upgrade_to, options, function callback(err, mfaResponse, response) {
 				// err can be a network error or a Plaid API error (i.e. invalid credentials)
@@ -672,7 +672,7 @@ module.exports = function (app, options) {
 		// The public_token is the access token returned by plaid link
 		var user_id = req.params.uid
 		var public_token = req.body.public_token;
-      	userController.getUser(user_id).then(function (user) { 
+      	userController.getUser(user_id).then(function (user, err) { 
 			// Exchange a public_token and account_id for a Plaid access_token
   			// and a Stripe bank account token
   			var plaid_acct_id = "QPO8Jo8vdDHMepg41PBwckXm4KdK1yUdmXOwK";
