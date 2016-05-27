@@ -50,7 +50,7 @@ exports.verifyEmail = function(user, link, callback) {
   }
 };
 
-exports.contactSupport = function(user, message, callback) {
+exports.contactSupport = function(user, subject, message, callback) {
   if (!config && process.env.ENV !== 'testing') {
     callback('Transporter not configured');
     return;
@@ -63,7 +63,7 @@ exports.contactSupport = function(user, message, callback) {
     var mailOptions = {
       from: user.email,
       to: config.supportEmails,
-      subject: config.supportTitle,
+      subject: subject,
       html: message
     };
     transporter.sendMail(mailOptions, function (error,info) {

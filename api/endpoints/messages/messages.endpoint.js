@@ -20,12 +20,13 @@ module.exports = function (app, options) {
 	app.post(endpoint.version + endpoint.base + "/:uid", function(req, res, next) {
 		logger.trace('req message received');
 		var user_id = req.params.uid;
+		var subject = req.body.subject;
 		var message = req.body.message;
 		userController.getUser(user_id).then(function (user, err) { 
 			if(err) {
 				res.json({err: err})
 			}
-			mailer.contactSupport(user, message, function (err, info) {
+			mailer.contactSupport(user, subject, message, function (err, info) {
 				if (err) {
 				  res.status(401).json({msg: 'error_sending_message', error: err});
 				  logger.error(err);
