@@ -58,6 +58,8 @@ var options = {
   mailer: {
     mailerFrom    : process.env.SUPPORT_EMAIL,
     passwordResetTitle   : 'Password Reset',
+    supportTitle: 'Support Request',
+    supportEmails: ['support@argent-tech.com', 'sinan@argent-tech.com', 'selin@argent-tech.com', 'semih@argent-tech.com'],
     verifyEmailTitle   : 'Verify Account for Argent',
     verifyEmailLinkText   : 'Welcome to Argent!  Please verify your email using the following link: ',
     quoteEmailTitle: 'Quote created',  
@@ -115,6 +117,7 @@ var notification = require('./api/endpoints/notification')(app, options);
 var stripe       = require('./api/endpoints/stripe/stripe.endpoint')(app, options);
 var plaid        = require('./api/endpoints/plaid/plaid.endpoint')(app, options);
 var cloudinary   = require('./api/endpoints/cloudinary/cloudinary.endpoint')(app, options);
+var messages   = require('./api/endpoints/messages/messages.endpoint')(app, options);
 var quote        = require('./api/endpoints/quote')(app, options);
 
 // app.use(express.static(path.join(__dirname, 'api/web')));

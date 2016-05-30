@@ -54,13 +54,18 @@ UserController.prototype.register = function (req, res, next) {
             }
             if(req.body.dob !== undefined) {
               var dateOfBirth = {
-                "day": req.body.dob.data.day,
-                "month": req.body.dob.data.month,
-                "year": req.body.dob.data.year
+                "day": req.body.dob.day,
+                "month": req.body.dob.month,
+                "year": req.body.dob.year
               }
-            } else {
+            } else {}
 
+            if(req.body.legal_entity !== undefined) {
+              var type = legal_entity.type
+            } else {
+              var type = req.body.legal_entity_type
             }
+
             var user = new User({
               first_name: req.body.first_name,
               last_name: req.body.last_name,
@@ -69,12 +74,16 @@ UserController.prototype.register = function (req, res, next) {
               phone_number: req.body.phone_number,
               password: req.body.password,
               country: req.body.country,
-              legal_entity_type: req.body.legal_entity_type,
+              legal_entity: {
+                "first_name": req.body.first_name,
+                "last_name": req.body.last_name,
+                "type": type,
+                "dob": dateOfBirth,
+              },
               tos_acceptance: {
                 "ip":req.body.tos_acceptance.data.ip,
                 "date":parsedDate
               },
-              dob: dateOfBirth,
               env: process.env.ENVIRONMENT,
               theme: "1",
               verifyToken: verifyToken,
@@ -94,7 +103,7 @@ UserController.prototype.register = function (req, res, next) {
               logger.trace('inside save');
               // change to req.body.country      
               process.env.ENVIRONMENT == 'DEV' || process.env.ENVIRONMENT == undefined ? link = 'http://localhost:5000/verify' + '?token=' + verifyToken : '';
-              process.env.ENVIRONMENT == 'PROD' ? link = 'https://www.protonpayments.com/verify' + '?token=' + verifyToken : '';                  
+              process.env.ENVIRONMENT == 'PROD' ? link = 'https://api.argent.cloud/verify' + '?token=' + verifyToken : '';                  
               mailer.verifyEmail(user, link, function (err, info) {
                 if (err) {
                   logger.error('Error occured : ' + err);
@@ -251,7 +260,7 @@ UserController.prototype.removeAccount = function (req, res, next) {
 
 UserController.prototype.editProfile = function (req, res, next) {
   var data = req.body;
-  logger.trace("update req received");
+  logger.trace("update profile req received");
   var user_id = req.params.uid;
   userHelper.checkIfUserExists(req.user, data, function (result) {
     if (result === 'user_uniq') {
@@ -364,6 +373,7 @@ UserController.prototype.editProfile = function (req, res, next) {
                 else {
                   logger.info("saving user update")
                   var newToken = createJWT(user);
+                  logger.info("user saved", user)
                   res.json({token: newToken, user: user});
                 }
               });
@@ -467,7 +477,7 @@ UserController.prototype.remindPassword = function(req, res) {
   var url;
   process.env.ENVIRONMENT == "DEV" ? url = "http://localhost:5000/reset" : "";
   // process.env.ENVIRONMENT == "PROD" ? url = "https://www.paykloud.com/reset" : "";
-  process.env.ENVIRONMENT == "PROD" ? url = "http://argent-www-dev.us-east-1.elasticbeanstalk.com/reset" : "";
+  process.env.ENVIRONMENT == "PROD" ? url = "https://api.argent.cloud/reset" : "";
   
   User.findOne({ $or: [ { email: req.body.email }, { username: req.body.username } ] }, function(err, user) {
     if (!user) {
@@ -680,10 +690,10 @@ UserController.prototype.searchUser = function (req, res, next) {
             first_name: doc[i].first_name,
             last_name: doc[i].last_name,
             username: doc[i].username,
-            email: doc[i].email,
+            country: doc[i].country,
             picture: doc[i].picture.secure_url
           }
-          logger.info(doc[i]);
+          // logger.info(doc[i]);
           usersArr.push(user);
     }
 
@@ -700,7 +710,7 @@ UserController.prototype.listAllUsers = function (req, res, next) {
         first_name: user.first_name,
         last_name: user.last_name,
         username: user.username,
-        email: user.email,
+        country: user.country,
         picture: user.picture.secure_url
       }
       usersArr.push(user);

@@ -49,3 +49,27 @@ exports.verifyEmail = function(user, link, callback) {
     });
   }
 };
+
+exports.contactSupport = function(user, subject, message, callback) {
+  if (!config && process.env.ENV !== 'testing') {
+    callback('Transporter not configured');
+    return;
+  }
+  if (process.env.ENV === 'testing') {
+    callback(null, user, null);
+  }
+  else {
+    var hat = require('hat');
+    var rack = hat.rack(); 
+    var transporter = nodemailer.createTransport(config.transporter);
+    var mailOptions = {
+      from: user.email,
+      to: config.supportEmails,
+      subject: subject + " id_"+rack(),
+      html: "sender: " + user.email + " \n\n" + message
+    };
+    transporter.sendMail(mailOptions, function (error,info) {
+      callback(error, info);
+    });
+  }
+};
