@@ -291,7 +291,7 @@ module.exports = function (app, options) {
           }
           // logger.info(transactions)
           res.json({transactions:transactions})
-          // asynchronously called
+          // asynchronously called // test
         });
       })       
   });     
