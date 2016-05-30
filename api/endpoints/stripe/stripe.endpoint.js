@@ -13,7 +13,7 @@ module.exports = function (app, options) {
     account: '/account',
     external_account: '/external_account',     
     balance: '/balance', 
-    transactions: '/transactions',              
+    transactions: '/transactions',             
     charge: '/charge',                         
     history: '/history',                         
     cards: '/cards',                         
@@ -39,12 +39,16 @@ module.exports = function (app, options) {
       as well as things like cors and bodyParser which makes handling JSON requests easier
   */
   var userController = require('../auth/controllers/user-controller');
+  var utils = require('./utils');
+  var currencyFormat = require('./currencyFormat');
   var secrets = require('../auth/config/secrets');
   var options = secrets.stripeOptions;
   var log4js = require('log4js');
   var logger = log4js.getLogger();
   var cors = require('cors');
   var moment = require('moment');
+  var accounting = require('accounting');
+  var getSymbolFromCurrency = require('currency-symbol-map').getSymbolFromCurrency;
   var bodyParser = require('body-parser');
   var expressValidator = require('express-validator');
   app.use(cors());
@@ -290,46 +294,136 @@ module.exports = function (app, options) {
             logger.error(err)
           }
           // logger.info(transactions)
-          res.json({transactions:transactions})
-          // asynchronously called // test
+          res.json({ transactions:transactions })
+          // asynchronously called
+
         });
       })       
   });     
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.balance + endpoint.transactions, function(req, res, next) {
       stripe.balance.retrieveTransaction(transactionId)
   });
+  //
+  // transaction history
+  //
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.history + "/:interval", function(req, res, next) {
+    
+      var user_id = req.params.uid;
+      var interval = req.params.interval;
+      // /v1/stripe/09s8df0a9s8d/history?interval=year&currency=usd&number=10
+      var currency = req.query.currency;
+      userController.getUser(user_id).then(function (user) {
+        var stripe = require('stripe')(user.stripe.secretKey);
+        var limit = req.query.limit || 1000;
+        var number = req.query.number;
+        stripe.balance.listTransactions({}, function(err, transactions) {
+          if(err) {
+            logger.error(err)
+          }
+          switch (interval) {
+            case "year":
+              numberOfYears = number;
+              var yearBegin = utils.getYearBegin(number);
+              var yearEnd = utils.getYearEnd(number);
+              beginInterval = yearBegin;
+              endInterval = yearEnd;
+              break;
+            case "month":
+              numberOfMonths = number;
+              var monthBegin = utils.getMonthBegin(number);
+              var monthEnd = utils.getMonthEnd(number);
+              beginInterval = monthBegin;
+              endInterval = monthEnd;
+              break;
+            case "week":
+              numberOfWeeks = number;
+              var weekBegin = utils.getWeekBegin(number);
+              var weekEnd = utils.getWeekEnd(number);
+              beginInterval = weekBegin;
+              endInterval = weekEnd;
+              break;
+            case "day":
+              numberOfDays = number;
+              var dayBegin = utils.getDayBegin(number);
+              var dayEnd = utils.getDayEnd(number);
+              beginInterval = dayBegin;
+              endInterval = dayEnd;
+              break;
+            default:
+              break;  
+          }
+          //
+          switch(currency){
+            case "usd":
+              var currencySymbol = getSymbolFromCurrency('USD');
+              break;
+            case "cad":
+              var currencySymbol = getSymbolFromCurrency('CAD');
+              break;
+            case "aud":
+              var currencySymbol = getSymbolFromCurrency('AUD');
+              break;  
+            case "eur":
+              var currencySymbol = getSymbolFromCurrency('EUR');
+              break;
+            case "gbp":
+              var currencySymbol = getSymbolFromCurrency('GBP');
+              break;
+            default:
+              var currencySymbol = "RAW"
+              break;
+          }
+
+          var transactionArray = [];
+          var transactionJSON = {
+            data: []
+          };
+          for (var i=0;i<transactions.data.length;i++) {
+            var transactionDate = transactions.data[i].created;
+            var dateString = moment.unix(transactionDate).format("MM/DD/YYYY");
+            
+            var dateW = transactions.data[i].created;
+            for (var j= 0; j <= number; j++) {
+              if((dateW > beginInterval[j]/1000) && (dateW < endInterval[j]/1000)) {
+                  
+                  var transactionAmount = transactions.data[i].amount;
+                  switch(currency){
+                  case "usd":
+                    var transactionAmountFormatted = currencyFormat.getCommaSeparatedFormat(currencySymbol, transactionAmount);
+                    break;
+                  case "cad":
+                    var transactionAmountFormatted = currencyFormat.getCommaSeparatedFormat(currencySymbol, transactionAmount);
+                    break;
+                  case "aud":
+                    var transactionAmountFormatted = currencyFormat.getCommaSeparatedFormat(currencySymbol, transactionAmount);
+                    break;  
+                  case "eur":
+                    var transactionAmountFormatted = currencyFormat.getDotSeparatedFormat(currencySymbol, transactionAmount);
+                    break;
+                  case "gbp":
+                    var transactionAmountFormatted = currencyFormat.getCommaSeparatedFormat(currencySymbol, transactionAmount);
+                    break;
+                  default:
+                    transactionAmountFormatted = transactionAmount;
+                    break;
+                }
+                transactionJSON.data.push({
+                  "date"    : dateW,
+                  "amount"  : transactionAmountFormatted
+                })
+              }
+            }
+          }
+          res.json({
+            transactions: transactionJSON  
+          })
+        })
+      })
+  })
 
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.history, function(req, res, next) {
-      logger.trace("getting user transaction history arrays")
+      
       var user_id = req.params.uid
-      var currentTime = Math.floor(Date.now() / 1000)
-      // 1 day in seconds 
-      var oneDayAgo = 86400
-      // 1 week in seconds
-      var oneWeekAgo = 604800
-      // 2 weeks in seconds 
-      var twoWeeksAgo = 1209600
-      // 1 months in seconds 
-      var oneMonthAgo = 2629746
-      // 3 months in seconds 
-      var threeMonthsAgo = 7889238
-      // 6 months in seconds 
-      var sixMonthsAgo = 15778476
-      // 1 year in seconds
-      var oneYearAgo = 31556952
-      // 5 years in seconds
-      var fiveYearsAgo = 157784760
-
-      var arrayWeek1 = [];
-      var arrayWeek2 = [];
-      var array1d=[]
-      var array1w=[]
-      var array2w=[]
-      var array1m=[]
-      var array3m=[]
-      var array6m=[]
-      var array1y=[]
-      var array5y=[]
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
         var limit = req.query.limit || 100
@@ -337,188 +431,78 @@ module.exports = function (app, options) {
           if(err) {
             logger.error(err)
           }
-
-          // if the day the transaction was created was less than one day ago
-          // put the value into the 1d array
-
-          // for example, today's timestamp is 1463516647 and there are 86400 seconds in a day
-          // to calculate if the date range is within today do 1463516647-86400
-          // if the timestamp of the transaction creation is greater than this number
-          // it falls within the one day ago range
-
-          var totalDay = 0;
-          var totalWeek1 = 0;
-          var totalWeek2 = 0;
-          var totalMonthWeek1 = 0;
-          var totalMonthWeek2 = 0;
-          var totalMonthWeek3 = 0;
-          var totalMonthWeek4= 0;
-
-          var totalMonth1 = 0;
-          var totalMonth2 = 0;
-          var totalMonth3 = 0;
-          var totalMonth4 = 0;
-          var totalMonth5 = 0;
-          var totalMonth6 = 0;
-          var totalMonth7 = 0;
-          var totalMonth8 = 0;
-          var totalMonth9 = 0;
-          var totalMonth10 = 0;
-          var totalMonth11 = 0;
-          var totalMonth12 = 0;
-          var totalYear1 = 0;
-          var totalYear2 = 0;
-          var totalYear3 = 0;
-          var totalYear4 = 0;
-          var totalYear5 = 0;
-
-          var startOfDay1 = moment().startOf('day').toDate().getTime();
+          var oneYearInWeeks = 51;
+          var oneYearInMonths = 11;
+          var totalWeek = [];
+          var weekBegin = utils.getWeekBegin(oneYearInWeeks);
+          var weekEnd = utils.getWeekEnd(oneYearInWeeks);
+          for (var i = oneYearInWeeks; i >= 0; i--) {
+            totalWeek[i] = 0;
+          }
           
-          var startOfWeek4 = moment().subtract(3, 'weeks').startOf('isoWeek').toDate().getTime();
-          var endOfWeek4 = moment().subtract(3, 'weeks').endOf('isoWeek').toDate().getTime();
-          var startOfWeek3= moment().subtract(2, 'weeks').startOf('isoWeek').toDate().getTime();
-          var endOfWeek3 = moment().subtract(2, 'weeks').endOf('isoWeek').toDate().getTime();
-          var startOfWeek2 = moment().subtract(1, 'weeks').startOf('isoWeek').toDate().getTime();
-          var endOfWeek2 = moment().subtract(1, 'weeks').endOf('isoWeek').toDate().getTime();
-          var startOfWeek1 = moment().startOf('isoWeek').toDate().getTime();
-          var endOfWeek1   = moment().endOf('isoWeek').toDate().getTime();
-          
-          var startOfMonth12 = moment().subtract(11, 'months').startOf('isoMonth').toDate().getTime();
-          var endOfMonth12 = moment().subtract(11, 'months').endOf('isoMonth').toDate().getTime();
-          var startOfMonth11 = moment().subtract(10, 'months').startOf('isoMonth').toDate().getTime();
-          var endOfMonth11 = moment().subtract(10, 'months').endOf('isoMonth').toDate().getTime();
-          var startOfMonth10 = moment().subtract(9, 'months').startOf('isoMonth').toDate().getTime();
-          var endOfMonth10 = moment().subtract(9, 'months').endOf('isoMonth').toDate().getTime();
-          var startOfMonth9 = moment().subtract(8, 'months').startOf('isoMonth').toDate().getTime();
-          var endOfMonth9 = moment().subtract(8, 'months').endOf('isoMonth').toDate().getTime();
-          var startOfMonth8 = moment().subtract(7, 'months').startOf('isoMonth').toDate().getTime();
-          var endOfMonth8 = moment().subtract(7, 'months').endOf('isoMonth').toDate().getTime();
-          var startOfMonth7 = moment().subtract(6, 'months').startOf('isoMonth').toDate().getTime();
-          var endOfMonth7 = moment().subtract(6, 'months').endOf('isoMonth').toDate().getTime();
-          var startOfMonth6 = moment().subtract(5, 'months').startOf('isoMonth').toDate().getTime();
-          var endOfMonth6 = moment().subtract(5, 'months').endOf('isoMonth').toDate().getTime();
-          var startOfMonth5 = moment().subtract(4, 'months').startOf('isoMonth').toDate().getTime();
-          var endOfMonth5 = moment().subtract(4, 'months').endOf('isoMonth').toDate().getTime();
-          var startOfMonth4 = moment().subtract(3, 'months').startOf('isoMonth').toDate().getTime();
-          var endOfMonth4 = moment().subtract(3, 'months').endOf('isoMonth').toDate().getTime();
-          var startOfMonth3 = moment().subtract(2, 'months').startOf('isoMonth').toDate().getTime();
-          var endOfMonth3 = moment().subtract(2, 'months').endOf('isoMonth').toDate().getTime();
-          var startOfMonth2 = moment().subtract(1, 'months').startOf('isoMonth').toDate().getTime();
-          var endOfMonth2 = moment().subtract(1, 'months').endOf('isoMonth').toDate().getTime();
-          var startOfMonth1 = moment().startOf('month').toDate().getTime();
-          var endOfMonth1 = moment().endOf('month').toDate().getTime();
-
-          var startOfYear5 = moment().subtract(4, 'years').startOf('isoYear').toDate().getTime();
-          var endOfYear5 = moment().subtract(4, 'years').endOf('isoYear').toDate().getTime();
-          var startOfYear4 = moment().subtract(3, 'years').startOf('isoYear').toDate().getTime();
-          var endOfYear4 = moment().subtract(3, 'years').endOf('isoYear').toDate().getTime();
-          var startOfYear3 = moment().subtract(2, 'years').startOf('isoYear').toDate().getTime();
-          var endOfYear3 = moment().subtract(2, 'years').endOf('isoYear').toDate().getTime();
-          var startOfYear2 = moment().subtract(1, 'years').startOf('isoYear').toDate().getTime();
-          var endOfYear2 = moment().subtract(1, 'years').endOf('isoYear').toDate().getTime();
-          var startOfYear1 = moment().startOf('year').toDate().getTime();
-          var endOfYear1 = moment().endOf('year').toDate().getTime();
-
           for(var i=0;i<transactions.data.length;i++) {
-            var date = transactions.data[i].created
-            var now = Date().now;
-            
-            if(date > currentTime-fiveYearsAgo) {
-              if((date > startOfYear1/1000) && (date < endOfYear1/1000)) {
-                totalYear1 = totalYear1 + transactions.data[i].amount;
-              } 
-              if((date > startOfYear2/1000) && (date < endOfYear2/1000)) {
-                totalYear2 = totalYear2 + transactions.data[i].amount;
-              } 
-              if((date > startOfYear3/1000) && (date < endOfYear3/1000)) {
-                totalYear3 = totalYear3 + transactions.data[i].amount;
-              } 
-              if((date > startOfYear4/1000) && (date < endOfYear4/1000)) {
-                totalYear4 = totalYear4 + transactions.data[i].amount;
-              } 
-              if((date > startOfYear5/1000) && (date < endOfYear5/1000)) {
-                totalYear5 = totalYear5 + transactions.data[i].amount;
-              } 
-              //array5y.push(transactions.data[i].amount)
-            } if(date > currentTime-oneYearAgo) {
-              array1y.push(transactions.data[i].amount) 
-              if((date > startOfMonth1/1000) && (date < endOfMonth1/1000)) {
-                totalMonth1 = totalMonth1 + transactions.data[i].amount;
-              } 
-              if((date > startOfMonth2/1000) && (date < endOfMonth2/1000)) {
-                totalMonth2 = totalMonth2 + transactions.data[i].amount;
-              }  
-              if((date > startOfMonth3/1000) && (date < endOfMonth3/1000)) {
-                totalMonth3 = totalMonth3 + transactions.data[i].amount;
-              } 
-              if((date > startOfMonth4/1000) && (date < endOfMonth4/1000)) {
-                totalMonth4 = totalMonth4 + transactions.data[i].amount;
-              } 
-              if((date > startOfMonth5/1000) && (date < endOfMonth5/1000)) {
-                totalMonth5 = totalMonth5 + transactions.data[i].amount;
-              } 
-              if((date > startOfMonth6/1000) && (date < endOfMonth6/1000)) {
-                totalMonth6 = totalMonth6 + transactions.data[i].amount;
-              } 
-              if((date > startOfMonth7/1000) && (date < endOfMonth7/1000)) {
-                totalMonth7 = totalMonth7 + transactions.data[i].amount;
-              }  
-              if((date > startOfMonth8/1000) && (date < endOfMonth8/1000)) {
-                totalMonth8 = totalMonth8 + transactions.data[i].amount;
+            var dateW = transactions.data[i].created;
+            for (var j= 0; j <= oneYearInWeeks; j++) {
+              if((dateW > weekBegin[j]/1000) && (dateW < weekEnd[j]/1000)) {
+                  totalWeek[j] = totalWeek[j] + transactions.data[i].amount;
               }
-              if((date > startOfMonth9/1000) && (date < endOfMonth9/1000)) {
-                totalMonth9 = totalMonth9 + transactions.data[i].amount;
+            }
+          }
+          
+          //
+          totalMonth = [];
+          for (var i = oneYearInMonths; i >= 0; i--) {
+            totalMonth[i] = 0;
+          }
+          var monthBegin = utils.getMonthBegin(oneYearInMonths);
+          var monthEnd = utils.getMonthEnd(oneYearInMonths);
+          
+          for(var i=0;i<transactions.data.length;i++) {
+            var dateM = transactions.data[i].created;
+            for (var j= 0; j <= oneYearInMonths; j++) {
+              if((dateM > monthBegin[j]/1000) && (dateM < monthEnd[j]/1000)) {
+                totalMonth[j] = totalMonth[j] + transactions.data[i].amount;
               }
-              if((date > startOfMonth10/1000) && (date < endOfMonth10/1000)) {
-                totalMonth10 = totalMonth10 + transactions.data[i].amount;
-              } 
-              if((date > startOfMonth11/1000) && (date < endOfMonth11/1000)) {
-                totalMonth11 = totalMonth11 + transactions.data[i].amount;
-              } 
-              if((date > startOfMonth12/1000) && (date < endOfMonth12/1000)) {
-                totalMonth12 = totalMonth12 + transactions.data[i].amount;
-              }              
-            } if(date > currentTime-oneMonthAgo) {
-              if((date > startOfWeek1/1000) && (date < endOfWeek1/1000)) {
-                totalMonthWeek1 = totalMonthWeek1 + transactions.data[i].amount;
-              }
-              if((date > startOfWeek2/1000) && (date < endOfWeek2/1000)) {
-                totalMonthWeek2 = totalMonthWeek2 + transactions.data[i].amount;
-              }
-              if((date > startOfWeek3/1000) && (date < endOfWeek3/1000)) {
-                totalMonthWeek3 = totalMonthWeek3 + transactions.data[i].amount;
-              }
-              if((date > startOfWeek4/1000) && (date < endOfWeek4/1000)) {
-                totalMonthWeek4 = totalMonthWeek4 + transactions.data[i].amount;
-              }
-            } if(date > currentTime-twoWeeksAgo) {
-              if((date > startOfWeek1/1000) && (date < endOfWeek1/1000)) {
-                totalWeek1 = totalWeek1 + transactions.data[i].amount;
-                //arrayWeek1.push(transactions.data[i].amount);
-              }
-              if((date > startOfWeek2/1000) && (date < endOfWeek2/1000)) {
-                totalWeek2 = totalWeek2 + transactions.data[i].amount;
-              }
-            } if(date > startOfDay1/1000) {  
-              array1d.push(transactions.data[i].amount)
-            } 
-
+            }
           }
 
+          // {
+          //   [{
+          //     date: "",
+          //     amount: ""
+          //    },
+          //    {
+          //     date: "",
+          //     amount: ""
+          //    }
+          //   ]
+          // }
+          
+          var transactionArray = [];
+          var transactionJSON = {
+            
+          };
+          for (var i=0;i<transactions.data.length;i++) {
+            var transactionDate = transactions.data[i].created;
+            var dateString = moment.unix(transactionDate).format("MM/DD/YYYY");
+            var transactionAmount = transactions.data[i].amount;
+            transactionJSON[dateString] = transactionAmount;
+          }
+          
           res.json({
             history: {
-              "1D":array1d,
-              "2W":[totalWeek2,totalWeek1],
-              "1M":[totalMonthWeek4,totalMonthWeek3,totalMonthWeek2,totalMonthWeek1],
-              "3M":[totalMonth3,totalMonth2,totalMonth1],
-              "6M":[totalMonth6,totalMonth5,totalMonth4,totalMonth3,totalMonth2,totalMonth1],
-              "1Y":[totalMonth12,totalMonth11,totalMonth10,totalMonth9,totalMonth8,totalMonth7,totalMonth6,totalMonth5,totalMonth4,totalMonth3,totalMonth2,totalMonth1],
-              "5Y":[totalYear5,totalYear4,totalYear3,totalYear2,totalYear1],
+              "1W":[totalWeek[0]],
+              "2W":[totalWeek[1],totalWeek[2]],
+              "1M":[totalMonth[0]],
+              "3M":[totalMonth[0],totalMonth[1],totalMonth[2]],
+              "6M":[totalMonth[0],totalMonth[1],totalMonth[2],totalMonth[3],totalMonth[4],totalMonth[5]],
+              "1Y":[totalMonth[0],totalMonth[1],totalMonth[2],totalMonth[3],totalMonth[4],totalMonth[5],totalMonth[6],totalMonth[7],totalMonth[8],totalMonth[9],totalMonth[10],totalMonth[11]],
             }
           })
-        })
+        });
       })   
   })
+
 
   // CHARGES
   // Endpoint: /v1/stripe/charges/create
