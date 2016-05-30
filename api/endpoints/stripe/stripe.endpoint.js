@@ -939,6 +939,26 @@ module.exports = function (app, options) {
       });
   });  
 
+  app.get(endpoint.version + endpoint.base + endpoint.plans + "/:username", function(req, res, next) {
+      // delegated user plan retrieval
+      logger.debug('getting delegated user plans')
+      var username = req.params.username
+      userController.getDelegatedUserByUsername(username).then(function (user) {
+        var stripe = require('stripe')(user.stripe.secretKey);
+        var params = {};
+        stripe.plans.list({ limit: req.url.limit },
+          function(err, plans) {
+            // asynchronously called
+            if(err) {
+              logger.error(err)
+            }
+            res.json({ plans: plans })
+          }
+        );
+      });
+  });  
+
+
   // Used to POST (update) a plan
   app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.plans + "/:plan_id", function(req, res, next) {
       var plan_id = req.params.plan_id;
