@@ -307,15 +307,19 @@ module.exports = function (app, options) {
   // transaction history
   //
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.history + "/:interval", function(req, res, next) {
-    
+            logger.debug("inside")
+
       var user_id = req.params.uid;
       var interval = req.params.interval;
       // /v1/stripe/09s8df0a9s8d/history?interval=year&currency=usd&number=10
       var currency = req.query.currency;
       userController.getUser(user_id).then(function (user) {
+        logger.debug("inside history")
         var stripe = require('stripe')(user.stripe.secretKey);
         var limit = req.query.limit || 1000;
         var number = req.query.number;
+        logger.debug("stripe key is");
+        logger.debug(user.stripe.stripeKey);
         stripe.balance.listTransactions({}, function(err, transactions) {
           if(err) {
             logger.error(err)
@@ -378,45 +382,47 @@ module.exports = function (app, options) {
           var transactionJSON = {
             data: []
           };
-          for (var i=0;i<transactions.data.length;i++) {
-            var transactionDate = transactions.data[i].created;
-            var dateString = moment.unix(transactionDate).format("MM/DD/YYYY");
-            
-            var dateW = transactions.data[i].created;
-            for (var j= 0; j <= number; j++) {
-              if((dateW > beginInterval[j]/1000) && (dateW < endInterval[j]/1000)) {
-                  
-                  var transactionAmount = transactions.data[i].amount;
-                  switch(currency){
-                  case "usd":
-                    var transactionAmountFormatted = currencyFormat.getCommaSeparatedFormat(currencySymbol, transactionAmount);
-                    break;
-                  case "cad":
-                    var transactionAmountFormatted = currencyFormat.getCommaSeparatedFormat(currencySymbol, transactionAmount);
-                    break;
-                  case "aud":
-                    var transactionAmountFormatted = currencyFormat.getCommaSeparatedFormat(currencySymbol, transactionAmount);
-                    break;  
-                  case "eur":
-                    var transactionAmountFormatted = currencyFormat.getDotSeparatedFormat(currencySymbol, transactionAmount);
-                    break;
-                  case "gbp":
-                    var transactionAmountFormatted = currencyFormat.getCommaSeparatedFormat(currencySymbol, transactionAmount);
-                    break;
-                  default:
-                    transactionAmountFormatted = transactionAmount;
-                    break;
+          if(transactions != null) {
+            for (var i=0;i<transactions.data.length;i++) {
+              var transactionDate = transactions.data[i].created;
+              var dateString = moment.unix(transactionDate).format("MM/DD/YYYY");
+              
+              var dateW = transactions.data[i].created;
+              for (var j= 0; j <= number; j++) {
+                if((dateW > beginInterval[j]/1000) && (dateW < endInterval[j]/1000)) {
+                    
+                    var transactionAmount = transactions.data[i].amount;
+                    switch(currency){
+                    case "usd":
+                      var transactionAmountFormatted = currencyFormat.getCommaSeparatedFormat(currencySymbol, transactionAmount);
+                      break;
+                    case "cad":
+                      var transactionAmountFormatted = currencyFormat.getCommaSeparatedFormat(currencySymbol, transactionAmount);
+                      break;
+                    case "aud":
+                      var transactionAmountFormatted = currencyFormat.getCommaSeparatedFormat(currencySymbol, transactionAmount);
+                      break;  
+                    case "eur":
+                      var transactionAmountFormatted = currencyFormat.getDotSeparatedFormat(currencySymbol, transactionAmount);
+                      break;
+                    case "gbp":
+                      var transactionAmountFormatted = currencyFormat.getCommaSeparatedFormat(currencySymbol, transactionAmount);
+                      break;
+                    default:
+                      transactionAmountFormatted = transactionAmount;
+                      break;
+                  }
+                  transactionJSON.data.push({
+                    "date"    : dateW,
+                    "amount"  : transactionAmountFormatted
+                  })
                 }
-                transactionJSON.data.push({
-                  "date"    : dateW,
-                  "amount"  : transactionAmountFormatted
-                })
               }
             }
+            res.json({
+              transactions: transactionJSON  
+            })
           }
-          res.json({
-            transactions: transactionJSON  
-          })
         })
       })
   })
@@ -431,74 +437,65 @@ module.exports = function (app, options) {
           if(err) {
             logger.error(err)
           }
-          var oneYearInWeeks = 51;
-          var oneYearInMonths = 11;
-          var totalWeek = [];
-          var weekBegin = utils.getWeekBegin(oneYearInWeeks);
-          var weekEnd = utils.getWeekEnd(oneYearInWeeks);
-          for (var i = oneYearInWeeks; i >= 0; i--) {
-            totalWeek[i] = 0;
-          }
-          
-          for(var i=0;i<transactions.data.length;i++) {
-            var dateW = transactions.data[i].created;
-            for (var j= 0; j <= oneYearInWeeks; j++) {
-              if((dateW > weekBegin[j]/1000) && (dateW < weekEnd[j]/1000)) {
-                  totalWeek[j] = totalWeek[j] + transactions.data[i].amount;
-              }
-            }
-          }
-          
-          //
-          totalMonth = [];
-          for (var i = oneYearInMonths; i >= 0; i--) {
-            totalMonth[i] = 0;
-          }
-          var monthBegin = utils.getMonthBegin(oneYearInMonths);
-          var monthEnd = utils.getMonthEnd(oneYearInMonths);
-          
-          for(var i=0;i<transactions.data.length;i++) {
-            var dateM = transactions.data[i].created;
-            for (var j= 0; j <= oneYearInMonths; j++) {
-              if((dateM > monthBegin[j]/1000) && (dateM < monthEnd[j]/1000)) {
-                totalMonth[j] = totalMonth[j] + transactions.data[i].amount;
-              }
-            }
-          }
 
-          // {
-          //   [{
-          //     date: "",
-          //     amount: ""
-          //    },
-          //    {
-          //     date: "",
-          //     amount: ""
-          //    }
-          //   ]
-          // }
-          
-          var transactionArray = [];
-          var transactionJSON = {
-            
-          };
-          for (var i=0;i<transactions.data.length;i++) {
-            var transactionDate = transactions.data[i].created;
-            var dateString = moment.unix(transactionDate).format("MM/DD/YYYY");
-            var transactionAmount = transactions.data[i].amount;
-            transactionJSON[dateString] = transactionAmount;
-          }
-          
-          res.json({
-            history: {
-              "1W":[totalWeek[0]],
-              "2W":[totalWeek[1],totalWeek[2]],
-              "1M":[totalMonth[0]],
-              "3M":[totalMonth[0],totalMonth[1],totalMonth[2]],
-              "6M":[totalMonth[0],totalMonth[1],totalMonth[2],totalMonth[3],totalMonth[4],totalMonth[5]],
-              "1Y":[totalMonth[0],totalMonth[1],totalMonth[2],totalMonth[3],totalMonth[4],totalMonth[5],totalMonth[6],totalMonth[7],totalMonth[8],totalMonth[9],totalMonth[10],totalMonth[11]],
+          if(transactions != null) {
+            var oneYearInWeeks = 51;
+            var oneYearInMonths = 11;
+            var totalWeek = [];
+            var weekBegin = utils.getWeekBegin(oneYearInWeeks);
+            var weekEnd = utils.getWeekEnd(oneYearInWeeks);
+            for (var i = oneYearInWeeks; i >= 0; i--) {
+              totalWeek[i] = 0;
             }
-          })
+            
+            for(var i=0;i<transactions.data.length;i++) {
+              var dateW = transactions.data[i].created;
+              for (var j= 0; j <= oneYearInWeeks; j++) {
+                if((dateW > weekBegin[j]/1000) && (dateW < weekEnd[j]/1000)) {
+                    totalWeek[j] = totalWeek[j] + transactions.data[i].amount;
+                }
+              }
+            }
+            
+            //
+            totalMonth = [];
+            for (var i = oneYearInMonths; i >= 0; i--) {
+              totalMonth[i] = 0;
+            }
+            var monthBegin = utils.getMonthBegin(oneYearInMonths);
+            var monthEnd = utils.getMonthEnd(oneYearInMonths);
+            
+            for(var i=0;i<transactions.data.length;i++) {
+              var dateM = transactions.data[i].created;
+              for (var j= 0; j <= oneYearInMonths; j++) {
+                if((dateM > monthBegin[j]/1000) && (dateM < monthEnd[j]/1000)) {
+                  totalMonth[j] = totalMonth[j] + transactions.data[i].amount;
+                }
+              }
+            }
+            
+            var transactionArray = [];
+            var transactionJSON = {
+              
+            };
+            for (var i=0;i<transactions.data.length;i++) {
+              var transactionDate = transactions.data[i].created;
+              var dateString = moment.unix(transactionDate).format("MM/DD/YYYY");
+              var transactionAmount = transactions.data[i].amount;
+              transactionJSON[dateString] = transactionAmount;
+            }
+            
+            res.json({
+              history: {
+                "1W":[totalWeek[0]],
+                "2W":[totalWeek[1],totalWeek[2]],
+                "1M":[totalMonth[0]],
+                "3M":[totalMonth[0],totalMonth[1],totalMonth[2]],
+                "6M":[totalMonth[0],totalMonth[1],totalMonth[2],totalMonth[3],totalMonth[4],totalMonth[5]],
+                "1Y":[totalMonth[0],totalMonth[1],totalMonth[2],totalMonth[3],totalMonth[4],totalMonth[5],totalMonth[6],totalMonth[7],totalMonth[8],totalMonth[9],totalMonth[10],totalMonth[11]],
+              }
+            })            
+          }
         });
       })   
   })
