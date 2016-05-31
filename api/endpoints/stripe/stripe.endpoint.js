@@ -993,7 +993,7 @@ module.exports = function (app, options) {
   app.get(endpoint.version + endpoint.base + endpoint.plans + "/:delegate_username", function(req, res, next) {
       // delegated user plan retrieval
       logger.debug('getting delegated user plans') // get user by username delegated // 2
-      var username = req.params.delegate_user
+      var username = req.params.delegate_username
       userController.getDelegatedUserByUsername(username).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
         var params = {};
