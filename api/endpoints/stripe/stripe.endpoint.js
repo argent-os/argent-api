@@ -14,6 +14,7 @@ module.exports = function (app, options) {
     external_account: '/external_account',     
     balance: '/balance', 
     transactions: '/transactions',             
+    subscriptions: '/subscriptions',             
     charge: '/charge',                         
     history: '/history',                         
     cards: '/cards',                         
@@ -772,6 +773,75 @@ module.exports = function (app, options) {
 
   // STATUS: IN PROGRESS
   // SUBSCRIPTIONS
+  // Delegated subscription creation
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.subscriptions + "/:delegate_username", function(req, res, next) {
+      // Flow
+      // Create a subscription with the credit card token
+      // Find the user in the database
+      // Make a delegated request on behalf of the user
+      var user_id = req.params.uid;
+      var params = {
+        plan: req.body.plan_id
+      }
+      var pay_params = {
+            source: req.body.token
+      }
+      //logger.debug(params);
+      userController.getDelegatedUserByUsername(req.params.delegate_username).then(function (delegateUser) {
+        // get delegate user
+        var delegateUser = delegateUser;
+        //logger.info(delegateUser.username);
+        var stripe = require('stripe')(delegateUser.stripe.secretKey);
+        userController.getUser(user_id).then(function (user) {
+          // get requesting user
+          var requestingUser = user
+          //logger.info(requestingUser.username);
+          stripe.customers.list({ limit: 100 }, function(err, customers) {
+              // asynchronously called
+              if(err) {
+                logger.error(err)
+              }
+
+              // list customers before adding plan
+              // check for existing customer by email
+              // so for example, list all customers and do
+              // a quick check to see if email matches any in
+              // customer list, if not create customer, if yes
+              // add new plan to existing customer
+
+              for (var i = 0; i < customers.data.length; i++) {
+                if(customers.data[i].email == requestingUser.email) {
+                  //logger.info("Customer email already exists in database! Adding plan to existing customer")
+                  stripe.subscriptions.create({ customer: customers.data[i].id, plan: params.plan }).then(function(subscription, err) {
+                      res.json({ subscription: subscription }).end();
+                  }, function(err) {
+                      logger.error(err)
+                      res.json({msg: "error", err: err}).end();
+                  })
+                }
+              }
+              // if customer does not exist, create one and add a plan
+              //logger.info("Customer email does not currently exist. Adding new customer with subscription")                    
+              stripe.customers.create(pay_params, function(err, customer) {
+                  // asynchronously called
+                  if(err) {
+                    logger.error(err)
+                  }
+                  //logger.info(customer);
+                  // Create a customer, then create a plan for that customer
+                  stripe.subscriptions.create({ customer: customer.id, plan: params.plan }).then(function(subscription, err) {
+                      res.json({ subscription: subscription }).end();
+                  }, function(err) {
+                      logger.error(err)
+                      res.json({msg: "error", err: err}).end();
+                  })
+                }
+              );                  
+            }
+          );          
+        })
+      }) 
+  });    
   app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.subscriptions, function(req, res, next) {
       stripe.subscriptions.createSubscription(customerId, params)
   });   
@@ -920,10 +990,10 @@ module.exports = function (app, options) {
       });
   });  
 
-  app.get(endpoint.version + endpoint.base + endpoint.plans + "/:username", function(req, res, next) {
+  app.get(endpoint.version + endpoint.base + endpoint.plans + "/:delegate_username", function(req, res, next) {
       // delegated user plan retrieval
       logger.debug('getting delegated user plans') // get user by username delegated // 2
-      var username = req.params.username
+      var username = req.params.delegate_user
       userController.getDelegatedUserByUsername(username).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
         var params = {};
