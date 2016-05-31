@@ -189,64 +189,58 @@ module.exports = function (app, options) {
   });
   
   // EXTERNAL ACCOUNTS
-  // Endpoint /v1/stripe/account/cards
+  // Endpoint /v1/stripe/a7sd89f7a98df/external_account?type=card
+  // Endpoint /v1/stripe/a7sd89f7a98df/external_account?type=bank
   // Add credit card external account
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.external_account + "/card", function(req, res, next) {
-      logger.trace("request received | add account external account")
-      var card_obj = {
-        card: {
-          "number": req.body.number,
-          "exp_month": req.body.exp_month,
-          "exp_year": req.body.exp_year,
-          "cvc": req.body.cvc,
-          "currency": "usd"
-        }
-      };
-      var user_id = req.params.uid
-      userController.getUser(user_id).then(function (user) {
-        // First create a tokenized card based on the request
-        var stripe = require('stripe')(user.stripe.secretKey);        
-        stripe.tokens.create(card_obj, function(err, token) {
-            logger.debug(token);
-            // asynchronously called
-            if(err) {
-              logger.error(err);
-              next();
-            }
-            var tokenObj = {
-              external_account: token.id
-            }
-            // Then add the source to Stripe using the token
-            stripe.accounts.createExternalAccount(accountId, tokenObj, function(err, card) {
-                // asynchronously called
-                if(err) {
-                  logger.error(err);
-                  next();
-                }
-                return res.json({msg:"card added!"}).end();
-              }
-            );          
-        });
-      });
-  });   
-
   app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.external_account, function(req, res, next) {
+      logger.trace("request received | add account external account")
+      if(req.query.type == "card") {
+        var card_obj = {
+          card: {
+            "number": req.body.number,
+            "exp_month": req.body.exp_month,
+            "exp_year": req.body.exp_year,
+            "cvc": req.body.cvc,
+            "currency": "usd"
+          }
+        };        
+      }
       logger.trace("request received | add external account")
       var user_id = req.params.uid
       var token = req.body.external_account;
       userController.getUser(user_id).then(function (user) {
         // First create a tokenized card based on the request
         var stripe = require('stripe')(user.stripe.secretKey); 
-        logger.trace('adding')       
-        stripe.accounts.createExternalAccount(user.stripe.accountId, { external_account: token }, function(err, externalAccount) {
-            // asynchronously called
-            if(err) {
-              logger.error(err);
+        if(req.query.type == "card") {
+          stripe.tokens.create(card_obj, function(err, token) {
+              logger.debug(token);
+              // asynchronously called
+              if(err) {
+                logger.error(err);
+                next();
+              }
+              // Then add the source to Stripe using the token
+              stripe.accounts.createExternalAccount(user.stripe.accountId, { external_account: token.id }, function(err, card) {
+                  // asynchronously called
+                  if(err) {
+                    logger.error(err);
+                    next();
+                  }
+                  return res.json({msg:"card added!"}).end();
+                }
+              );          
+          });          
+        } else {
+          stripe.accounts.createExternalAccount(user.stripe.accountId, { external_account: token }, function(err, externalAccount) {
+              // asynchronously called
+              if(err) {
+                logger.error(err);
+              }
+              logger.trace('done')
+              res.json({msg:"external account added!", external_account: externalAccount})
             }
-            logger.trace('done')
-            res.json({msg:"external account added!", external_account: externalAccount})
-          }
-        );   
+          );   
+        }
       });
   });   
 
@@ -264,6 +258,26 @@ module.exports = function (app, options) {
             next();
           }
           return res.json({external_accounts:externalAccounts}).end();
+        });
+      });
+  });   
+
+
+  app.delete(endpoint.version + endpoint.base + "/:uid" + endpoint.external_account + "/:bank_acct_id", function(req, res, next) {
+      logger.trace("request received | list external accounts.");
+      var user_id = req.params.uid
+      var bank_id = req.params.bank_acct_id
+      userController.getUser(user_id).then(function (user) {
+        // First create a tokenized card based on the request
+        var stripe = require('stripe')(user.stripe.secretKey);  
+        var acct_id = user.stripe.accountId;
+        stripe.accounts.deleteExternalAccount(acct_id, bank_id, function(err, confirmation) {
+          logger.trace("done: " + confirmation);
+          if(err) {
+            logger.error(err);
+            next();
+          }
+          return res.json({ confirmation: confirmation }).end();
         });
       });
   });   
