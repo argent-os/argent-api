@@ -793,23 +793,23 @@ module.exports = function (app, options) {
       // Create a subscription with the credit card token
       // Find the user in the database
       // Make a delegated request on behalf of the user
+      logger.debug("delegated subscription creation called")
+      logger.debug(req.body);
+      logger.debug(req.params);
       var user_id = req.params.uid;
       var params = {
         plan: req.body.plan_id
       }
-      var pay_params = {
-            source: req.body.token
-      }
-      //logger.debug(params);
+      logger.debug(params);
       userController.getDelegatedUserByUsername(req.params.delegate_username).then(function (delegateUser) {
         // get delegate user
         var delegateUser = delegateUser;
-        //logger.info(delegateUser.username);
+        logger.info(delegateUser.username);
         var stripe = require('stripe')(delegateUser.stripe.secretKey);
         userController.getUser(user_id).then(function (user) {
           // get requesting user
           var requestingUser = user
-          //logger.info(requestingUser.username);
+          logger.info(requestingUser.username);
           stripe.customers.list({ limit: 100 }, function(err, customers) {
               // asynchronously called
               if(err) {
@@ -823,34 +823,52 @@ module.exports = function (app, options) {
               // customer list, if not create customer, if yes
               // add new plan to existing customer
 
+
+              // current logic, loops through current customers, if it finds a customer it add the plan to the customer
+              // but the problem is it then carries out a second subscription creation, with a second response that breaks
+              // the program.  
+
+              // Solution: loop through the current customers and do a match on whether customer already exists or not.  Then
+              // if no matches are found perform the secondary option of creating the customer and subscription.
+              // The second part of the execution can only occur once the full loop has been performed, perhaps do this through a
+              // variable that exists outside of the for loop
+
               for (var i = 0; i < customers.data.length; i++) {
                 if(customers.data[i].email == requestingUser.email) {
-                  //logger.info("Customer email already exists in database! Adding plan to existing customer")
+                  logger.info("Customer email already exists in database! Adding plan to existing customer")
                   stripe.subscriptions.create({ customer: customers.data[i].id, plan: params.plan }).then(function(subscription, err) {
                       res.json({ subscription: subscription }).end();
                   }, function(err) {
                       logger.error(err)
                       res.json({msg: "error", err: err}).end();
-                  })
+                  });
+                  break;
                 }
-              }
-              // if customer does not exist, create one and add a plan
-              //logger.info("Customer email does not currently exist. Adding new customer with subscription")                    
-              stripe.customers.create(pay_params, function(err, customer) {
-                  // asynchronously called
-                  if(err) {
-                    logger.error(err)
-                  }
-                  //logger.info(customer);
-                  // Create a customer, then create a plan for that customer
-                  stripe.subscriptions.create({ customer: customer.id, plan: params.plan }).then(function(subscription, err) {
-                      res.json({ subscription: subscription }).end();
-                  }, function(err) {
-                      logger.error(err)
-                      res.json({msg: "error", err: err}).end();
-                  })
+                // At the end of the data array if we still haven't found an existing customer add a new one with subscription
+                if(i == customers.data.length - 1 && customers.data[i].email != requestingUser.email) {
+                  // if customer does not exist, create one and add a plan
+                  logger.info("Customer email does not currently exist. Adding new customer with subscription")   
+                  var customer_params = {
+                      email: requestingUser.email,
+                      source: req.body.token
+                  }                 
+                  stripe.customers.create(customer_params, function(err, customer) {
+                      // asynchronously called
+                      if(err) {
+                        logger.error(err)
+                      }
+                      //logger.info(customer);
+                      // Create a customer, then create a plan for that customer
+                      stripe.subscriptions.create({ customer: customer.id, plan: params.plan }).then(function(subscription, err) {
+                          res.json({ subscription: subscription }).end();
+                      }, function(err) {
+                          logger.error(err)
+                          res.json({msg: "error", err: err}).end();
+                      })
+                    }
+                  );      
                 }
-              );                  
+              }            
             }
           );          
         })
