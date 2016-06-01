@@ -811,6 +811,7 @@ module.exports = function (app, options) {
           var requestingUser = user
           logger.info(requestingUser.username);
           stripe.customers.list({ limit: 100 }, function(err, customers) {
+              logger.trace('inside customer list')
               // asynchronously called
               if(err) {
                 logger.error(err)
@@ -833,21 +834,11 @@ module.exports = function (app, options) {
               // The second part of the execution can only occur once the full loop has been performed, perhaps do this through a
               // variable that exists outside of the for loop
 
-              for (var i = 0; i < customers.data.length; i++) {
-                if(customers.data[i].email == requestingUser.email) {
-                  logger.info("Customer email already exists in database! Adding plan to existing customer")
-                  stripe.subscriptions.create({ customer: customers.data[i].id, plan: params.plan }).then(function(subscription, err) {
-                      res.json({ subscription: subscription }).end();
-                  }, function(err) {
-                      logger.error(err)
-                      res.json({msg: "error", err: err}).end();
-                  });
-                  break;
-                }
-                // At the end of the data array if we still haven't found an existing customer add a new one with subscription
-                if(i == customers.data.length - 1 && customers.data[i].email != requestingUser.email) {
+              logger.trace('about to loop')
+              logger.debug(customers.data.length)
+              if( customers.data.length == 0 ) {
                   // if customer does not exist, create one and add a plan
-                  logger.info("Customer email does not currently exist. Adding new customer with subscription")   
+                  logger.info("No customers exist for this user, adding the first one!")   
                   var customer_params = {
                       email: requestingUser.email,
                       source: req.body.token
@@ -866,9 +857,47 @@ module.exports = function (app, options) {
                           res.json({msg: "error", err: err}).end();
                       })
                     }
-                  );      
-                }
-              }            
+                  );  
+              } else {
+                logger.info("Customer's exist for this user, checking if requesting user is one of them")   
+                for (var i = 0; i < customers.data.length; i++) {
+                  logger.trace('looping')                
+                  if(customers.data[i].email == requestingUser.email) {
+                    logger.info("Customer email already exists in database! Adding plan to existing customer")
+                    stripe.subscriptions.create({ customer: customers.data[i].id, plan: params.plan }).then(function(subscription, err) {
+                        res.json({ subscription: subscription }).end();
+                    }, function(err) {
+                        logger.error(err)
+                        res.json({msg: "error", err: err}).end();
+                    });
+                    break;
+                  }
+                  // At the end of the data array if we still haven't found an existing customer add a new one with subscription
+                  if(i == customers.data.length - 1 && customers.data[i].email != requestingUser.email) {
+                    // if customer does not exist, create one and add a plan
+                    logger.info("Customer email does not currently exist. Adding new customer with subscription")   
+                    var customer_params = {
+                        email: requestingUser.email,
+                        source: req.body.token
+                    }                 
+                    stripe.customers.create(customer_params, function(err, customer) {
+                        // asynchronously called
+                        if(err) {
+                          logger.error(err)
+                        }
+                        //logger.info(customer);
+                        // Create a customer, then create a plan for that customer
+                        stripe.subscriptions.create({ customer: customer.id, plan: params.plan }).then(function(subscription, err) {
+                            res.json({ subscription: subscription }).end();
+                        }, function(err) {
+                            logger.error(err)
+                            res.json({msg: "error", err: err}).end();
+                        })
+                      }
+                    );      
+                  }
+                } 
+              }           
             }
           );          
         })
