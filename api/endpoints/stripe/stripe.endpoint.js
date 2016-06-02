@@ -691,7 +691,7 @@ module.exports = function (app, options) {
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
         var params = {};
-        stripe.customers.list({ limit: req.url.limit }, function(err, customers) {
+        stripe.customers.list({ limit: req.query.limit }, function(err, customers) {
             // asynchronously called
             if(err) {
               logger.error(err)
@@ -741,13 +741,12 @@ module.exports = function (app, options) {
       var customer_id = req.params.cust_id;      
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
-        var customer_id = req.body.customerId;
-        stripe.customers.del(customer_id, function(err, customer) {
+        stripe.customers.del(customer_id, function(err, confirmation) {
           // asynchronously called
             if(err) {
               logger.error(err)
             }
-            res.json({ customer: customer })          
+            res.json({ confirmation: confirmation })          
         });        
       });     
   });    
@@ -906,12 +905,27 @@ module.exports = function (app, options) {
   app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.subscriptions, function(req, res, next) {
       stripe.subscriptions.cancelSubscription(customerId, subscriptionId, params)
   });   
+  app.delete(endpoint.version + endpoint.base + "/:uid" + endpoint.subscriptions + "/:sub_id", function(req, res, next) {
+      var subscription_id = req.params.sub_id;
+      var user_id = req.params.uid;    
+      logger.debug("deleting subscription ", subscription_id)
+      userController.getUser(user_id).then(function (user) {
+        var stripe = require('stripe')(user.stripe.secretKey);
+        stripe.subscriptions.del(subscription_id, function(err, confirmation) {
+            if(err) {
+              logger.error(err)
+            }          
+            res.json({ confirmation: confirmation })
+            // asynchronously called
+        });
+      });
+  });   
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.subscriptions, function(req, res, next) {
       logger.debug('getting user subscriptions')
       var user_id = req.params.uid
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
-        // var params = { limit: req.url.limit };
+        // var params = { limit: req.query.limit };
         stripe.subscriptions.list({ limit: 100 },
           function(err, subscriptions) {
             // asynchronously called
@@ -1047,7 +1061,7 @@ module.exports = function (app, options) {
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
         var params = {};
-        stripe.plans.list({ limit: req.url.limit },
+        stripe.plans.list({ limit: req.query.limit },
           function(err, plans) {
             // asynchronously called
             if(err) {
@@ -1066,7 +1080,7 @@ module.exports = function (app, options) {
       userController.getDelegatedUserByUsername(username).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
         var params = {};
-        stripe.plans.list({ limit: req.url.limit },
+        stripe.plans.list({ limit: req.query.limit },
           function(err, plans) {
             // asynchronously called
             if(err) {
@@ -1121,6 +1135,7 @@ module.exports = function (app, options) {
   app.delete(endpoint.version + endpoint.base + "/:uid" + endpoint.plans + "/:plan_id", function(req, res, next) {
       var plan_id = req.params.plan_id;
       var user_id = req.params.uid;    
+      logger.debug("deleting plan ", plan_id)
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
         stripe.plans.del(plan_id, function(err, confirmation) {
@@ -1163,7 +1178,7 @@ module.exports = function (app, options) {
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
         var params = {};
-        stripe.products.list({ limit: req.url.limit },
+        stripe.products.list({ limit: req.query.limit },
           function(err, products) {
             // asynchronously called
             if(err) {
@@ -1287,7 +1302,7 @@ module.exports = function (app, options) {
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
         var params = {};
-        stripe.transfers.list({ limit: req.url.limit },
+        stripe.transfers.list({ limit: req.query.limit },
           function(err, transfers) {
             // asynchronously called
             if(err) {
