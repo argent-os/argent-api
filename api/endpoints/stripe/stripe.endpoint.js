@@ -508,7 +508,7 @@ module.exports = function (app, options) {
               history: {
                 "1W":[totalWeek[0]],
                 "2W":[totalWeek[1],totalWeek[2]],
-                "1M":[totalMonth[0]],
+                "1M":[totalWeek[0],totalWeek[1],totalWeek[2],totalWeek[3]],
                 "3M":[totalMonth[0],totalMonth[1],totalMonth[2]],
                 "6M":[totalMonth[0],totalMonth[1],totalMonth[2],totalMonth[3],totalMonth[4],totalMonth[5]],
                 "1Y":[totalMonth[0],totalMonth[1],totalMonth[2],totalMonth[3],totalMonth[4],totalMonth[5],totalMonth[6],totalMonth[7],totalMonth[8],totalMonth[9],totalMonth[10],totalMonth[11]],
