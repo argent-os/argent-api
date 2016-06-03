@@ -29,7 +29,8 @@ module.exports = function (app, options) {
     tokens: '/tokens',             
     bitcoin: '/bitcoin',
     transfers: '/transfers',  
-    external: '/external'                  
+    external: '/external',                 
+    upload: '/upload'                  
   };
 
   // Set your secret key: remember to change this to your live secret key in production
@@ -52,6 +53,9 @@ module.exports = function (app, options) {
   var getSymbolFromCurrency = require('currency-symbol-map').getSymbolFromCurrency;
   var bodyParser = require('body-parser');
   var expressValidator = require('express-validator');
+  var multer  = require('multer');
+  var upload = multer({ dest: 'images/' });
+  var fs = require('fs');
   app.use(cors());
   app.use(bodyParser.json());
   app.use(expressValidator());
@@ -1382,4 +1386,34 @@ module.exports = function (app, options) {
   // stripe.bitcoinReceivers.retrieve(receiverId)
   // stripe.bitcoinReceivers.list([params])
   // stripe.bitcoinReceivers.getMetadata(receiverId)
+
+  // stripe.fileUploads // upload and multer imported above
+  // /v1/stripe/5asdg98a09sdf/upload/
+  // note the file multipart name must be 'document' aka post with multi-part form data { document: "/path/to/file", purpose: identity_document }
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.upload, upload.single('document'), function(req, res, next) {
+      var user_id = req.params.uid;
+      userController.getUser(user_id).then(function (user) {
+        var stripe = require('stripe')(user.stripe.secretKey);
+        var path = req.file.path;
+        var fp = fs.readFileSync(path);
+        var hat = require('hat');
+        var rack = hat.rack(); 
+        var file_name = req.file.filename + "_" + rack() + ".jpg";
+        stripe.fileUploads.create({
+          purpose: req.body.purpose,
+          file: {
+            data: fp,
+            name: file_name,
+            type: 'application/octet-stream'
+          }
+        }, function(err, fileUpload) {
+          if(err) {
+            logger.error(err);
+          }
+          res.json({ file: fileUpload });
+          // asynchronously called
+        });
+      });
+  });
+
 }
