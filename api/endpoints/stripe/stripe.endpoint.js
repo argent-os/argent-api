@@ -1391,6 +1391,7 @@ module.exports = function (app, options) {
   // /v1/stripe/5asdg98a09sdf/upload/
   // note the file multipart name must be 'document' aka post with multi-part form data { document: "/path/to/file", purpose: identity_document }
   app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.upload, upload.single('document'), function(req, res, next) {
+      logger.info("uploading document")
       var user_id = req.params.uid;
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
@@ -1410,7 +1411,17 @@ module.exports = function (app, options) {
           if(err) {
             logger.error(err);
           }
-          res.json({ file: fileUpload });
+          logger.info("document upload success");
+          var params = {
+            legal_entity: {
+              verification: {
+                document: fileUpload.id
+              }
+            }
+          }
+          stripe.accounts.update(user.stripe.accountId, params, function(err, account) {
+              res.json({ account: account });
+          });
           // asynchronously called
         });
       });
