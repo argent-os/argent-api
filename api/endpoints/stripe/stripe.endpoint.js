@@ -571,6 +571,30 @@ module.exports = function (app, options) {
           });
       }) 
   });
+
+  // Delegated one time charge, pay another delegated user
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/:delegate_username", function(req, res, next) {
+    logger.trace('delegate one-time charge request received');
+    var stripeToken = req.body.stripeToken;
+    var amount = req.body.amount;
+    var currency = req.body.currency;
+    var customer = req.body.customer;
+    var source = req.body.token;
+    logger.debug('source is ', source)
+    var chargeObject = {
+        source: source,
+        amount: amount, // amount in cents, again
+        currency: "usd"
+    }
+    logger.debug('charge object is', chargeObject)
+    stripe.charges.create(chargeObject).then(function(charge) {
+        logger.info("charge success", charge);
+        return res.json({msg: "success", charge: charge})
+    }, function(err) {
+        logger.error(err);
+        return res.json({msg: err})
+    });
+  })
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.charge, function(req, res, next) {
       var user_id = req.params.uid;
       var params = { limit: 10 }
