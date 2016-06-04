@@ -1402,6 +1402,22 @@ module.exports = function (app, options) {
       });
   });  
   // stripe.bitcoinReceivers.retrieve(receiverId)
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.bitcoin + "/:btc", function(req, res, next) {
+      logger.trace("requesting bitcoin receiver")
+      var user_id = req.params.uid;
+      var bitcoin_receiver_id = req.params.btc;
+      userController.getUser(user_id).then(function (user) {
+        var stripe = require('stripe')(user.stripe.secretKey);
+        stripe.bitcoinReceivers.retrieve(bitcoin_receiver_id, function(err, receiver) {
+            if(err) {
+              logger.error(err)
+            }          
+            logger.trace("is bitcoin receiver filled? ", receiver.filled)
+            res.json({ receiver: receiver })
+            // asynchronously called
+        });
+      });
+  });    
   // stripe.bitcoinReceivers.list([params])
   // stripe.bitcoinReceivers.getMetadata(receiverId)
 
