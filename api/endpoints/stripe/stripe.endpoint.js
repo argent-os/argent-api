@@ -544,17 +544,11 @@ module.exports = function (app, options) {
       log the error.
   */
   app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge, function(req, res, next) {
-      // TODO
-      // Create a request to charge
-      // If the charge is approved proceed with the charge request
-
-      // Flow
-      // Create a charge with the credit card token
-      // Find the user in the database
-      // Make a delegated request on behalf of the user
+      // POS Charge, aka pay yourself through a terminal
+      logger.info("POS charge")
       var user_id = req.params.uid;
-      userController.getDelegatedUserByUsername(req.body.delegatedUser).then(function (delegateUser) {
-          var stripe = require('stripe')(delegateUser.stripe.secretKey);
+      userController.getUser(user_id).then(function (user) {
+          var stripe = require('stripe')(user.stripe.secretKey);
           var params = {
             amount: req.body.amount,
             currency: "usd",
@@ -574,26 +568,26 @@ module.exports = function (app, options) {
 
   // Delegated one time charge, pay another delegated user
   app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/:delegate_username", function(req, res, next) {
-    logger.trace('delegate one-time charge request received');
-    var stripeToken = req.body.stripeToken;
-    var amount = req.body.amount;
-    var currency = req.body.currency;
-    var customer = req.body.customer;
-    var source = req.body.token;
-    logger.debug('source is ', source)
-    var chargeObject = {
-        source: source,
-        amount: amount, // amount in cents, again
-        currency: "usd"
-    }
-    logger.debug('charge object is', chargeObject)
-    stripe.charges.create(chargeObject).then(function(charge) {
-        logger.info("charge success", charge);
-        return res.json({msg: "success", charge: charge})
-    }, function(err) {
-        logger.error(err);
-        return res.json({msg: err})
-    });
+    // Delegated charge, aka someone pays you
+    var user_id = req.params.uid;
+    var delegate_user = req.params.delegate_username;
+    userController.getDelegatedUserByUsername(delegate_user).then(function (delegateUser) {
+        var stripe = require('stripe')(delegateUser.stripe.secretKey);
+        var params = {
+          amount: req.body.amount,
+          currency: "usd",
+          source: req.body.token,
+          description: "New charge"
+        }
+        // Charge a card based on customer ID, the customer must have a linked credit card
+        stripe.charges.create(params).then(function(charge) {
+            // logger.info(res)
+            res.json({msg: "success", charge: charge}).end();
+        }, function(err) {
+            logger.error(err)
+            res.json({msg: "error", err: err}).end();
+        });
+    }) 
   })
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.charge, function(req, res, next) {
       var user_id = req.params.uid;
