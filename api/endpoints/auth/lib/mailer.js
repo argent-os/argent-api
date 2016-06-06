@@ -114,7 +114,7 @@ exports.sendReceipt = function(user, subject, message, recipient, callback) {
       from: config.mailerFrom,
       to: recipient,
       subject: subject,
-      html: "sender: " + user.email + " \n\n" + message
+      html: "Merchant's Argent username @" + user.username + " \n\n" + message
     };
     transporter.sendMail(mailOptions, function (error,info) {
       callback(error, info);

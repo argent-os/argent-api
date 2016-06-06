@@ -27,7 +27,6 @@ module.exports = function (app, options) {
 			if(err) {
 				res.json({err: err})
 			}
-			logger.trace("about to send receipt")
 			mailer.sendReceipt(user, "Your Receipt from Argent", message, cust_email, function (err, info) {
 				if (err) {
 				  res.status(401).json({msg: 'error_sending_message', error: err});
