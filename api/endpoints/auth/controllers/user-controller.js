@@ -319,7 +319,6 @@ UserController.prototype.editProfile = function (req, res, next) {
               }    
               if (user.ios !== data.ios && data.ios !== undefined && data.ios !== null && data.ios != '') {
                 updated.push('ios');
-                logger.debug('ios data is', data.ios);
                 user.ios = data.ios;
               }                                                                
               if (user.verified !== data.verified && data.verified !== undefined && data.verified !== null && data.verified !== '') {
@@ -373,7 +372,6 @@ UserController.prototype.editProfile = function (req, res, next) {
                 else {
                   logger.info("saving user update")
                   var newToken = createJWT(user);
-                  logger.info("user saved", user)
                   res.json({token: newToken, user: user});
                 }
               });

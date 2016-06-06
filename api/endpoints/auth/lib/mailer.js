@@ -89,8 +89,8 @@ exports.messageUser = function(user, message, callback) {
     var mailOptions = {
       from: config.mailerFrom,
       to: user.email,
-      subject: "Message from Argent User " + user.first_name + " id_"+rack(),
-      html: "sender: " + user.email + " \n\n" + message
+      subject: "Message from Argent User " + user.first_name + " #"+rack(),
+      html: "@" + user.username + "messaged you! Message: \n\n" + message
     };
     transporter.sendMail(mailOptions, function (error,info) {
       callback(error, info);

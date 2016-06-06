@@ -339,7 +339,7 @@ module.exports = function (app, options) {
         var number = req.query.number;
         logger.debug("stripe key is");
         logger.debug(user.stripe.stripeKey);
-        stripe.balance.listTransactions({}, function(err, transactions) {
+        stripe.balance.listTransactions({ limit: limit }, function(err, transactions) {
           if(err) {
             logger.error(err)
           }
@@ -591,7 +591,7 @@ module.exports = function (app, options) {
   })
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.charge, function(req, res, next) {
       var user_id = req.params.uid;
-      var params = { limit: 10 }
+      var params = { limit: req.query.limit }
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);      
         stripe.charges.list(params, function(err, charges) {
@@ -747,7 +747,6 @@ module.exports = function (app, options) {
       var customer_id = req.params.cust_id;      
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
-        var customer_id = req.body.customerId;
         stripe.customers.retrieve(customer_id, function(err, customer) {
           // asynchronously called
             if(err) {
@@ -831,8 +830,9 @@ module.exports = function (app, options) {
         // get requesting user
         var requestingUser = user
         logger.info(requestingUser.username);
-        // TODO: CHANGE LIMIT TO INFINITE!
-        stripe.customers.list({ limit: 100 }, function(err, customers) {
+        // TODO: CHANGE LIMIT TO INFINITE! or paginate it
+        var limit = req.query.limit
+        stripe.customers.list({ limit: limit }, function(err, customers) {
             logger.trace('inside customer list')
             // asynchronously called
             if(err) {
@@ -947,8 +947,8 @@ module.exports = function (app, options) {
       var user_id = req.params.uid
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
-        // var params = { limit: req.query.limit };
-        stripe.subscriptions.list({ limit: 100 },
+        var limit = req.query.limit;
+        stripe.subscriptions.list({ limit: limit },
           function(err, subscriptions) {
             // asynchronously called
             if(err) {
@@ -993,9 +993,7 @@ module.exports = function (app, options) {
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
         var limit = req.query.limit
-        stripe.events.list(
-          { limit: limit },
-          function(err, events) {
+        stripe.events.list({ limit: limit }, function(err, events) {
             if(err) {
               logger.error(err)
             }
@@ -1082,8 +1080,8 @@ module.exports = function (app, options) {
       var user_id = req.params.uid
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
-        var params = {};
-        stripe.plans.list({ limit: req.query.limit },
+        var limit = req.query.limit
+        stripe.plans.list({ limit: limit },
           function(err, plans) {
             // asynchronously called
             if(err) {
@@ -1101,8 +1099,8 @@ module.exports = function (app, options) {
       var username = req.params.delegate_username
       userController.getDelegatedUserByUsername(username).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
-        var params = {};
-        stripe.plans.list({ limit: req.query.limit },
+        var limit = req.query.limit;
+        stripe.plans.list({ limit: limit },
           function(err, plans) {
             // asynchronously called
             if(err) {
@@ -1199,8 +1197,8 @@ module.exports = function (app, options) {
       var user_id = req.params.uid
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
-        var params = {};
-        stripe.products.list({ limit: req.query.limit },
+        var limit = req.query.limit;
+        stripe.products.list({ limit: limit },
           function(err, products) {
             // asynchronously called
             if(err) {
@@ -1323,8 +1321,8 @@ module.exports = function (app, options) {
       var user_id = req.params.uid
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
-        var params = {};
-        stripe.transfers.list({ limit: req.query.limit },
+        var limit = req.query.limit;
+        stripe.transfers.list({ limit: limit },
           function(err, transfers) {
             // asynchronously called
             if(err) {
