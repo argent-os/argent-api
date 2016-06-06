@@ -177,7 +177,7 @@ module.exports = function (app, options) {
       logger.trace("request received | update stripe account")
       var user_id = req.params.uid;
       var parameters = req.body;
-      logger.info(parameters)
+      //logger.info(parameters)
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey); 
         stripe.account.update(user.stripe.accountId, parameters, function(err, account) {
