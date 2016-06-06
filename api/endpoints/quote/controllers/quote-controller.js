@@ -47,7 +47,7 @@ QuoteController.prototype.createQuote = function (req, res, next) {
           return next(err);
         }
                   // process.env.ENVIRONMENT == 'DEV' || process.env.ENVIRONMENT == undefined ? link = 'http://localhost:5000/quote' + '?token=' + verifyToken : '';
-                  // process.env.ENVIRONMENT == 'PROD' ? link = 'https://www.timekloud.com/quote' + '?token=' + verifyToken : ''; 
+                  // process.env.ENVIRONMENT == 'PROD' ? link = 'https://www.argentapp.com/quote' + '?token=' + verifyToken : ''; 
                   var acceptLink = "http://localhost:5000/acceptQuote";
                   var rejectLink = "http://localhost:5000/rejectQuote";           
                   mailer.sendQuote(recipient, acceptLink, rejectLink, function (err, info) {

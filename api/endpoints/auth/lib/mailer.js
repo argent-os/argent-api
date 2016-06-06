@@ -87,9 +87,33 @@ exports.messageUser = function(user, message, callback) {
     var rack = hat.rack(); 
     var transporter = nodemailer.createTransport(config.transporter);
     var mailOptions = {
-      from: user.email,
+      from: config.mailerFrom,
       to: user.email,
       subject: "Message from Argent User " + user.first_name + " id_"+rack(),
+      html: "sender: " + user.email + " \n\n" + message
+    };
+    transporter.sendMail(mailOptions, function (error,info) {
+      callback(error, info);
+    });
+  }
+};
+
+exports.sendReceipt = function(user, subject, message, recipient, callback) {
+  if (!config && process.env.ENV !== 'testing') {
+    callback('Transporter not configured');
+    return;
+  }
+  if (process.env.ENV === 'testing') {
+    callback(null, user, null);
+  }
+  else {
+    var hat = require('hat');
+    var rack = hat.rack(); 
+    var transporter = nodemailer.createTransport(config.transporter);
+    var mailOptions = {
+      from: config.mailerFrom,
+      to: recipient,
+      subject: subject,
       html: "sender: " + user.email + " \n\n" + message
     };
     transporter.sendMail(mailOptions, function (error,info) {

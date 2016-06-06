@@ -117,7 +117,8 @@ var notification = require('./api/endpoints/notification')(app, options);
 var stripe       = require('./api/endpoints/stripe/stripe.endpoint')(app, options);
 var plaid        = require('./api/endpoints/plaid/plaid.endpoint')(app, options);
 var cloudinary   = require('./api/endpoints/cloudinary/cloudinary.endpoint')(app, options);
-var messages   = require('./api/endpoints/messages/messages.endpoint')(app, options);
+var messages     = require('./api/endpoints/messages/messages.endpoint')(app, options);
+var messages     = require('./api/endpoints/receipts/receipts.endpoint')(app, options);
 var quote        = require('./api/endpoints/quote')(app, options);
 
 // app.use(express.static(path.join(__dirname, 'api/web')));
