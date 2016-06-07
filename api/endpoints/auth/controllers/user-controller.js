@@ -397,7 +397,8 @@ UserController.prototype.getProfile = function (req, res, next) {
   }
   User.findById(req.user._id, function (err, user) {
       if (!user) {
-        logger.info('User not found for account update. User id : ' + req.user._id);
+        logger.info('User not found for account retrieval. User id : ' + req.user._id);
+        res.json({err: "could not get profile"});
         return;
       }
       else {

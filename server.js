@@ -116,6 +116,7 @@ var prot_company = require('./api/endpoints/company')(app, options);
 var notification = require('./api/endpoints/notification')(app, options);
 var stripe       = require('./api/endpoints/stripe/stripe.endpoint')(app, options);
 var plaid        = require('./api/endpoints/plaid/plaid.endpoint')(app, options);
+var twilio       = require('./api/endpoints/twilio/twilio.endpoint')(app, options);
 var cloudinary   = require('./api/endpoints/cloudinary/cloudinary.endpoint')(app, options);
 var messages     = require('./api/endpoints/messages/messages.endpoint')(app, options);
 var messages     = require('./api/endpoints/receipts/receipts.endpoint')(app, options);
