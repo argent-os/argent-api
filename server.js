@@ -69,8 +69,8 @@ var options = {
     transporter   : {
       service: 'Gmail',
       auth: {
-        user: process.env.APP_GMAIL,
-        pass: process.env.APP_GMAIL_PW
+        user: process.env.SUPPORT_EMAIL,
+        pass: process.env.SUPPORT_EMAIL_PW
       }
     }
   }
@@ -116,9 +116,9 @@ var prot_company = require('./api/endpoints/company')(app, options);
 var notification = require('./api/endpoints/notification')(app, options);
 var stripe       = require('./api/endpoints/stripe/stripe.endpoint')(app, options);
 var plaid        = require('./api/endpoints/plaid/plaid.endpoint')(app, options);
-var twilio       = require('./api/endpoints/twilio/twilio.endpoint')(app, options);
 var cloudinary   = require('./api/endpoints/cloudinary/cloudinary.endpoint')(app, options);
 var messages     = require('./api/endpoints/messages/messages.endpoint')(app, options);
+var email        = require('./api/endpoints/email/email.endpoint')(app, options);
 var messages     = require('./api/endpoints/receipts/receipts.endpoint')(app, options);
 var quote        = require('./api/endpoints/quote')(app, options);
 

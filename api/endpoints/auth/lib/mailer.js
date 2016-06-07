@@ -121,3 +121,25 @@ exports.sendReceipt = function(user, subject, message, recipient, callback) {
     });
   }
 };
+
+exports.sendAppLink = function(email, subject, message, callback) {
+  if (!config && process.env.ENV !== 'testing') {
+    callback('Transporter not configured');
+    return;
+  }
+  if (process.env.ENV === 'testing') {
+    callback(null, user, null);
+  }
+  else {
+    var transporter = nodemailer.createTransport(config.transporter);
+    var mailOptions = {
+      from: config.mailerFrom,
+      to: email,
+      subject: subject,
+      html: message
+    };
+    transporter.sendMail(mailOptions, function (error,info) {
+      callback(error, info);
+    });
+  }
+};
