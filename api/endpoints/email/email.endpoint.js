@@ -38,8 +38,8 @@ module.exports = function (app, options) {
 		var message = 'Welcome to Argent! You can download the app here: https://itunes.apple.com/us/app/argent/id1110084542?mt=8';
 		mailer.sendAppLink(email, subject, message, function (err, info) {
 			if (err) {
-			  res.status(401).json({msg: 'error_sending_message', error: err});
-			  logger.error(err);
+			  res.status(401).json({msg: 'error_sending_message', error: err}).end();
+			  return;
 			}
 			else {
 			  var msg = 'message_sent';
