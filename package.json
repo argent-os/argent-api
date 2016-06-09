@@ -31,8 +31,6 @@
     "express": "^4.13.3",
     "express-session": "^1.11.3",
     "express-validator": "^2.13.0",
-    "firebase": "^2.3.2",
-    "firebase-token-generator": "^2.0.0",
     "h5bp": "^0.1.4",
     "hat": "0.0.3",
     "jwt-simple": "^0.3.0",

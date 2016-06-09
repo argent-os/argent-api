@@ -79,7 +79,6 @@ Edit the following in ```src/app/index.js``` to match local settings
 ```
 .value('appconfig',{
         apiRoot: 'http://localhost:5001',
-        firebaseUrl: 'https://demosandbox.firebaseio.com/api/v1'
 })
 ```    
 Run ```nodemon server``` to instantiate Angular frontend
@@ -91,51 +90,10 @@ App should now be running on ```http://localhost:5000```
 
 ##Staging and Deployment
 
-###Firebase
-
-#####URLs
-Sandbox: ```https://demosandbox.firebaseio.com```
-<br />Production: ```https://timekloud.firebaseiocom```
-
-To set up a new Firebase instance be sure to enable Email & Password User Authentication
-
-Be sure to include the following security rules
-<br />
-```
-{
-  "rules": {
-      "api" :{
-          "v1" : {
-              "users": {
-                "$username" :{
-                    "logs": {
-                      ".read": "$username === auth.username && auth.uid !== null && auth.hasTCAccess === true",
-                      ".write": "$username === auth.username && auth.uid !== null && auth.hasTCAccess === true"                  
-                    },
-                    "projects": {
-                      ".read": "$username === auth.username && auth.uid !== null && auth.hasTCAccess === true",
-                      ".write": "$username === auth.username && auth.uid !== null && auth.hasTCAccess === true"  
-                    },
-                    "status": {
-                      ".read": "$username === auth.username && auth.uid !== null && auth.hasTCAccess === true",
-                      ".write": "$username === auth.username && auth.uid !== null && auth.hasTCAccess === true"  
-                    },
-                    "tasks": {
-                      ".read": "$username === auth.username && auth.uid !== null && auth.hasTCAccess === true",
-                      ".write": "$username === auth.username && auth.uid !== null && auth.hasTCAccess === true"  
-                    }
-                }                  
-              }
-          }
-      }   
-  }
-}
-```
-
 ------------------------------
-###Heroku
+### AWS documentation needed, replace heroku
 
-Download Heroku Toolbelt
+Download Toolbelt
 <br />https://toolbelt.heroku.com/osx
 
 With Two-Factor Authentication

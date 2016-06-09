@@ -35,10 +35,8 @@ var compress       = require('compression');
 
 var app = express();
 
-// Key Stripe and Firebase Handlers for DEV vs PROD
 process.env.ENVIRONMENT == 'DEV' ? mongooseUri = process.env.MONGOLAB_URI_DEV : '';
 process.env.ENVIRONMENT == 'PROD' ? mongooseUri =process.env.MONGOLAB_URI : '';
-
 
 console.log('Running in ' + process.env.ENVIRONMENT + ' mode');
 
