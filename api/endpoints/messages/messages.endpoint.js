@@ -18,7 +18,7 @@ module.exports = function (app, options) {
 	app.use(expressValidator());
 
 	// curl -X GET -i -H "Content-Type: application/json" -d '{"message": "foobar"}' http://192.168.1.232:5001/v1/message/6a4sh02hicnxmf28
-	app.post(endpoint.version + endpoint.base + "/:uid", function(req, res, next) {
+	app.post(endpoint.version + endpoint.base + "/:uid", userController.authorize, function(req, res, next) {
 		logger.trace('req message received');
 		var user_id = req.params.uid;
 		var subject = req.body.subject;
@@ -41,7 +41,7 @@ module.exports = function (app, options) {
 	});
 
 		// curl -X GET -i -H "Content-Type: application/json" -d '{"message": "foobar"}' http://192.168.1.232:5001/v1/message/6a4sh02hicnxmf28
-	app.post(endpoint.version + endpoint.base + endpoint.user + "/:username", function(req, res, next) {
+	app.post(endpoint.version + endpoint.base + endpoint.user + "/:username", userController.authorize, function(req, res, next) {
 		logger.trace('send message received');
 		var username = req.params.username;
 		var message = req.body.message;

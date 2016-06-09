@@ -125,7 +125,7 @@ module.exports = function (app, options) {
 
       // To use this example change the request url to your own IP and keep the port the same
   */
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/example", function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/example", userController.authorize, function(req, res, next) {
     logger.trace('example charge request received');
     var stripeToken = req.body.stripeToken;
     var amount = req.body.amount;
@@ -146,13 +146,13 @@ module.exports = function (app, options) {
         return res.json({msg: "success", charge: charge})
     }, function(err) {
         logger.error(err);
-        return res.json({msg: err})
+        return res.status(400).json({ error: err }).end();                          
     });
   })
 
   // TODO: Complete API
   // ACCOUNT
-  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.account, function(req, res, next) {
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.account, userController.authorize, function(req, res, next) {
       logger.trace("request received | get account")
       var user_id = req.params.uid
       userController.getUser(user_id).then(function (user) {
@@ -161,19 +161,20 @@ module.exports = function (app, options) {
             // asynchronously called
             if(err) {
               logger.error(err);
+              return res.status(400).json({ error: err }).end();            
             }
             res.json({account: account})
           }
         );   
       });
   });
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.account, function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.account, userController.authorize, function(req, res, next) {
       stripe.account.create([params])
   }); 
-  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.account, function(req, res, next) {
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.account, userController.authorize, function(req, res, next) {
       stripe.account.list([params])
   }); 
-  app.put(endpoint.version + endpoint.base + "/:uid" + endpoint.account, function(req, res, next) {
+  app.put(endpoint.version + endpoint.base + "/:uid" + endpoint.account, userController.authorize, function(req, res, next) {
       logger.trace("request received | update stripe account")
       var user_id = req.params.uid;
       var parameters = req.body;
@@ -184,6 +185,7 @@ module.exports = function (app, options) {
             // asynchronously called
             if(err) {
               logger.error(err);
+              return res.status(400).json({ error: err }).end();                          
             }
             logger.info("updated stripe account")
             res.json({account: account})
@@ -196,7 +198,7 @@ module.exports = function (app, options) {
   // Endpoint /v1/stripe/a7sd89f7a98df/external_account?type=card
   // Endpoint /v1/stripe/a7sd89f7a98df/external_account?type=bank
   // Add credit card external account
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.external_account, function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.external_account, userController.authorize, function(req, res, next) {
       logger.trace("request received | add account external account")
       if(req.query.type == "card") {
         var card_obj = {
@@ -221,14 +223,14 @@ module.exports = function (app, options) {
               // asynchronously called
               if(err) {
                 logger.error(err);
-                next();
+                return res.status(400).json({ error: err }).end();            
               }
               // Then add the source to Stripe using the token
               stripe.accounts.createExternalAccount(user.stripe.accountId, { external_account: token.id }, function(err, card) {
                   // asynchronously called
                   if(err) {
                     logger.error(err);
-                    next();
+                    return res.status(400).json({ error: err }).end();            
                   }
                   return res.json({msg:"card added!"}).end();
                 }
@@ -239,6 +241,7 @@ module.exports = function (app, options) {
               // asynchronously called
               if(err) {
                 logger.error(err);
+                return res.status(400).json({ error: err }).end();                            
               }
               logger.trace('done')
               res.json({msg:"external account added!", external_account: externalAccount})
@@ -248,7 +251,7 @@ module.exports = function (app, options) {
       });
   });   
 
-  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.external_account, function(req, res, next) {
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.external_account, userController.authorize, function(req, res, next) {
       logger.trace("request received | list external accounts.");
       var user_id = req.params.uid
       userController.getUser(user_id).then(function (user) {
@@ -259,7 +262,7 @@ module.exports = function (app, options) {
           logger.trace("accounts: " + externalAccounts);
           if(err) {
             logger.error(err);
-            next();
+            return res.status(400).json({ error: err }).end();            
           }
           return res.json({external_accounts:externalAccounts}).end();
         });
@@ -267,7 +270,7 @@ module.exports = function (app, options) {
   });   
 
 
-  app.delete(endpoint.version + endpoint.base + "/:uid" + endpoint.external_account + "/:bank_acct_id", function(req, res, next) {
+  app.delete(endpoint.version + endpoint.base + "/:uid" + endpoint.external_account + "/:bank_acct_id", userController.authorize, function(req, res, next) {
       logger.trace("request received | list external accounts.");
       var user_id = req.params.uid
       var bank_id = req.params.bank_acct_id
@@ -279,7 +282,7 @@ module.exports = function (app, options) {
           logger.trace("done: " + confirmation);
           if(err) {
             logger.error(err);
-            next();
+            return res.status(400).json({ error: err }).end();            
           }
           return res.json({ confirmation: confirmation }).end();
         });
@@ -294,23 +297,30 @@ module.exports = function (app, options) {
         var stripe = require('stripe')(user.stripe.secretKey);
         stripe.balance.retrieve(function(err, balance) {
             if(err) {
-                logger.error(err)
+                logger.error(err);
+                return res.status(400).json({ error: err }).end();            
             }
             res.json({balance:balance})
         })
       })   
   });  
+
   // HISTORY
-  // Get user balance transactions history
-  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.balance + endpoint.transactions, userController.authorize, function(req, res, next) {
+  // Get user transactions history
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.transactions, userController.authorize, function(req, res, next) {
       logger.trace("getting user transaction history")
       var user_id = req.params.uid
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
-        var limit = req.query.limit
-        stripe.balance.listTransactions({ limit: limit }, function(err, transactions) {
+        var limit = req.query.limit || 100;
+        var starting_after;
+        if(req.query.starting_after != undefined) {
+          starting_after = req.query.starting_after;
+        }       
+        stripe.balance.listTransactions({ limit: limit, starting_after: starting_after }, function(err, transactions) {
           if(err) {
             logger.error(err)
+            return res.status(400).json({ error: err }).end();                        
           }
           // logger.info(transactions)
           res.json({ transactions:transactions })
@@ -319,7 +329,7 @@ module.exports = function (app, options) {
         });
       })       
   });     
-  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.balance + endpoint.transactions, function(req, res, next) {
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.transactions, userController.authorize, function(req, res, next) {
       stripe.balance.retrieveTransaction(transactionId)
   });
   //
@@ -335,13 +345,18 @@ module.exports = function (app, options) {
       userController.getUser(user_id).then(function (user) {
         logger.debug("inside history")
         var stripe = require('stripe')(user.stripe.secretKey);
-        var limit = req.query.limit || 1000;
+        var limit = req.query.limit || 100;
         var number = req.query.number;
         logger.debug("stripe key is");
         logger.debug(user.stripe.stripeKey);
-        stripe.balance.listTransactions({ limit: limit }, function(err, transactions) {
+        var starting_after;
+        if(req.query.starting_after != undefined) {
+          starting_after = req.query.starting_after;
+        }        
+        stripe.balance.listTransactions({ limit: limit, starting_after: starting_after }, function(err, transactions) {
           if(err) {
             logger.error(err)
+            return res.status(400).json({ error: err }).end();                        
           }
           switch (interval) {
             case "year":
@@ -446,15 +461,20 @@ module.exports = function (app, options) {
       })
   })
 
-  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.history, function(req, res, next) {
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.history, userController.authorize, function(req, res, next) {
       
       var user_id = req.params.uid
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
-        var limit = req.query.limit || 100
-        stripe.balance.listTransactions({ limit: limit }, function(err, transactions) {
+        var limit = req.query.limit || 100;
+        var starting_after;
+        if(req.query.starting_after != undefined) {
+          starting_after = req.query.starting_after;
+        }        
+        stripe.balance.listTransactions({ limit: limit, starting_after: starting_after }, function(err, transactions) {
           if(err) {
             logger.error(err)
+            return res.status(400).json({ error: err }).end();                        
           }
 
           if(transactions != null) {
@@ -543,7 +563,7 @@ module.exports = function (app, options) {
       with the charge in the response and send that back as JSON.  If there is an error we
       log the error.
   */
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge, function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge, userController.authorize, function(req, res, next) {
       // POS Charge, aka pay yourself through a terminal
       logger.info("POS charge")
       var user_id = req.params.uid;
@@ -568,13 +588,13 @@ module.exports = function (app, options) {
               res.json({msg: "success", charge: charge}).end();
           }, function(err) {
               logger.error(err)
-              res.json({msg: "error", err: err}).end();
+              return res.status(400).json({ error: err }).end();                          
           });
       }) 
   });
 
   // Delegated one time charge, pay another delegated user
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/:delegate_username", function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/:delegate_username", userController.authorize, function(req, res, next) {
     // Delegated charge, aka someone pays you
     var user_id = req.params.uid;
     var delegate_user = req.params.delegate_username;
@@ -599,25 +619,30 @@ module.exports = function (app, options) {
             res.json({msg: "success", charge: charge}).end();
         }, function(err) {
             logger.error(err)
-            res.json({msg: "error", err: err}).end();
+            return res.status(400).json({ error: err }).end();                          
         });
     }) 
   })
-  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.charge, function(req, res, next) {
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.charge, userController.authorize, function(req, res, next) {
       var user_id = req.params.uid;
-      var params = { limit: req.query.limit }
       userController.getUser(user_id).then(function (user) {
-        var stripe = require('stripe')(user.stripe.secretKey);      
-        stripe.charges.list(params, function(err, charges) {
+        var stripe = require('stripe')(user.stripe.secretKey); 
+        var limit = req.query.limit || 100;
+        var starting_after;
+        if(req.query.starting_after != undefined) {
+          starting_after = req.query.starting_after;
+        }            
+        stripe.charges.list({ limit: limit, starting_after: starting_after }, userController.authorize, function(err, charges) {
           // asynchronously called
             if(err) {
               logger.error(err)
+              return res.status(400).json({ error: err }).end();                                        
             }
             res.json({ charges: charges })          
         });    
       });     
   });
-  app.put(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/:charge_id", function(req, res, next) {
+  app.put(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/:charge_id", userController.authorize, function(req, res, next) {
       var user_id = req.params.uid;
       var charge_id = req.params.charge_id;
       userController.getUser(user_id).then(function (user) {
@@ -626,13 +651,13 @@ module.exports = function (app, options) {
           // asynchronously called
             if(err) {
               logger.error(err)
+              return res.status(400).json({ error: err }).end();                                        
             }
             res.json({ charge: charge })          
         });        
       });
   });
-  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/:charge_id", function(req, res, next) {
-      var params = {"foo": "bar"};
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/:charge_id", userController.authorize, function(req, res, next) {
       var user_id = req.params.uid;
       var charge_id = req.params.charge_id;
       userController.getUser(user_id).then(function (user) {
@@ -641,55 +666,54 @@ module.exports = function (app, options) {
           // asynchronously called
             if(err) {
               logger.error(err)
+              return res.status(400).json({ error: err }).end();                                        
             }
             res.json({ charge: charge })          
         });        
       });      
   });
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/:charge_id", function(req, res, next) {
-      var params = { 
-        description: "foobar"
-      };
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/:charge_id", userController.authorize, function(req, res, next) {
       var user_id = req.params.uid;
       var charge_id = req.params.charge_id;
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);      
-        stripe.charges.update(charge_id, params, function(err, charge) {
+        stripe.charges.update(charge_id, {}, function(err, charge) {
           // asynchronously called
             if(err) {
               logger.error(err)
+              return res.status(400).json({ error: err }).end();                                        
             }
             res.json({ charge: charge })          
         });        
       });        
   });
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/close/dispute", function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/close/dispute", userController.authorize, function(req, res, next) {
       stripe.charges.closeDispute(chargeId, params)
   });
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/set/metadata", function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/set/metadata", userController.authorize, function(req, res, next) {
       stripe.charges.setMetadata(chargeId, metadataObject)
   });
-  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/get/metadata", function(req, res, next) {
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/get/metadata", userController.authorize, function(req, res, next) {
       stripe.charges.getMetadata(chargeId)
   });
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/mark/safe", function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/mark/safe", userController.authorize, function(req, res, next) {
       stripe.charges.markAsSafe(chargeId)
   });
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/mark/fraud", function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/mark/fraud", userController.authorize, function(req, res, next) {
       stripe.charges.markAsFraudulent(chargeId)
   });
 
   // COUPONS
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.coupons, function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.coupons, userController.authorize, function(req, res, next) {
       stripe.coupons.create(params)
   });
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.coupons, function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.coupons, userController.authorize, function(req, res, next) {
       stripe.coupons.list([params])
   });
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.coupons, function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.coupons, userController.authorize, function(req, res, next) {
       stripe.coupons.retrieve(chargeId)
   });
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.coupons, function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.coupons, userController.authorize, function(req, res, next) {
       stripe.coupons.del(chargeId)
   });
 
@@ -701,7 +725,7 @@ module.exports = function (app, options) {
       a token using either credit card or Apple Pay
   */
   // Create customer
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.customers, function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.customers, userController.authorize, function(req, res, next) {
       var user_id = req.params.uid;
       var params = {
         email: req.body.email,
@@ -714,6 +738,7 @@ module.exports = function (app, options) {
             // asynchronously called
             if(err) {
               logger.error(err)
+              return res.status(400).json({ error: err }).end();                                        
             }
             res.json({ customer: customer })
           }
@@ -721,16 +746,21 @@ module.exports = function (app, options) {
       });
   });  
   // List customers /v1/stripe/:uid/customers/
-  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.customers, function(req, res, next) {
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.customers, userController.authorize, function(req, res, next) {
       logger.trace('getting user customers');
       var user_id = req.params.uid;
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
-        var params = {};
-        stripe.customers.list({ limit: req.query.limit }, function(err, customers) {
+        var limit = req.query.limit || 100;
+        var starting_after;
+        if(req.query.starting_after != undefined) {
+          starting_after = req.query.starting_after;
+        }
+        stripe.customers.list({ limit: limit, starting_after: starting_after }, function(err, customers) {
             // asynchronously called
             if(err) {
               logger.error(err)
+              return res.status(400).json({ error: err }).end();                                        
             }
             res.json({ customers: customers })
           }
@@ -739,7 +769,7 @@ module.exports = function (app, options) {
   });   
 
   // Update customer 
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.customers + "/:cust_id", function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.customers + "/:cust_id", userController.authorize, function(req, res, next) {
       var user_id = req.params.uid;
       var customer_id = req.params.cust_id
       userController.getUser(user_id).then(function (user) {
@@ -750,13 +780,14 @@ module.exports = function (app, options) {
           // asynchronously called
             if(err) {
               logger.error(err)
+              return res.status(400).json({ error: err }).end();                                        
             }
             res.json({ customer: customer })          
         });        
       });    
   });  
   // Retrieve single customer
-  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.customers + "/:cust_id", function(req, res, next) {
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.customers + "/:cust_id", userController.authorize, function(req, res, next) {
       var user_id = req.params.uid;
       var customer_id = req.params.cust_id;      
       userController.getUser(user_id).then(function (user) {
@@ -765,13 +796,14 @@ module.exports = function (app, options) {
           // asynchronously called
             if(err) {
               logger.error(err)
+              return res.status(400).json({ error: err }).end();                                        
             }
             res.json({ customer: customer })          
         });        
       });       
   });   
   // Delete customer
-  app.delete(endpoint.version + endpoint.base + "/:uid" + endpoint.customers + "/:cust_id", function(req, res, next) {
+  app.delete(endpoint.version + endpoint.base + "/:uid" + endpoint.customers + "/:cust_id", userController.authorize, function(req, res, next) {
       var user_id = req.params.uid;
       var customer_id = req.params.cust_id;      
       userController.getUser(user_id).then(function (user) {
@@ -780,13 +812,14 @@ module.exports = function (app, options) {
           // asynchronously called
             if(err) {
               logger.error(err)
+              return res.status(400).json({ error: err }).end();                                        
             }
             res.json({ confirmation: confirmation })          
         });        
       });     
   });    
   // Set customer metadata      
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.customers + "/:cust_id", function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.customers + "/:cust_id", userController.authorize, function(req, res, next) {
       var metadata_obj = req.body.metadataObject;
       var user_id = req.params.uid;
       var customer_id = req.params.cust_id;      
@@ -797,6 +830,7 @@ module.exports = function (app, options) {
           // asynchronously called
             if(err) {
               logger.error(err)
+              return res.status(400).json({ error: err }).end();                                        
             }
             res.json({ customer: customer })          
         });        
@@ -813,6 +847,7 @@ module.exports = function (app, options) {
           // asynchronously called
             if(err) {
               logger.error(err)
+              return res.status(400).json({ error: err }).end();                                        
             }
             res.json({ customer: customer })          
         });        
@@ -845,12 +880,17 @@ module.exports = function (app, options) {
         var requestingUser = user
         logger.info(requestingUser.username);
         // TODO: CHANGE LIMIT TO INFINITE! or paginate it
-        var limit = req.query.limit
-        stripe.customers.list({ limit: limit }, function(err, customers) {
+        var limit = req.query.limit || 100;
+        var starting_after;
+        if(req.query.starting_after != undefined) {
+          starting_after = req.query.starting_after;
+        }        
+        stripe.customers.list({ limit: limit, starting_after: starting_after }, function(err, customers) {
             logger.trace('inside customer list')
             // asynchronously called
             if(err) {
               logger.error(err)
+              return res.status(400).json({ error: err }).end();                                        
             }
 
             // list customers before adding plan
@@ -877,13 +917,14 @@ module.exports = function (app, options) {
                     // asynchronously called
                     if(err) {
                       logger.error(err)
+                      return res.status(400).json({ error: err }).end();                                                
                     }
                     // Create a customer, then create a plan for that customer
                     stripe.subscriptions.create({ customer: customer.id, plan: params.plan }).then(function(subscription, err) {
                         res.json({ subscription: subscription }).end();
                     }, function(err) {
                         logger.error(err)
-                        res.json({msg: "error", err: err}).end();
+                        return res.status(400).json({ error: err }).end();                                                  
                     })
                   }
                 );  
@@ -896,7 +937,7 @@ module.exports = function (app, options) {
                       res.json({ subscription: subscription }).end();
                   }, function(err) {
                       logger.error(err)
-                      res.json({msg: "error", err: err}).end();
+                      return res.status(400).json({ error: err }).end();                          
                   });
                   break;
                 }
@@ -912,6 +953,7 @@ module.exports = function (app, options) {
                       // asynchronously called
                       if(err) {
                         logger.error(err)
+                        return res.status(400).json({ error: err }).end();                                                  
                       }
                       //logger.info(customer);
                       // Create a customer, then create a plan for that customer
@@ -919,7 +961,7 @@ module.exports = function (app, options) {
                           res.json({ subscription: subscription }).end();
                       }, function(err) {
                           logger.error(err)
-                          res.json({msg: "error", err: err}).end();
+                          return res.status(400).json({ error: err }).end();                          
                       })
                     }
                   )    
@@ -950,6 +992,7 @@ module.exports = function (app, options) {
         stripe.subscriptions.del(subscription_id, function(err, confirmation) {
             if(err) {
               logger.error(err)
+              return res.status(400).json({ error: err }).end();                                        
             }          
             res.json({ confirmation: confirmation })
             // asynchronously called
@@ -961,12 +1004,17 @@ module.exports = function (app, options) {
       var user_id = req.params.uid
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
-        var limit = req.query.limit;
-        stripe.subscriptions.list({ limit: limit },
+        var limit = req.query.limit || 100;
+        var starting_after;
+        if(req.query.starting_after != undefined) {
+          starting_after = req.query.starting_after;
+        }
+        stripe.subscriptions.list({ limit: limit, starting_after: starting_after },
           function(err, subscriptions) {
             // asynchronously called
             if(err) {
               logger.error(err)
+              return res.status(400).json({ error: err }).end();                                        
             }
             res.json({ subscriptions: subscriptions })
           }
@@ -1006,10 +1054,15 @@ module.exports = function (app, options) {
       var user_id = req.params.uid
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
-        var limit = req.query.limit
-        stripe.events.list({ limit: limit }, function(err, events) {
+        var limit = req.query.limit || 100;
+        var starting_after;
+        if(req.query.starting_after != undefined) {
+          starting_after = req.query.starting_after;
+        }
+        stripe.events.list({ limit: limit, starting_after: starting_after }, function(err, events) {
             if(err) {
               logger.error(err)
+              return res.status(400).json({ error: err }).end();                                        
             }
             // asynchronously called
             res.json({events:events})
@@ -1049,7 +1102,7 @@ module.exports = function (app, options) {
         GENERIC: /v1/stripe/plans/
   */
   // Used to POST (create) a new plan
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.plans, function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.plans, userController.authorize, function(req, res, next) {
       logger.info("creating new plan");
       var user_id = req.params.uid
       userController.getUser(user_id).then(function (user) {
@@ -1061,14 +1114,15 @@ module.exports = function (app, options) {
           interval_count: req.body.interval_count,
           name: req.body.name,
           currency: req.body.currency,
-          trial_period_days: req.body.trial_period_days,
-          statement_descriptor: req.body.statement_descriptor
+          trial_period_days: req.body.trial_period_days || null,
+          statement_descriptor: req.body.statement_descriptor || null
         };
         logger.debug(params);
         stripe.plans.create(params, function(err, plan) {
             if(err) {
               // logger.error(err)
               res.status(400).json({ error: err })
+              return res.status(400).json({ error: err }).end();                                        
             } else {
               res.json({ plan: plan })
             }
@@ -1089,17 +1143,22 @@ module.exports = function (app, options) {
           req.params.uid
         - Use req.url to retrieve the query variables such as ?limit=10
   */
-  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.plans, function(req, res, next) {
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.plans, userController.authorize, function(req, res, next) {
       logger.debug('getting user plans')
       var user_id = req.params.uid
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
-        var limit = req.query.limit
-        stripe.plans.list({ limit: limit },
+        var limit = req.query.limit || 100;
+        var starting_after;
+        if(req.query.starting_after != undefined) {
+          starting_after = req.query.starting_after;
+        }        
+        stripe.plans.list({ limit: limit, starting_after: starting_after },
           function(err, plans) {
             // asynchronously called
             if(err) {
               logger.error(err)
+              return res.status(400).json({ error: err }).end();                                        
             }
             res.json({ plans: plans })
           }
@@ -1107,18 +1166,23 @@ module.exports = function (app, options) {
       });
   });  
 
-  app.get(endpoint.version + endpoint.base + endpoint.plans + "/:delegate_username", function(req, res, next) {
+  app.get(endpoint.version + endpoint.base + endpoint.plans + "/:delegate_username", userController.authorize, function(req, res, next) {
       // delegated user plan retrieval
       logger.debug('getting delegated user plans') // get user by username delegated // 2
       var username = req.params.delegate_username
       userController.getDelegatedUserByUsername(username).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
-        var limit = req.query.limit;
-        stripe.plans.list({ limit: limit },
+        var limit = req.query.limit || 100;
+        var starting_after;
+        if(req.query.starting_after != undefined) {
+          starting_after = req.query.starting_after;
+        }        
+        stripe.plans.list({ limit: limit, starting_after: starting_after },
           function(err, plans) {
             // asynchronously called
             if(err) {
               logger.error(err)
+              return res.status(400).json({ error: err }).end();                                        
             }
             res.json({ plans: plans })
           }
@@ -1128,7 +1192,7 @@ module.exports = function (app, options) {
 
 
   // Used to POST (update) a plan
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.plans + "/:plan_id", function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.plans + "/:plan_id", userController.authorize, function(req, res, next) {
       var plan_id = req.params.plan_id;
       var user_id = req.params.uid;
       userController.getUser(user_id).then(function (user) {
@@ -1142,6 +1206,7 @@ module.exports = function (app, options) {
         stripe.plans.update(plan_id, params, function(err, plan) {
             if(err) {
               logger.error(err)
+              return res.status(400).json({ error: err }).end();                                        
             }          
             res.json({ plan: plan })
             // asynchronously called
@@ -1150,7 +1215,7 @@ module.exports = function (app, options) {
   }); 
 
   // Used to GET (retrieve) a single plan
-  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.plans + "/:plan_id", function(req, res, next) {
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.plans + "/:plan_id", userController.authorize, function(req, res, next) {
       var plan_id = req.params.plan_id;
       var user_id = req.params.uid;
       userController.getUser(user_id).then(function (user) {
@@ -1158,6 +1223,7 @@ module.exports = function (app, options) {
         stripe.plans.retrieve(plan_id, function(err, plan) {
             if(err) {
               logger.error(err)
+              return res.status(400).json({ error: err }).end();                                        
             }          
             res.json({ plan: plan })
             // asynchronously called
@@ -1166,7 +1232,7 @@ module.exports = function (app, options) {
   }); 
 
   // Used to DELETE a single plan
-  app.delete(endpoint.version + endpoint.base + "/:uid" + endpoint.plans + "/:plan_id", function(req, res, next) {
+  app.delete(endpoint.version + endpoint.base + "/:uid" + endpoint.plans + "/:plan_id", userController.authorize, function(req, res, next) {
       var plan_id = req.params.plan_id;
       var user_id = req.params.uid;    
       logger.debug("deleting plan ", plan_id)
@@ -1175,6 +1241,7 @@ module.exports = function (app, options) {
         stripe.plans.del(plan_id, function(err, confirmation) {
             if(err) {
               logger.error(err)
+              return res.status(400).json({ error: err }).end();                                        
             }          
             res.json({ confirmation: confirmation })
             // asynchronously called
@@ -1184,7 +1251,7 @@ module.exports = function (app, options) {
 
   // // PRODUCTS
   // stripe.products.create(params)
-    app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.products, function(req, res, next) {
+    app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.products, userController.authorize, function(req, res, next) {
       var user_id = req.params.uid
       logger.info(req.body.attributes);
       userController.getUser(user_id).then(function (user) {
@@ -1199,6 +1266,7 @@ module.exports = function (app, options) {
         stripe.products.create(params, function(err, product) {
             if(err) {
               logger.error(err)
+              return res.status(400).json({ error: err }).end();                                        
             }          
             res.json({ product: product })
             // asynchronously called
@@ -1206,17 +1274,22 @@ module.exports = function (app, options) {
       });
   }); 
   // stripe.products.list([params])
-  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.products, function(req, res, next) {
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.products, userController.authorize, function(req, res, next) {
       logger.debug('getting products')
       var user_id = req.params.uid
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
-        var limit = req.query.limit;
-        stripe.products.list({ limit: limit },
+        var limit = req.query.limit || 100;
+        var starting_after;
+        if(req.query.starting_after != undefined) {
+          starting_after = req.query.starting_after;
+        }        
+        stripe.products.list({ limit: limit, starting_after: starting_after },
           function(err, products) {
             // asynchronously called
             if(err) {
               logger.error(err)
+              return res.status(400).json({ error: err }).end();                                        
             }
             res.json({ products: products })
           }
@@ -1224,7 +1297,7 @@ module.exports = function (app, options) {
       });
   });  
   // stripe.products.update(productId[, params])
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.products + "/:product_id", function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.products + "/:product_id", userController.authorize, function(req, res, next) {
       var product_id = req.params.product_id;
       var user_id = req.params.uid;
       userController.getUser(user_id).then(function (user) {
@@ -1239,6 +1312,7 @@ module.exports = function (app, options) {
         stripe.products.update(product_id, params, function(err, product) {
             if(err) {
               logger.error(err)
+              return res.status(400).json({ error: err }).end();                                        
             }          
             res.json({ product: product })
             // asynchronously called
@@ -1247,7 +1321,7 @@ module.exports = function (app, options) {
   }); 
 
   // Used to GET (retrieve) a single product
-  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.products + "/:product_id", function(req, res, next) {
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.products + "/:product_id", userController.authorize, function(req, res, next) {
       var product_id = req.params.product_id;
       var user_id = req.params.uid;
       userController.getUser(user_id).then(function (user) {
@@ -1255,6 +1329,7 @@ module.exports = function (app, options) {
         stripe.products.retrieve(product_id, function(err, product) {
             if(err) {
               logger.error(err)
+              return res.status(400).json({ error: err }).end();                                        
             }          
             res.json({ product: product })
             // asynchronously called
@@ -1264,7 +1339,7 @@ module.exports = function (app, options) {
 
 
   // Used to delete a single product
-  app.delete(endpoint.version + endpoint.base + "/:uid" + endpoint.products + "/:product_id", function(req, res, next) {
+  app.delete(endpoint.version + endpoint.base + "/:uid" + endpoint.products + "/:product_id", userController.authorize, function(req, res, next) {
       //logger.info("deleting")
       var product_id = req.params.product_id;
       var user_id = req.params.uid;    
@@ -1276,6 +1351,7 @@ module.exports = function (app, options) {
             //logger.info('inside product del')
             if(err) {
               logger.error(err)
+              return res.status(400).json({ error: err }).end();                                        
             }      
             logger.info(confirmation)    
             res.json({ confirmation: confirmation })
@@ -1308,7 +1384,7 @@ module.exports = function (app, options) {
 
   // // TRANSFERS
   // stripe.transfers.create(params)
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.transfers, function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.transfers, userController.authorize, function(req, res, next) {
       //logger.debug('creating transfer...');
       var user_id = req.params.uid
       //logger.debug('in transfer create')
@@ -1323,6 +1399,7 @@ module.exports = function (app, options) {
         stripe.transfers.create(params, function(err, transfer) {
             if(err) {
               logger.error(err)
+              return res.status(400).json({ error: err }).end();                                        
             }          
             res.json({ transfer: transfer })
             // asynchronously called
@@ -1330,17 +1407,22 @@ module.exports = function (app, options) {
       });
   }); 
   // stripe.transfers.list([params])
-  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.transfers, function(req, res, next) {
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.transfers, userController.authorize, function(req, res, next) {
       logger.debug('getting transfers')
       var user_id = req.params.uid
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
-        var limit = req.query.limit;
-        stripe.transfers.list({ limit: limit },
+        var limit = req.query.limit || 100;
+        var starting_after;
+        if(req.query.starting_after != undefined) {
+          starting_after = req.query.starting_after;
+        }        
+        stripe.transfers.list({ limit: limit, starting_after: starting_after },
           function(err, transfers) {
             // asynchronously called
             if(err) {
               logger.error(err)
+              return res.status(400).json({ error: err }).end();                                        
             }
             res.json({ transfers: transfers })
           }
@@ -1349,7 +1431,7 @@ module.exports = function (app, options) {
   });  
 
   // stripe.transfers.retrieve(transferI_id)
-  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.transfers + "/:transfer_id", function(req, res, next) {
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.transfers + "/:transfer_id", userController.authorize, function(req, res, next) {
       var transfer_id = req.params.transfer_id;
       var user_id = req.params.uid;
       userController.getUser(user_id).then(function (user) {
@@ -1358,6 +1440,7 @@ module.exports = function (app, options) {
         stripe.transfers.retrieve(transfer_id, function(err, transfer) {
             if(err) {
               logger.error(err)
+              return res.status(400).json({ error: err }).end();                                        
             }          
             res.json({ transfer: transfer })
             // asynchronously called
@@ -1366,7 +1449,7 @@ module.exports = function (app, options) {
   });
   
   // stripe.transfers.update(transferId[, params])
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.transfers + "/:transfer_id", function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.transfers + "/:transfer_id", userController.authorize, function(req, res, next) {
       var transfer_id = req.params.transfer_id;
       var user_id = req.params.uid;
       userController.getUser(user_id).then(function (user) {
@@ -1378,6 +1461,7 @@ module.exports = function (app, options) {
         stripe.transfers.update(transfer_id, params, function(err, transfer) {
             if(err) {
               logger.error(err)
+              return res.status(400).json({ error: err }).end();                                        
             }          
             res.json({ transfer: transfer })
             // asynchronously called
@@ -1393,7 +1477,7 @@ module.exports = function (app, options) {
 
   // // BITCOIN (resource bitcoinReceivers)
   // stripe.bitcoinReceivers.create(params)
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.bitcoin, function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.bitcoin, userController.authorize, function(req, res, next) {
       var user_id = req.params.uid;
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
@@ -1407,6 +1491,7 @@ module.exports = function (app, options) {
         stripe.bitcoinReceivers.create(params, function(err, receiver) {
             if(err) {
               logger.error(err)
+              return res.status(400).json({ error: err }).end();                                        
             }          
             res.json({ receiver: receiver })
             // asynchronously called
@@ -1414,7 +1499,7 @@ module.exports = function (app, options) {
       });
   });  
   // stripe.bitcoinReceivers.retrieve(receiverId)
-  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.bitcoin + "/:btc", function(req, res, next) {
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.bitcoin + "/:btc", userController.authorize, function(req, res, next) {
       logger.trace("requesting bitcoin receiver")
       var user_id = req.params.uid;
       var bitcoin_receiver_id = req.params.btc;
@@ -1423,6 +1508,7 @@ module.exports = function (app, options) {
         stripe.bitcoinReceivers.retrieve(bitcoin_receiver_id, function(err, receiver) {
             if(err) {
               logger.error(err)
+              return res.status(400).json({ error: err }).end();                                        
             }          
             logger.trace("is bitcoin receiver filled? ", receiver.filled)
             res.json({ receiver: receiver })
@@ -1436,7 +1522,7 @@ module.exports = function (app, options) {
   // stripe.fileUploads // upload and multer imported above
   // /v1/stripe/5asdg98a09sdf/upload/
   // note the file multipart name must be 'document' aka post with multi-part form data { document: "/path/to/file", purpose: identity_document }
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.upload, upload.single('document'), function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.upload, upload.single('document'), userController.authorize, function(req, res, next) {
       logger.info("uploading document")
       var user_id = req.params.uid;
       userController.getUser(user_id).then(function (user) {
@@ -1456,6 +1542,7 @@ module.exports = function (app, options) {
         }, function(err, fileUpload) {
           if(err) {
             logger.error(err);
+            return res.status(400).json({ error: err });            
           }
           logger.info("document upload success");
           var params = {

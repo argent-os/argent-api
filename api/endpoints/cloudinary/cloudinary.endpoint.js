@@ -85,7 +85,7 @@ module.exports = function (app, options) {
 	});
 	 
 	 
-	app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.upload + "/:file", function (req, res){
+	app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.upload + "/:file", userController.authorize, function (req, res){
         file = req.params.file;
         var dirname = "/home/sinan/node/file-upload";
         var img = fs.readFileSync(dirname + "/uploads/" + file);
