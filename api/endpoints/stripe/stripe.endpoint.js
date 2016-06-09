@@ -549,11 +549,18 @@ module.exports = function (app, options) {
       var user_id = req.params.uid;
       userController.getUser(user_id).then(function (user) {
           var stripe = require('stripe')(user.stripe.secretKey);
+          var amountInCents = req.body.amount;
+          var application_fee = (amountInCents*0.0109 + 3);
+          var description = "New charge in the amount of " + currencyFormat.getCommaSeparatedFormat("USD", amountInCents/100);
+          logger.info(amountInCents);
+          logger.info(application_fee);
+          logger.info(description);
           var params = {
-            amount: req.body.amount,
+            amount: amountInCents,
+            application_fee: application_fee,
             currency: "usd",
             source: req.body.token,
-            description: "New charge"
+            description: description
           }
           // Charge a card based on customer ID, the customer must have a linked credit card
           stripe.charges.create(params).then(function(charge, err) {
@@ -573,11 +580,18 @@ module.exports = function (app, options) {
     var delegate_user = req.params.delegate_username;
     userController.getDelegatedUserByUsername(delegate_user).then(function (delegateUser) {
         var stripe = require('stripe')(delegateUser.stripe.secretKey);
+        var amountInCents = req.body.amount;
+        var application_fee = (amountInCents*0.0109 + 3);
+        var description = "New charge in the amount of " + currencyFormat.getCommaSeparatedFormat("USD", amountInCents/100);
+        logger.info(amountInCents);
+        logger.info(application_fee);
+        logger.info(description);
         var params = {
-          amount: req.body.amount,
+          amount: amountInCents,
+          application_fee: application_fee,
           currency: "usd",
           source: req.body.token,
-          description: "New charge"
+          description: description
         }
         // Charge a card based on customer ID, the customer must have a linked credit card
         stripe.charges.create(params).then(function(charge) {
