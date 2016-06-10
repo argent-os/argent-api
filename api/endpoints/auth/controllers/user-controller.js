@@ -142,7 +142,7 @@ UserController.prototype.register = function (req, res, next) {
               logger.trace('inside save');
               // change to req.body.country      
               process.env.ENVIRONMENT == 'DEV' || process.env.ENVIRONMENT == undefined ? link = 'http://localhost:5000/verify' + '?token=' + verifyToken : '';
-              process.env.ENVIRONMENT == 'PROD' ? link = 'https://api.argent.cloud/verify' + '?token=' + verifyToken : '';                  
+              process.env.ENVIRONMENT == 'PROD' ? link = 'https://api.argentapp.com/verify' + '?token=' + verifyToken : '';                  
               mailer.verifyEmail(user, link, function (err, info) {
                 if (err) {
                   logger.error('Error occured : ' + err);
@@ -520,7 +520,7 @@ UserController.prototype.remindPassword = function(req, res) {
   var url;
   process.env.ENVIRONMENT == "DEV" ? url = "http://localhost:5000/reset" : "";
   // process.env.ENVIRONMENT == "PROD" ? url = "https://www.argentapp.com/reset" : "";
-  process.env.ENVIRONMENT == "PROD" ? url = "https://api.argent.cloud/reset" : "";
+  process.env.ENVIRONMENT == "PROD" ? url = "https://api.argentapp.com/reset" : "";
   
   User.findOne({ $or: [ { email: req.body.email }, { username: req.body.username } ] }, function(err, user) {
     if (!user) {
