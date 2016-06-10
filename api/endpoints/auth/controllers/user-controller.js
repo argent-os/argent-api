@@ -47,11 +47,20 @@ UserController.prototype.register = function (req, res, next) {
             var scope = 'read_write';    
             var tokenType = 'bearer';    
             var livemode = 'true';    
-            var _date = req.body.tos_acceptance.data.date;
+
+            logger.trace("body date", req.body.tos_acceptance.date);
+            var _date = req.body.tos_acceptance.date;
+            var parsedDate;
             if( _date.indexOf('.') != -1 ) {
-                var parsedDate = _date.substring(0, _date.indexOf('.'));
+                parsedDate = _date.substring(0, _date.indexOf('.'));
                 logger.info("parsing date, " + parsedDate);
+            } else {
+                logger.info("in else ")
+                parsedDate = req.body.tos_acceptance.date
             }
+
+            logger.trace("parsed date", parsedDate);
+
             if(req.body.dob !== undefined) {
               var dateOfBirth = {
                 "day": req.body.dob.day,
@@ -60,28 +69,58 @@ UserController.prototype.register = function (req, res, next) {
               }
             } else {}
 
+            var type;
             if(req.body.legal_entity !== undefined) {
-              var type = legal_entity.type
+              type = legal_entity.type
             } else {
-              var type = req.body.legal_entity_type
+              type = req.body.legal_entity_type
+            }
+
+            var business_name;
+            if(req.body.business_name !== undefined) {
+              business_name = req.body.business_name
+            } else {
+              business_name = ""
+            }
+
+            var first_name;
+            if(req.body.first_name !== undefined) {
+              first_name = req.body.first_name
+            } else {
+              first_name = ""
+            }
+
+            var last_name;
+            if(req.body.last_name !== undefined) {
+              last_name = req.body.last_name
+            } else {
+              last_name = ""
+            }
+
+            var phone_number;
+            if(req.body.phone_number !== undefined) {
+              phone_number = req.body.phone_number
+            } else {
+              phone_number = ""
             }
 
             var user = new User({
-              first_name: req.body.first_name,
-              last_name: req.body.last_name,
+              first_name: first_name,
+              last_name: last_name,
               username: req.body.username,
               email: req.body.email,
-              phone_number: req.body.phone_number,
+              phone_number: phone_number,
               password: req.body.password,
               country: req.body.country,
               legal_entity: {
-                "first_name": req.body.first_name,
-                "last_name": req.body.last_name,
+                "first_name": first_name,
+                "last_name": last_name,
                 "type": type,
                 "dob": dateOfBirth,
+                "business_name": business_name
               },
               tos_acceptance: {
-                "ip":req.body.tos_acceptance.data.ip,
+                "ip":req.body.tos_acceptance.ip,
                 "date":parsedDate
               },
               env: process.env.ENVIRONMENT,
@@ -313,7 +352,7 @@ UserController.prototype.editProfile = function (req, res, next) {
                 updated.push('stripe');
                 user.stripe = data.stripe;
               }    
-              if (user.plaid !== data.plaid && data.plaid !== undefined && data.plaid !== null && data.plaid != '') {
+              if (user.plaid !== data.plaid && data.plaid !== undefined && data.plaid !== null && data.plaid != "") {
                 updated.push('plaid');
                 user.plaid = data.plaid;
               }    
@@ -325,7 +364,7 @@ UserController.prototype.editProfile = function (req, res, next) {
                 updated.push('verified');
                 user.verified = data.verified;
               }    
-              if (user.theme !== data.theme && data.theme !== undefined && data.theme !== null && data.theme !== '') {
+              if (user.theme !== data.theme && data.theme !== undefined && data.theme !== null && data.theme !== "") {
                 updated.push('theme');
                 user.theme = data.theme;
               }                     
@@ -333,7 +372,7 @@ UserController.prototype.editProfile = function (req, res, next) {
                 updated.push('verifyToken');
                 user.verifyToken = data.verifyToken;
               }                                       
-              if (data.password !== '' && data.password !== null && data.password !== undefined && data.password !== '') {
+              if (data.password !== '' && data.password !== null && data.password !== undefined && data.password !== "") {
                 updated.push('password');
                 user.password = data.password;
               }
@@ -708,9 +747,10 @@ UserController.prototype.listAllUsers = function (req, res, next) {
       var user = {
         first_name: user.first_name,
         last_name: user.last_name,
+        business_name: user.business_name,
         username: user.username,
         country: user.country,
-        picture: user.picture.secure_url
+        picture: user.picture.secure_url,
       }
       usersArr.push(user);
     });

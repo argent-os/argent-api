@@ -66,13 +66,14 @@ module.exports = exports = function stripeCustomer (schema, options) {
     // logger.debug(user.email);
     // logger.debug(user.country);
     logger.trace('inside create stripe account');
-    logger.info(user.legal_entity);
-    stripe.accounts.create(
-      {
+    // logger.info(user.legal_entity);
+    var business_name;
+    stripe.accounts.create({
         managed: true,
         legal_entity: {
-          first_name: user.legal_entity.first_name,
-          last_name: user.legal_entity.last_name,
+          first_name: user.legal_entity.first_name || "",
+          last_name: user.legal_entity.last_name || "",
+          business_name: user.legal_entity.business_name || "",
           type: user.legal_entity.type,
           dob: {
             day: user.legal_entity.dob.day,

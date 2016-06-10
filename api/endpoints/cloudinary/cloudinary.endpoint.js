@@ -68,7 +68,7 @@ module.exports = function (app, options) {
 
 	// /v1/cloudinary/:uid/upload
 	// note the file multipart name must be 'avatar'
-	app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.upload, upload.single('avatar'), function(req, res) {
+	app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.upload, upload.single('avatar'), userController.authorize, function(req, res) {
 	    // logger.info(req.file);
 	    // pass in a path to upload to cloudinary, remove existing user image first!
 	    var user_id = req.params.uid;
