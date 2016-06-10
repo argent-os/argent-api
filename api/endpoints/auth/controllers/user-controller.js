@@ -142,7 +142,8 @@ UserController.prototype.register = function (req, res, next) {
               logger.trace('inside save');
               // change to req.body.country      
               process.env.ENVIRONMENT == 'DEV' || process.env.ENVIRONMENT == undefined ? link = 'http://localhost:5000/verify' + '?token=' + verifyToken : '';
-              process.env.ENVIRONMENT == 'PROD' ? link = 'https://api.argentapp.com/verify' + '?token=' + verifyToken : '';                  
+              process.env.ENVIRONMENT == 'PROD' ? link = 'https://api.argentapp.com/verify' + '?token=' + verifyToken : '';  
+              res.send({ token: createJWT(user, user.username),  user: user, message: "Welcome to Argent" });                                                
               // mailer.verifyEmail(user, link, function (err, info) {
               //   if (err) {
               //     logger.error('Error occured : ' + err);
