@@ -48,18 +48,18 @@ UserController.prototype.register = function (req, res, next) {
             var tokenType = 'bearer';    
             var livemode = 'true';    
 
-            logger.trace("body date", req.body.tos_acceptance.date);
+            // logger.trace("body date", req.body.tos_acceptance.date);
             var _date = req.body.tos_acceptance.date;
             var parsedDate;
             if( _date.indexOf('.') != -1 ) {
                 parsedDate = _date.substring(0, _date.indexOf('.'));
-                logger.info("parsing date, " + parsedDate);
+                // logger.info("parsing date, " + parsedDate);
             } else {
-                logger.info("in else ")
+                // logger.info("in else ")
                 parsedDate = req.body.tos_acceptance.date
             }
 
-            logger.trace("parsed date", parsedDate);
+            // logger.trace("parsed date", parsedDate);
 
             if(req.body.dob !== undefined) {
               var dateOfBirth = {
@@ -340,6 +340,10 @@ UserController.prototype.editProfile = function (req, res, next) {
                 updated.push('last_name');
                 user.last_name = data.last_name;
               }   
+              if (user.business_name !== data.business_name && data.business_name !== null && data.business_name !== undefined && data.business_name !== "") {
+                updated.push('business_name');
+                user.business_name = data.business_name;
+              }                 
               if (user.orgId !== data.orgId && data.orgId !=null && data.orgId !== '' && data.orgId !== undefined) {
                 updated.push('orgId');
                 user.orgId = data.orgId;
@@ -384,6 +388,7 @@ UserController.prototype.editProfile = function (req, res, next) {
                   fullname: user.fullname,
                   first_name: user.first_name,
                   last_name: user.last_name,
+                  business_name: user.business_name,
                   username: user.username,
                   stripe: user.stripe,
                   plaid: user.plaid,                
