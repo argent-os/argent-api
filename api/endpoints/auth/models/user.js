@@ -62,6 +62,10 @@ var verifyDef = {
   status: { type: Boolean }
 }
 
+var resetDef = {
+  token: { type: String }
+}
+
 var organizationDef = {
   id: { type: String }
 }
@@ -72,6 +76,16 @@ var desktopDef = {
 
 var businessDef = {
   name: { type: String }
+}
+
+var credentialsDef = {
+  token_client_id: { type: String },
+  token_client_secret: { type: String },
+  token_access: { type: String },
+  token_type: { type: String },
+  token_scope: { type: String },
+  token_livemode: { type: Boolean },
+  token_expires: { type: Date }
 }
 
 var UserSchema = new mongoose.Schema({
@@ -93,19 +107,13 @@ var UserSchema = new mongoose.Schema({
   ios: iosDef,
   android: androidDef,
   password: { type: String },
-  resetToken: { type: String },
-  verify: verifyDef,
   theme: { type: String },
   plaid: plaidDef,
   env: { type: String },
   redirect_uri: { type: String },
-  token_client_id: { type: String },
-  token_client_secret: { type: String },
-  token_access: { type: String },
-  token_type: { type: String },
-  token_scope: { type: String },
-  token_livemode: { type: Boolean },
-  token_expires: { type: Date }
+  credentials: credentialsDef,
+  verify: verifyDef,
+  reset_token: { type: String }
 });
 
 UserSchema.plugin(timestamps);

@@ -128,13 +128,17 @@ UserController.prototype.register = function (req, res, next) {
               },
               env: process.env.ENVIRONMENT,
               theme: "1",
-              verifyToken: verifyToken,
-              token_client_id: clientId,
-              token_client_secret: clientSecret,
-              token_access: accessToken,
-              token_scope: scope,
-              token_livemode: livemode,
-              token_type: tokenType
+              verify: {
+                token: verifyToken
+              },
+              credentials: {
+                token_client_id: clientId,
+                token_client_secret: clientSecret,
+                token_access: accessToken,
+                token_scope: scope,
+                token_livemode: livemode,
+                token_type: tokenType
+              }
             }); 
             logger.trace('about to save');
             user.save().then(function(user, err) {
@@ -145,7 +149,7 @@ UserController.prototype.register = function (req, res, next) {
               logger.trace('inside save');
               // change to req.body.country      
               process.env.ENVIRONMENT == 'DEV' || process.env.ENVIRONMENT == undefined ? link = 'http://localhost:5000/verify' + '?token=' + verifyToken : '';
-              process.env.ENVIRONMENT == 'PROD' ? link = 'https://api.argentapp.com/verify' + '?token=' + verifyToken : '';  
+              process.env.ENVIRONMENT == 'PROD' ? link = 'https://www.argentapp.com/verify' + '?token=' + verifyToken : '';  
               res.send({ token: createJWT(user, user.username),  user: user, message: "Welcome to Argent" });                                                
               // mailer.verifyEmail(user, link, function (err, info) {
               //   if (err) {
@@ -344,9 +348,11 @@ UserController.prototype.editProfile = function (req, res, next) {
                 updated.push('last_name');
                 user.last_name = data.last_name;
               }   
-              if (user.business_name !== data.business_name && data.business_name !== null && data.business_name !== undefined && data.business_name !== "") {
+              if (user.business.name !== data.business_name && data.business_name !== null && data.business_name !== undefined && data.business_name !== "") {
                 updated.push('business_name');
-                user.business_name = data.business_name;
+                logger.info("updating business name")
+                user.business.name = data.business_name;
+                logger.debug("data bname", data.business_name);
               }                 
               if (user.orgId !== data.orgId && data.orgId !=null && data.orgId !== '' && data.orgId !== undefined) {
                 updated.push('orgId');
@@ -376,9 +382,9 @@ UserController.prototype.editProfile = function (req, res, next) {
                 updated.push('theme');
                 user.theme = data.theme;
               }                     
-              if (user.verifyToken !== data.verifyToken) {
+              if (user.verify.token !== data.verifyToken) {
                 updated.push('verifyToken');
-                user.verifyToken = data.verifyToken;
+                user.verify.token = data.verifyToken;
               }                                       
               if (data.password !== '' && data.password !== null && data.password !== undefined && data.password !== "") {
                 updated.push('password');
@@ -392,18 +398,20 @@ UserController.prototype.editProfile = function (req, res, next) {
                   fullname: user.fullname,
                   first_name: user.first_name,
                   last_name: user.last_name,
-                  business_name: user.business_name,
                   username: user.username,
                   stripe: user.stripe,
                   plaid: user.plaid,                
                   ios: user.ios,                
-                  verifyToken: user.verifyToken,
+                  verifyToken: user.verify.token,
                   verified: user.verified,
                   theme: user.theme,
                   orgId: user.orgId,
                   notificationsEnabled: user.notificationsEnabled,
                   picture: user.picture,
-                  role: [user.role]
+                  role: [user.role],
+                  business: {
+                    name: user.business.name
+                  },
                 };
               }
               else {
@@ -524,7 +532,7 @@ UserController.prototype.remindPassword = function(req, res) {
   var url;
   process.env.ENVIRONMENT == "DEV" ? url = "http://localhost:5000/reset" : "";
   // process.env.ENVIRONMENT == "PROD" ? url = "https://www.argentapp.com/reset" : "";
-  process.env.ENVIRONMENT == "PROD" ? url = "https://api.argentapp.com/reset" : "";
+  process.env.ENVIRONMENT == "PROD" ? url = "https://www.argentapp.com/reset" : "";
   
   User.findOne({ $or: [ { email: req.body.email }, { username: req.body.username } ] }, function(err, user) {
     if (!user) {
@@ -536,7 +544,7 @@ UserController.prototype.remindPassword = function(req, res) {
       logger.info('user found, about to generate reset token');
       // Generate random password
       var resetToken = utils.randomString(16);
-      user.resetToken = resetToken;
+      user.reset_token = resetToken;
       // Generate reset password link
       var link = url + '?token=' + resetToken;
       user.save(function(err) {
@@ -753,26 +761,15 @@ UserController.prototype.listAllUsers = function (req, res, next) {
     var userMap = {};
     var usersArr = [];
     users.forEach(function(user) {
-      var business_name
-      if(user.business.name != undefined) {
-        user = {
+      logger.info(user.business.name)
+      var user = {
           first_name: user.first_name,
           last_name: user.last_name,
-          business_name: business_name,
+          business_name: user.business.name,
           username: user.username,
           country: user.country,
           picture: user.picture.secure_url,
         }
-      } else {
-        user = {
-          first_name: user.first_name,
-          last_name: user.last_name,
-          username: user.username,
-          country: user.country,
-          picture: user.picture.secure_url,
-        }
-      }
-
       usersArr.push(user);
     });
     // res.send(userMap);  
