@@ -1114,16 +1114,16 @@ module.exports = function (app, options) {
           interval_count: req.body.interval_count,
           name: req.body.name,
           currency: req.body.currency,
-          trial_period_days: req.body.trial_period_days || null,
-          statement_descriptor: req.body.statement_descriptor || null
+          trial_period_days: req.body.trial_period_days || 0,
+          statement_descriptor: req.body.statement_descriptor || ""
         };
         logger.debug(params);
         stripe.plans.create(params, function(err, plan) {
             if(err) {
-              // logger.error(err)
-              res.status(400).json({ error: err })
-              return res.status(400).json({ error: err }).end();                                        
+              logger.error(err)
+              res.json({ error: err })                                       
             } else {
+              logger.debug("plan creation success", plan);
               res.json({ plan: plan })
             }
             // asynchronously called
