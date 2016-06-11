@@ -82,6 +82,7 @@ module.exports = function (app, options) {
 
   process.env.ENVIRONMENT == 'DEV' || process.env.ENVIRONMENT == undefined ? stripeApiKey = process.env.STRIPE_TEST_KEY : '';
   process.env.ENVIRONMENT == 'DEV' || process.env.ENVIRONMENT == undefined ? stripePublishableKey = process.env.STRIPE_TEST_PUB_KEY : '';
+
   process.env.ENVIRONMENT == 'PROD' ? stripeApiKey = process.env.STRIPE_KEY : '';
   process.env.ENVIRONMENT == 'PROD' ? stripePublishableKey = process.env.STRIPE_PUB_KEY : '';
 
@@ -259,7 +260,7 @@ module.exports = function (app, options) {
         var stripe = require('stripe')(user.stripe.secretKey);  
         var acct_id = user.stripe.accountId;
         stripe.accounts.listExternalAccounts(acct_id, function(err, externalAccounts) {
-          logger.trace("accounts: " + externalAccounts);
+          //logger.trace("accounts: " + externalAccounts);
           if(err) {
             logger.error(err);
             return res.status(400).json({ error: err }).end();            
@@ -1062,10 +1063,11 @@ module.exports = function (app, options) {
         stripe.events.list({ limit: limit, starting_after: starting_after }, function(err, events) {
             if(err) {
               logger.error(err)
-              return res.status(400).json({ error: err }).end();                                        
+              res.json({ error: err })                                     
+            } else {
+              logger.info("events sent");
+              res.json({events:events})
             }
-            // asynchronously called
-            res.json({events:events})
         });
       })       
   });

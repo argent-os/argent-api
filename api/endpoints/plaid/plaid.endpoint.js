@@ -3,17 +3,24 @@ module.exports = function (app, options) {
 	var endpoint = {
 		version: '/v1',
 		base: '/plaid',
-		ping: '/ping',
 		exchange: '/exchange',     
-		auth: '/auth',      		     
-		connect: '/connect',    		        		     
-		income: '/income',    		        		     
-		info: '/info',    		        		     
-		risk: '/risk',    		     
-		balance: '/balance',    		     
-		upgrade: '/upgrade',    		     
-		longtail: '/longtail'  		     
+		auth: '/auth',      		     		     
 	};
+
+	// var endpoint = {
+	// 	version: '/v1',
+	// 	base: '/plaid',
+	// 	ping: '/ping',
+	// 	exchange: '/exchange',     
+	// 	auth: '/auth',      		     
+	// 	connect: '/connect',    		        		     
+	// 	income: '/income',    		        		     
+	// 	info: '/info',    		        		     
+	// 	risk: '/risk',    		     
+	// 	balance: '/balance',    		     
+	// 	upgrade: '/upgrade',    		     
+	// 	longtail: '/longtail'  		     
+	// };
 
   	var userController = require('../auth/controllers/user-controller');
 	var log4js = require('log4js');
@@ -28,7 +35,13 @@ module.exports = function (app, options) {
 	var plaid = require('plaid');
 	var PLAID_CLIENT_ID = process.env.PLAID_CLIENT_ID;
 	var PLAID_SECRET = process.env.PLAID_SECRET;
-	var PLAID_ENV = plaid.environments.tartan; // plaid.environments.production
+	var PLAID_ACCOUNT_ID = process.env.PLAID_ACCOUNT_ID; // switch to env var
+
+	var PLAID_ENV;
+  	process.env.ENVIRONMENT == 'DEV' ? PLAID_ENV = plaid.environments.tartan : '';
+  	process.env.ENVIRONMENT == 'PROD' ? PLAID_ENV = plaid.environments.production : '';
+
+  	logger.info("Running plaid on ", PLAID_ENV);
 
 	// Initialize client
 	var plaidClient = new plaid.Client(PLAID_CLIENT_ID, PLAID_SECRET, PLAID_ENV);
@@ -670,16 +683,18 @@ module.exports = function (app, options) {
 		logger.trace('req plaid exchange token received');
 		// Used for Plaid Link
 		// The public_token is the access token returned by plaid link
-		var user_id = req.params.uid
+		var user_id = req.params.uid;
 		var public_token = req.body.public_token;
+		logger.info("public token is", public_token)
       	userController.getUser(user_id).then(function (user, err) { 
 			// Exchange a public_token and account_id for a Plaid access_token
   			// and a Stripe bank account token
-  			var plaid_acct_id = "QPO8Jo8vdDHMepg41PBwckXm4KdK1yUdmXOwK";
-			plaidClient.exchangeToken(public_token, plaid_acct_id, function(err, tokenResponse) {
+  			logger.debug("about to exchange token", public_token)
+  			logger.debug("plaid acct id", PLAID_ACCOUNT_ID)
+			plaidClient.exchangeToken(public_token, PLAID_ACCOUNT_ID, function(err, tokenResponse) {
 			  if (err != null) {
 			  	logger.error(err);
-			    res.json({error: 'Unable to exchange public_token'});
+			    res.json({ error: err });
 			  } else {
 				// This is your Plaid access token - store somewhere persistent
 				// The access_token can be used to make Plaid API calls to
@@ -689,6 +704,7 @@ module.exports = function (app, options) {
 				// This is your Stripe bank account token - store somewhere
 				// persistent. The token can be used to move money via
 				// Stripe's ACH API.
+				logger.debug("successful plaid")
 				var bank_account_token = tokenResponse.stripe_bank_account_token;
 			    res.json({ response: tokenResponse })
 			  }

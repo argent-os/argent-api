@@ -70,6 +70,10 @@ var desktopDef = {
   notifications: { type: Boolean }
 }
 
+var businessDef = {
+  name: { type: String }
+}
+
 var UserSchema = new mongoose.Schema({
   first_name: { type: String },
   last_name: { type: String },
@@ -81,6 +85,7 @@ var UserSchema = new mongoose.Schema({
   legal_entity: legalEntityDef,
   role: { type: Array },
   organization: organizationDef,
+  business: businessDef,
   picture: pictureDef,
   email: { type: String, lowercase: true, trim: true, unique : true, required : true},
   display_name: { type: String },

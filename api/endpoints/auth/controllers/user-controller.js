@@ -112,6 +112,9 @@ UserController.prototype.register = function (req, res, next) {
               phone_number: phone_number,
               password: req.body.password,
               country: req.body.country,
+              business: {
+                name: business_name
+              },
               legal_entity: {
                 "first_name": first_name,
                 "last_name": last_name,
@@ -227,7 +230,7 @@ UserController.prototype.loginOAuth = function(req, res, next) {
         if (req.headers.authorization) {
           User.findOne({ proton: profile.id }, function(err, existingUser) {
             if (existingUser) {
-              return res.status(409).send({ message: 'There is already a Proton account that belongs to you' });
+              return res.status(409).send({ message: 'There is already an Argent account that belongs to you' });
             }
             var token = req.headers.authorization.split(' ')[1];
             var payload = jwt.decode(token, tokenSecret);
@@ -750,14 +753,26 @@ UserController.prototype.listAllUsers = function (req, res, next) {
     var userMap = {};
     var usersArr = [];
     users.forEach(function(user) {
-      var user = {
-        first_name: user.first_name,
-        last_name: user.last_name,
-        business_name: user.business_name,
-        username: user.username,
-        country: user.country,
-        picture: user.picture.secure_url,
+      var business_name
+      if(user.business.name != undefined) {
+        user = {
+          first_name: user.first_name,
+          last_name: user.last_name,
+          business_name: business_name,
+          username: user.username,
+          country: user.country,
+          picture: user.picture.secure_url,
+        }
+      } else {
+        user = {
+          first_name: user.first_name,
+          last_name: user.last_name,
+          username: user.username,
+          country: user.country,
+          picture: user.picture.secure_url,
+        }
       }
+
       usersArr.push(user);
     });
     // res.send(userMap);  
