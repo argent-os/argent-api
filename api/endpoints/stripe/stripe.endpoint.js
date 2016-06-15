@@ -144,10 +144,10 @@ module.exports = function (app, options) {
     logger.debug('example charge object is', chargeObject)
     stripe.charges.create(chargeObject).then(function(charge) {
         logger.info("charge success", charge);
-        return res.json({msg: "success", charge: charge})
+        res.json({msg: "success", charge: charge})
     }, function(err) {
         logger.error(err);
-        return res.status(400).json({ error: err }).end();                          
+        res.json({ error: err })                          
     });
   })
 
@@ -162,9 +162,10 @@ module.exports = function (app, options) {
             // asynchronously called
             if(err) {
               logger.error(err);
-              return res.status(400).json({ error: err }).end();            
+              res.json({ error: err })            
+            } else {
+              res.json({account: account})              
             }
-            res.json({account: account})
           }
         );   
       });
@@ -186,10 +187,11 @@ module.exports = function (app, options) {
             // asynchronously called
             if(err) {
               logger.error(err);
-              return res.status(400).json({ error: err }).end();                          
+              res.json({ error: err })                          
+            } else {
+              logger.info("updated stripe account")
+              res.json({account: account})              
             }
-            logger.info("updated stripe account")
-            res.json({account: account})
           }
         );   
       });
@@ -201,8 +203,9 @@ module.exports = function (app, options) {
   // Add credit card external account
   app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.external_account, userController.authorize, function(req, res, next) {
       logger.trace("request received | add account external account")
+      var card_obj;
       if(req.query.type == "card") {
-        var card_obj = {
+        card_obj = {
           card: {
             "number": req.body.number,
             "exp_month": req.body.exp_month,
@@ -210,11 +213,12 @@ module.exports = function (app, options) {
             "cvc": req.body.cvc,
             "currency": "usd"
           }
-        };        
+        }
       }
       logger.trace("request received | add external account")
       var user_id = req.params.uid
       var token = req.body.external_account;
+      logger.info(token)
       userController.getUser(user_id).then(function (user) {
         // First create a tokenized card based on the request
         var stripe = require('stripe')(user.stripe.secretKey); 
@@ -224,28 +228,32 @@ module.exports = function (app, options) {
               // asynchronously called
               if(err) {
                 logger.error(err);
-                return res.status(400).json({ error: err }).end();            
+                res.json({ error: err })            
               }
               // Then add the source to Stripe using the token
               stripe.accounts.createExternalAccount(user.stripe.accountId, { external_account: token.id }, function(err, card) {
                   // asynchronously called
                   if(err) {
                     logger.error(err);
-                    return res.status(400).json({ error: err }).end();            
+                    res.json({ error: err })            
+                  } else {
+                    res.json({ msg:"card added!", card: card })                    
                   }
-                  return res.json({msg:"card added!"}).end();
                 }
               );          
           });          
         } else {
+          logger.info("adding external account plaid bank")
+          logger.info("token is ", token)
           stripe.accounts.createExternalAccount(user.stripe.accountId, { external_account: token }, function(err, externalAccount) {
               // asynchronously called
               if(err) {
-                logger.error(err);
-                return res.status(400).json({ error: err }).end();                            
+                logger.error("error occurred", err);
+                res.json({ error: err })                           
+              } else {
+                logger.trace('done')
+                res.json({ msg: "external account added!", external_account: externalAccount })
               }
-              logger.trace('done')
-              res.json({msg:"external account added!", external_account: externalAccount})
             }
           );   
         }
@@ -263,9 +271,10 @@ module.exports = function (app, options) {
           //logger.trace("accounts: " + externalAccounts);
           if(err) {
             logger.error(err);
-            return res.status(400).json({ error: err }).end();            
+            res.json({ error: err })            
+          } else {
+            res.json({external_accounts:externalAccounts})
           }
-          return res.json({external_accounts:externalAccounts}).end();
         });
       });
   });   
@@ -283,9 +292,10 @@ module.exports = function (app, options) {
           logger.trace("done: " + confirmation);
           if(err) {
             logger.error(err);
-            return res.status(400).json({ error: err }).end();            
+            res.json({ error: err })            
+          } else {
+            res.json({ confirmation: confirmation })            
           }
-          return res.json({ confirmation: confirmation }).end();
         });
       });
   });   
@@ -299,9 +309,10 @@ module.exports = function (app, options) {
         stripe.balance.retrieve(function(err, balance) {
             if(err) {
                 logger.error(err);
-                return res.status(400).json({ error: err }).end();            
+                res.json({ error: err })            
+            } else {
+                res.json({balance:balance})              
             }
-            res.json({balance:balance})
         })
       })   
   });  
@@ -321,10 +332,11 @@ module.exports = function (app, options) {
         stripe.balance.listTransactions({ limit: limit, starting_after: starting_after }, function(err, transactions) {
           if(err) {
             logger.error(err)
-            return res.status(400).json({ error: err }).end();                        
+            res.json({ error: err })                        
+          } else {
+            res.json({ transactions:transactions })            
           }
           // logger.info(transactions)
-          res.json({ transactions:transactions })
           // asynchronously called
 
         });
@@ -357,7 +369,7 @@ module.exports = function (app, options) {
         stripe.balance.listTransactions({ limit: limit, starting_after: starting_after }, function(err, transactions) {
           if(err) {
             logger.error(err)
-            return res.status(400).json({ error: err }).end();                        
+            res.json({ error: err })                        
           }
           switch (interval) {
             case "year":
@@ -475,7 +487,7 @@ module.exports = function (app, options) {
         stripe.balance.listTransactions({ limit: limit, starting_after: starting_after }, function(err, transactions) {
           if(err) {
             logger.error(err)
-            return res.status(400).json({ error: err }).end();                        
+            res.json({ error: err })                        
           }
 
           if(transactions != null) {
@@ -571,7 +583,7 @@ module.exports = function (app, options) {
       userController.getUser(user_id).then(function (user) {
           var stripe = require('stripe')(user.stripe.secretKey);
           var amountInCents = req.body.amount;
-          var application_fee = (amountInCents*0.0109 + 3);
+          var application_fee = Math.round((amountInCents*0.0109 + 3));
           var description = "New charge in the amount of " + currencyFormat.getCommaSeparatedFormat("USD", amountInCents/100);
           logger.info(amountInCents);
           logger.info(application_fee);
@@ -586,10 +598,10 @@ module.exports = function (app, options) {
           // Charge a card based on customer ID, the customer must have a linked credit card
           stripe.charges.create(params).then(function(charge, err) {
               // logger.info(res)
-              res.json({msg: "success", charge: charge}).end();
+              res.json({msg: "success", charge: charge})
           }, function(err) {
               logger.error(err)
-              return res.status(400).json({ error: err }).end();                          
+              res.json({ error: err })                          
           });
       }) 
   });
@@ -602,7 +614,7 @@ module.exports = function (app, options) {
     userController.getDelegatedUserByUsername(delegate_user).then(function (delegateUser) {
         var stripe = require('stripe')(delegateUser.stripe.secretKey);
         var amountInCents = req.body.amount;
-        var application_fee = (amountInCents*0.0109 + 3);
+        var application_fee = Math.round((amountInCents*0.0109 + 3));
         var description = "New charge in the amount of " + currencyFormat.getCommaSeparatedFormat("USD", amountInCents/100);
         logger.info(amountInCents);
         logger.info(application_fee);
@@ -617,10 +629,10 @@ module.exports = function (app, options) {
         // Charge a card based on customer ID, the customer must have a linked credit card
         stripe.charges.create(params).then(function(charge) {
             // logger.info(res)
-            res.json({msg: "success", charge: charge}).end();
+            res.json({msg: "success", charge: charge})
         }, function(err) {
             logger.error(err)
-            return res.status(400).json({ error: err }).end();                          
+            res.json({ error: err })                          
         });
     }) 
   })
@@ -637,9 +649,10 @@ module.exports = function (app, options) {
           // asynchronously called
             if(err) {
               logger.error(err)
-              return res.status(400).json({ error: err }).end();                                        
+              res.json({ error: err })                                        
+            } else {
+              res.json({ charges: charges })                        
             }
-            res.json({ charges: charges })          
         });    
       });     
   });
@@ -652,9 +665,10 @@ module.exports = function (app, options) {
           // asynchronously called
             if(err) {
               logger.error(err)
-              return res.status(400).json({ error: err }).end();                                        
+              res.json({ error: err })                                        
+            } else {
+              res.json({ charge: charge })                        
             }
-            res.json({ charge: charge })          
         });        
       });
   });
@@ -667,9 +681,10 @@ module.exports = function (app, options) {
           // asynchronously called
             if(err) {
               logger.error(err)
-              return res.status(400).json({ error: err }).end();                                        
+              res.json({ error: err })                                        
+            } else {
+              res.json({ charge: charge })                          
             }
-            res.json({ charge: charge })          
         });        
       });      
   });
@@ -682,9 +697,10 @@ module.exports = function (app, options) {
           // asynchronously called
             if(err) {
               logger.error(err)
-              return res.status(400).json({ error: err }).end();                                        
+              res.json({ error: err })                                        
+            } else {
+              res.json({ charge: charge })                        
             }
-            res.json({ charge: charge })          
         });        
       });        
   });
@@ -739,9 +755,10 @@ module.exports = function (app, options) {
             // asynchronously called
             if(err) {
               logger.error(err)
-              return res.status(400).json({ error: err }).end();                                        
+              res.json({ error: err })                                        
+            } else {
+              res.json({ customer: customer })              
             }
-            res.json({ customer: customer })
           }
         );
       });
@@ -761,9 +778,10 @@ module.exports = function (app, options) {
             // asynchronously called
             if(err) {
               logger.error(err)
-              return res.status(400).json({ error: err }).end();                                        
+              res.json({ error: err })                                        
+            } else {
+              res.json({ customers: customers })              
             }
-            res.json({ customers: customers })
           }
         );
       });
@@ -781,9 +799,10 @@ module.exports = function (app, options) {
           // asynchronously called
             if(err) {
               logger.error(err)
-              return res.status(400).json({ error: err }).end();                                        
+              res.json({ error: err })                                        
+            } else {
+              res.json({ customer: customer })                        
             }
-            res.json({ customer: customer })          
         });        
       });    
   });  
@@ -797,9 +816,10 @@ module.exports = function (app, options) {
           // asynchronously called
             if(err) {
               logger.error(err)
-              return res.status(400).json({ error: err }).end();                                        
+              res.json({ error: err })                                        
+            } else {
+              res.json({ customer: customer })                          
             }
-            res.json({ customer: customer })          
         });        
       });       
   });   
@@ -813,9 +833,10 @@ module.exports = function (app, options) {
           // asynchronously called
             if(err) {
               logger.error(err)
-              return res.status(400).json({ error: err }).end();                                        
+              res.json({ error: err })                                        
+            } else {
+              res.json({ confirmation: confirmation })                        
             }
-            res.json({ confirmation: confirmation })          
         });        
       });     
   });    
@@ -831,10 +852,11 @@ module.exports = function (app, options) {
           // asynchronously called
             if(err) {
               logger.error(err)
-              return res.status(400).json({ error: err }).end();                                        
+              res.json({ error: err })                                        
+            } else {
+              res.json({ customer: customer })                        
             }
-            res.json({ customer: customer })          
-        });        
+        });         
       }); 
   });    
   // Get customer metadata     
@@ -848,9 +870,10 @@ module.exports = function (app, options) {
           // asynchronously called
             if(err) {
               logger.error(err)
-              return res.status(400).json({ error: err }).end();                                        
+              res.json({ error: err })                                        
+            } else {
+              res.json({ customer: customer })                        
             }
-            res.json({ customer: customer })          
         });        
       }); 
   });        
@@ -891,7 +914,7 @@ module.exports = function (app, options) {
             // asynchronously called
             if(err) {
               logger.error(err)
-              return res.status(400).json({ error: err }).end();                                        
+              res.json({ error: err })                                        
             }
 
             // list customers before adding plan
@@ -918,14 +941,14 @@ module.exports = function (app, options) {
                     // asynchronously called
                     if(err) {
                       logger.error(err)
-                      return res.status(400).json({ error: err }).end();                                                
+                      res.json({ error: err })                                                
                     }
                     // Create a customer, then create a plan for that customer
                     stripe.subscriptions.create({ customer: customer.id, plan: params.plan }).then(function(subscription, err) {
-                        res.json({ subscription: subscription }).end();
+                        res.json({ subscription: subscription })
                     }, function(err) {
                         logger.error(err)
-                        return res.status(400).json({ error: err }).end();                                                  
+                        res.json({ error: err })                                                  
                     })
                   }
                 );  
@@ -935,10 +958,10 @@ module.exports = function (app, options) {
                 if(customers.data[i].email == requestingUser.email) {
                   logger.info("Customer email already exists in database! Adding plan to existing customer")
                   stripe.subscriptions.create({ customer: customers.data[i].id, plan: params.plan }).then(function(subscription, err) {
-                      res.json({ subscription: subscription }).end();
+                      res.json({ subscription: subscription })
                   }, function(err) {
                       logger.error(err)
-                      return res.status(400).json({ error: err }).end();                          
+                      res.json({ error: err })                          
                   });
                   break;
                 }
@@ -954,15 +977,15 @@ module.exports = function (app, options) {
                       // asynchronously called
                       if(err) {
                         logger.error(err)
-                        return res.status(400).json({ error: err }).end();                                                  
+                        res.json({ error: err })                                                  
                       }
                       //logger.info(customer);
                       // Create a customer, then create a plan for that customer
                       stripe.subscriptions.create({ customer: customer.id, plan: params.plan }).then(function(subscription, err) {
-                          res.json({ subscription: subscription }).end();
+                          res.json({ subscription: subscription })
                       }, function(err) {
                           logger.error(err)
-                          return res.status(400).json({ error: err }).end();                          
+                          res.json({ error: err })                          
                       })
                     }
                   )    
@@ -993,9 +1016,10 @@ module.exports = function (app, options) {
         stripe.subscriptions.del(subscription_id, function(err, confirmation) {
             if(err) {
               logger.error(err)
-              return res.status(400).json({ error: err }).end();                                        
-            }          
-            res.json({ confirmation: confirmation })
+              res.json({ error: err })                                        
+            } else {
+              res.json({ confirmation: confirmation })              
+            } 
             // asynchronously called
         });
       });
@@ -1015,9 +1039,10 @@ module.exports = function (app, options) {
             // asynchronously called
             if(err) {
               logger.error(err)
-              return res.status(400).json({ error: err }).end();                                        
+              res.json({ error: err })                                        
+            } else {
+              res.json({ subscriptions: subscriptions })              
             }
-            res.json({ subscriptions: subscriptions })
           }
         );
       });      
@@ -1160,9 +1185,10 @@ module.exports = function (app, options) {
             // asynchronously called
             if(err) {
               logger.error(err)
-              return res.status(400).json({ error: err }).end();                                        
+              res.json({ error: err })                                        
+            } else {
+              res.json({ plans: plans })              
             }
-            res.json({ plans: plans })
           }
         );
       });
@@ -1184,9 +1210,10 @@ module.exports = function (app, options) {
             // asynchronously called
             if(err) {
               logger.error(err)
-              return res.status(400).json({ error: err }).end();                                        
+              res.json({ error: err })                                        
+            } else {
+              res.json({ plans: plans })              
             }
-            res.json({ plans: plans })
           }
         );
       });
@@ -1208,9 +1235,10 @@ module.exports = function (app, options) {
         stripe.plans.update(plan_id, params, function(err, plan) {
             if(err) {
               logger.error(err)
-              return res.status(400).json({ error: err }).end();                                        
-            }          
-            res.json({ plan: plan })
+              res.json({ error: err })                                        
+            } else {
+              res.json({ plan: plan })              
+            }     
             // asynchronously called
         });
       });
@@ -1225,9 +1253,10 @@ module.exports = function (app, options) {
         stripe.plans.retrieve(plan_id, function(err, plan) {
             if(err) {
               logger.error(err)
-              return res.status(400).json({ error: err }).end();                                        
-            }          
-            res.json({ plan: plan })
+              res.json({ error: err })                                        
+            } else {
+              res.json({ plan: plan })              
+            }
             // asynchronously called
         });
       });
@@ -1243,9 +1272,10 @@ module.exports = function (app, options) {
         stripe.plans.del(plan_id, function(err, confirmation) {
             if(err) {
               logger.error(err)
-              return res.status(400).json({ error: err }).end();                                        
-            }          
-            res.json({ confirmation: confirmation })
+              res.json({ error: err })                                        
+            } else {
+              res.json({ confirmation: confirmation })              
+            }   
             // asynchronously called
         });
       });
@@ -1268,9 +1298,10 @@ module.exports = function (app, options) {
         stripe.products.create(params, function(err, product) {
             if(err) {
               logger.error(err)
-              return res.status(400).json({ error: err }).end();                                        
-            }          
-            res.json({ product: product })
+              res.json({ error: err })                                        
+            } else {
+              res.json({ product: product })              
+            }  
             // asynchronously called
         });
       });
@@ -1291,9 +1322,10 @@ module.exports = function (app, options) {
             // asynchronously called
             if(err) {
               logger.error(err)
-              return res.status(400).json({ error: err }).end();                                        
+              res.json({ error: err })                                        
+            } else {
+              res.json({ products: products })              
             }
-            res.json({ products: products })
           }
         );
       });
@@ -1314,9 +1346,10 @@ module.exports = function (app, options) {
         stripe.products.update(product_id, params, function(err, product) {
             if(err) {
               logger.error(err)
-              return res.status(400).json({ error: err }).end();                                        
-            }          
-            res.json({ product: product })
+              res.json({ error: err })                                        
+            } else {
+              res.json({ product: product })              
+            }
             // asynchronously called
         });
       });
@@ -1331,9 +1364,10 @@ module.exports = function (app, options) {
         stripe.products.retrieve(product_id, function(err, product) {
             if(err) {
               logger.error(err)
-              return res.status(400).json({ error: err }).end();                                        
-            }          
-            res.json({ product: product })
+              res.json({ error: err })                                        
+            } else {
+              res.json({ product: product })              
+            }    
             // asynchronously called
         });
       });
@@ -1353,10 +1387,11 @@ module.exports = function (app, options) {
             //logger.info('inside product del')
             if(err) {
               logger.error(err)
-              return res.status(400).json({ error: err }).end();                                        
-            }      
-            logger.info(confirmation)    
-            res.json({ confirmation: confirmation })
+              res.json({ error: err })                                        
+            } else {
+              logger.info(confirmation)    
+              res.json({ confirmation: confirmation })              
+            }     
             // asynchronously called
         });
       });
@@ -1401,9 +1436,10 @@ module.exports = function (app, options) {
         stripe.transfers.create(params, function(err, transfer) {
             if(err) {
               logger.error(err)
-              return res.status(400).json({ error: err }).end();                                        
-            }          
-            res.json({ transfer: transfer })
+              res.json({ error: err })                                        
+            } else {
+              res.json({ transfer: transfer })              
+            }
             // asynchronously called
         });
       });
@@ -1424,9 +1460,10 @@ module.exports = function (app, options) {
             // asynchronously called
             if(err) {
               logger.error(err)
-              return res.status(400).json({ error: err }).end();                                        
+              res.json({ error: err })                                        
+            } else {
+              res.json({ transfers: transfers })              
             }
-            res.json({ transfers: transfers })
           }
         );
       });
@@ -1442,9 +1479,10 @@ module.exports = function (app, options) {
         stripe.transfers.retrieve(transfer_id, function(err, transfer) {
             if(err) {
               logger.error(err)
-              return res.status(400).json({ error: err }).end();                                        
-            }          
-            res.json({ transfer: transfer })
+              res.json({ error: err })                                        
+            } else {
+              res.json({ transfer: transfer })              
+            }     
             // asynchronously called
         });
       });
@@ -1463,9 +1501,10 @@ module.exports = function (app, options) {
         stripe.transfers.update(transfer_id, params, function(err, transfer) {
             if(err) {
               logger.error(err)
-              return res.status(400).json({ error: err }).end();                                        
-            }          
-            res.json({ transfer: transfer })
+              res.json({ error: err })                                        
+            } else {
+              res.json({ transfer: transfer })              
+            }
             // asynchronously called
         });
       });
@@ -1479,10 +1518,12 @@ module.exports = function (app, options) {
 
   // // BITCOIN (resource bitcoinReceivers)
   // stripe.bitcoinReceivers.create(params)
+  // Use own stripe keys to create bitcoin receivers for now, then do a delegated charge
   app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.bitcoin, userController.authorize, function(req, res, next) {
       var user_id = req.params.uid;
+      // use our own stripe account for now as a workaround
+      var stripe = require("stripe")(options.apiKey);
       userController.getUser(user_id).then(function (user) {
-        var stripe = require('stripe')(user.stripe.secretKey);
         var params = {
           amount: req.body.amount,
           currency: "usd",
@@ -1493,9 +1534,10 @@ module.exports = function (app, options) {
         stripe.bitcoinReceivers.create(params, function(err, receiver) {
             if(err) {
               logger.error(err)
-              return res.status(400).json({ error: err }).end();                                        
-            }          
-            res.json({ receiver: receiver })
+              res.json({ error: err })                                        
+            } else {
+              res.json({ receiver: receiver })              
+            }
             // asynchronously called
         });
       });
@@ -1505,16 +1547,45 @@ module.exports = function (app, options) {
       logger.trace("requesting bitcoin receiver")
       var user_id = req.params.uid;
       var bitcoin_receiver_id = req.params.btc;
+      // use our own stripe account for now as a workaround
+      var stripe = require("stripe")(options.apiKey);
       userController.getUser(user_id).then(function (user) {
-        var stripe = require('stripe')(user.stripe.secretKey);
         stripe.bitcoinReceivers.retrieve(bitcoin_receiver_id, function(err, receiver) {
             if(err) {
               logger.error(err)
-              return res.status(400).json({ error: err }).end();                                        
+              return res.json({ error: err })                                        
             }          
             logger.trace("is bitcoin receiver filled? ", receiver.filled)
-            res.json({ receiver: receiver })
             // asynchronously called
+            if (receiver.filled) {
+              // create a bitcoin transfer on receiver filled
+              var amountInCents = receiver.amount;
+              var application_fee = Math.round((amountInCents*0.0399 + 33));
+              var description = "New transfer in the amount of " + currencyFormat.getCommaSeparatedFormat("USD", amountInCents/100);
+              logger.info("receiver amount in cents", receiver.amount);
+              logger.info("application fee", application_fee);
+              logger.info("description", description);
+              logger.info("source", receiver.id);
+              var params = {
+                amount: receiver.amount,
+                application_fee: application_fee,
+                currency: receiver.currency,
+                source: receiver.id,
+                description: description,
+                destination: user.stripe.accountId
+              }
+              // use our own stripe account for now, transfer amount to destination acct
+              stripe.charges.create(params, function(err, charge) {
+                  if(err) {
+                    logger.error(err)
+                    return res.json({ error: err })                    
+                  } else {
+                    res.json({ receiver: receiver }).end();
+                  }                         
+              });
+            } else {
+                res.json({ receiver: receiver })
+            }
         });
       });
   });    
@@ -1544,7 +1615,7 @@ module.exports = function (app, options) {
         }, function(err, fileUpload) {
           if(err) {
             logger.error(err);
-            return res.status(400).json({ error: err });            
+            res.json({ error: err });            
           }
           logger.info("document upload success");
           var params = {

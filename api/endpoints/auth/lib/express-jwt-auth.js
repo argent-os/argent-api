@@ -49,9 +49,9 @@ module.exports = function (app, options) {
       }
     };
   }
-  if (!options.mongoconnection) {
-    throw Error('You must specify db connection details!');
-  }
+  // if (!options.mongoconnection) {
+  //   throw Error('You must specify db connection details!');
+  // }
 
   var urlStrings = {
     oauth:          '/v1/oauth',

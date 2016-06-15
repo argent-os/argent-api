@@ -36,19 +36,19 @@ var compress       = require('compression');
 var app = express();
 
 process.env.ENVIRONMENT == 'DEV' ? mongooseUri = process.env.MONGOLAB_URI_DEV : '';
-process.env.ENVIRONMENT == 'PROD' ? mongooseUri =process.env.MONGOLAB_URI : '';
+process.env.ENVIRONMENT == 'PROD' ? mongooseUri = process.env.MONGOLAB_URI : '';
 
-console.log('Running in ' + process.env.ENVIRONMENT + ' mode');
+logger.info('Running in ' + process.env.ENVIRONMENT + ' mode');
 
 process.env.ENVIRONMENT == 'DEV' || process.env.ENVIRONMENT == undefined ? stripeApiKey = process.env.STRIPE_TEST_KEY : '';
 process.env.ENVIRONMENT == 'DEV' || process.env.ENVIRONMENT == undefined ? stripePublishableKey = process.env.STRIPE_TEST_PUB_KEY : '';
+
 process.env.ENVIRONMENT == 'PROD' ? stripeApiKey = process.env.STRIPE_KEY : '';
 process.env.ENVIRONMENT == 'PROD' ? stripePublishableKey = process.env.STRIPE_PUB_KEY : '';
 
-console.log('Utilizing Stripe Key in ' + process.env.ENVIRONMENT + ' mode');
+logger.info('Utilizing Stripe Key in ' + process.env.ENVIRONMENT + ' mode');
 
 var options = {
-  //mongoconnection: localMongo || mongooseUri,
   mongoconnection: mongooseUri,
   logFile: path.join(__dirname, 'authlogger.log'),
   corsDomains: ['*', 'http://localhost:5000'],
@@ -77,28 +77,31 @@ var options = {
 // *****************************************************************************
 // ************************** SERVER STARTUP ***********************************
 // *****************************************************************************
+if (!options.mongoconnection) {
+  throw Error('You must specify db connection details! Try checking environment db variables.');
+}
 
-mongoose.connect(options.mongoconnection);
+mongoose.connect(mongooseUri);
 // CONNECTION EVENTS
 // When successfully connected
 mongoose.connection.on('connected', function () {  
-  console.log('Mongoose default connection open');
+  logger.info('Mongoose default connection open');
 }); 
 
 // If the connection throws an error
 mongoose.connection.on('error',function (err) {  
-  console.log('Mongoose default connection error: ' + err);
+  logger.info('Mongoose default connection error: ' + err);
 }); 
 
 // When the connection is disconnected
 mongoose.connection.on('disconnected', function () {  
-  console.log('Mongoose default connection disconnected'); 
+  logger.info('Mongoose default connection disconnected'); 
 });
 
 // If the Node process ends, close the Mongoose connection 
 process.on('SIGINT', function() {  
   mongoose.connection.close(function () { 
-    console.log('Mongoose default connection disconnected through app termination'); 
+    logger.info('Mongoose default connection disconnected through app termination'); 
     process.exit(0); 
   }); 
 }); 
