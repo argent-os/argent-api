@@ -558,7 +558,7 @@ UserController.prototype.remindPassword = function(req, res) {
             if (err) {
               // logger.info(err);
               //logger.error('Sending message error : ' + err);
-              res.status(401).json({msg: 'error_sending_password', error: err});
+              res.status(401).json({status: "error", msg: 'error_sending_password', error: err});
             }
             else {
               if (process.env.ENV === 'testing') {
@@ -568,7 +568,7 @@ UserController.prototype.remindPassword = function(req, res) {
               //logger.info('Remind password message sent to email : ' + user.email);
               var resp = {};
               resp.msg = 'new_password_sent';
-              res.json({message: 'Password reset link sent'});
+              res.json({status:"success", message: 'Password reset link sent'});
             }
           });
         }
@@ -585,13 +585,13 @@ UserController.prototype.resetPassword = function (req, res, next) {
     res.status(400).send('Token or password not provided');
     return;
   }
-  User.findOne({resetToken: token}, function(err, user) {
+  User.findOne({reset_token: token}, function(err, user) {
     if (!user) {
       logger.error('User not found resetToken: ' + token);
       res.status(400).send('User not found');
     }
     else {
-      user.resetToken = '';
+      user.reset_token = '';
       user.password = password;
       user.save(function(err) {
         if (err) {
@@ -599,7 +599,7 @@ UserController.prototype.resetPassword = function (req, res, next) {
         }
         else {
           logger.info('Reset password by user with id: ' + user._id);
-          res.json({msg: 'new_password_success'});
+          res.json({status: "success", msg: 'new_password_success'});
         }
       });
     }
