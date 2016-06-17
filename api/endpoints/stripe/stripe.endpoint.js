@@ -190,7 +190,7 @@ module.exports = function (app, options) {
               res.json({ error: err })                          
             } else {
               logger.info("updated stripe account")
-              res.json({account: account})              
+              res.json({ account: account })              
             }
           }
         );   
