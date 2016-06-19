@@ -588,7 +588,7 @@ module.exports = function (app, options) {
       userController.getUser(user_id).then(function (user) {
           var stripe = require('stripe')(user.stripe.secretKey);
           var amountInCents = req.body.amount;
-          var application_fee = Math.round((amountInCents*0.0109 + 3));
+          var application_fee = Math.round((amountInCents*0.01));
           var description = "New charge in the amount of " + currencyFormat.getCommaSeparatedFormat("USD", amountInCents/100);
           logger.info(amountInCents);
           logger.info(application_fee);
@@ -625,7 +625,7 @@ module.exports = function (app, options) {
     userController.getDelegatedUserByUsername(delegate_user).then(function (delegateUser) {
         var stripe = require('stripe')(delegateUser.stripe.secretKey);
         var amountInCents = req.body.amount;
-        var application_fee = Math.round((amountInCents*0.0109 + 3));
+        var application_fee = Math.round((amountInCents*0.01));
         var description = "New charge in the amount of " + currencyFormat.getCommaSeparatedFormat("USD", amountInCents/100);
         logger.info(amountInCents);
         logger.info(application_fee);
@@ -1571,7 +1571,7 @@ module.exports = function (app, options) {
             if (receiver.filled) {
               // create a bitcoin transfer on receiver filled
               var amountInCents = receiver.amount;
-              var application_fee = Math.round((amountInCents*0.0399 + 33));
+              var application_fee = Math.round((amountInCents*0.035 + 30));
               var description = "New transfer in the amount of " + currencyFormat.getCommaSeparatedFormat("USD", amountInCents/100);
               logger.info("receiver amount in cents", receiver.amount);
               logger.info("application fee", application_fee);
