@@ -180,7 +180,7 @@ module.exports = function (app, options) {
       logger.trace("request received | update stripe account")
       var user_id = req.params.uid;
       var parameters = req.body;
-      //logger.info(parameters)
+      logger.info(parameters)
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey); 
         stripe.account.update(user.stripe.accountId, parameters, function(err, account) {
@@ -576,8 +576,13 @@ module.exports = function (app, options) {
       with the charge in the response and send that back as JSON.  If there is an error we
       log the error.
   */
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge, userController.authorize, function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge, function(req, res, next) {
       // POS Charge, aka pay yourself through a terminal
+      if (!req.headers.authorization) {
+        return res.status(401).send({ message: 'Unauthorized' });
+      }
+
+      // TODO: Implement check of auth token
       logger.info("POS charge")
       var user_id = req.params.uid;
       userController.getUser(user_id).then(function (user) {
@@ -607,8 +612,14 @@ module.exports = function (app, options) {
   });
 
   // Delegated one time charge, pay another delegated user
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/:delegate_username", userController.authorize, function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/:delegate_username", function(req, res, next) {
     // Delegated charge, aka someone pays you
+    if (!req.headers.authorization) {
+      return res.status(401).send({ message: 'Unauthorized' });
+    }
+
+    // TODO: Implement check of auth token
+    logger.info("delegated charge request")
     var user_id = req.params.uid;
     var delegate_user = req.params.delegate_username;
     userController.getDelegatedUserByUsername(delegate_user).then(function (delegateUser) {
@@ -656,7 +667,7 @@ module.exports = function (app, options) {
         });    
       });     
   });
-  app.put(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/:charge_id", userController.authorize, function(req, res, next) {
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/:charge_id", userController.authorize, function(req, res, next) {
       var user_id = req.params.uid;
       var charge_id = req.params.charge_id;
       userController.getUser(user_id).then(function (user) {

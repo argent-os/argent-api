@@ -173,6 +173,18 @@ openssl x509 -in aps.cer -inform DER -outform PEM -out cert.pem
 openssl pkcs12 -in key.p12 -out key.pem -nodes
 
 ------------------------------
+###APP STORE
+
+- Create an archive
+- Bump build version
+- Upload to the App Store
+
+------------------------------
+###VIDEO
+
+- ProRes 422 HQ https://developer.apple.com/library/ios/documentation/LanguagesUtilities/Conceptual/iTunesConnect_Guide/Appendices/Properties.html#//apple_ref/doc/uid/TP40011225-CH26-SW14
+
+------------------------------
 ###QUESTIONS?
 
 For any questions please email [support](mailto:support@timekloud.com)
