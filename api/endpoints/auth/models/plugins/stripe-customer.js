@@ -26,10 +26,7 @@ module.exports = exports = function stripeCustomer (schema, options) {
   schema.pre('save', function (next) {
     var user = this;
     if(!user.isNew || user.stripe.customerId) return next();
-    user.createCustomer(function(err){
-      if (err) return next(err);
-      next();
-    });
+    // creating a stripe account creates the customer, removes double entry
     user.createStripeAccount(function(err) {
       if (err) {
         logger.error(err);
@@ -46,19 +43,6 @@ module.exports = exports = function stripeCustomer (schema, options) {
 
   schema.statics.getPlans = function () {
     return options.planData;
-  };
-
-  schema.methods.createCustomer = function(cb) {
-    var user = this;
-
-    stripe.customers.create({
-      email: user.email
-    }, function(err, customer){
-      if (err) return cb(err);
-
-      user.stripe.customerId = customer.id;
-      return cb();
-    });
   };
 
   schema.methods.createStripeAccount = function(cb) {
@@ -108,7 +92,7 @@ module.exports = exports = function stripeCustomer (schema, options) {
     }, function(err, customer){
       if (err) return cb(err);
       user.stripe.customerId = customer.id;
-      return cb();
+      return cb(null);
     });
   };
 
@@ -139,18 +123,6 @@ module.exports = exports = function stripeCustomer (schema, options) {
       }, cardHandler);
     }
   };
-
-  // Example create charge
-  schema.methods.createCharge = function(amount, currency) {
-    stripe.charges.create({
-      amount: amount,
-      currency: "usd",
-      source: "tok_177sxQBtUid5FqMrnq48uoom", // obtained with Stripe.js
-      description: "Charge for test@example.com"
-    }, function(err, charge) {
-      // asynchronously called
-    });    
-  }
 
   schema.methods.setPlan = function(plan, cb) {
     var user = this;

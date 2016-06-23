@@ -1,6 +1,6 @@
 <br />
 <p align="center">
-	<img src="https://www.timekloud.com/assets/img/timekloudlogo-dark.png" width="220">
+	<img src="https://www.argentapp.com//assets/img/logos/argent/logo-app.png" width="220">
 </p>
 <br />
 ##Application Programming Interface (API)

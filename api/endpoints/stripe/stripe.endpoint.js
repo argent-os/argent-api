@@ -1159,7 +1159,7 @@ module.exports = function (app, options) {
         stripe.plans.create(params, function(err, plan) {
             if(err) {
               logger.error(err)
-              res.json({ error: err })                                       
+              return res.json(400, { error: err })                                    
             } else {
               logger.debug("plan creation success", plan);
               res.json({ plan: plan })

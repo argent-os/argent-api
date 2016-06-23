@@ -10,6 +10,8 @@ var nconf       = require('nconf');
 var moment      = require('moment');
 var logger      = require('../lib/logger')();
 var request     = require('request');
+var hat         = require('hat');
+var sg = require('sendgrid').SendGrid(process.env.SENDGRID_API_KEY)
 
 var tokenSecret = process.env.JWT_SECRET;
 var facebookSecret   = process.env.FACEBOOK_SECRET;
@@ -22,6 +24,10 @@ var apiUrl;
 process.env.ENVIRONMENT == 'DEV' || process.env.ENVIRONMENT == undefined ? apiUrl = process.env.API_DEV_URL : '';
 process.env.ENVIRONMENT == 'PROD' ? apiUrl = process.env.API_URL : apiUrl = process.env.API_DEV_URL;
 
+// grab the Mixpanel factory
+var Mixpanel = require('mixpanel');
+var mixpanel = Mixpanel.init(process.env.MIXPANEL_TOKEN);
+
 function UserController (req, res, next) {}
 
 UserController.prototype.register = function (req, res, next) {
@@ -33,12 +39,22 @@ UserController.prototype.register = function (req, res, next) {
   User.findOne({ email: req.body.email }, function(err, existingUser) {
         if (existingUser) {
           logger.error('email is taken')
+          var rack = hat.rack();           
+          mixpanel.track('signup_error', {
+              distinct_id: 'id_'+rack(),
+              type: 'email_dup'
+          });
           return res.status(409).send({ message: 'Email is already taken', type: "email_exists" });
         } else {
           User.findOne({ username: req.body.username }, function(err, existingUser) {
             if(existingUser) {
               logger.error('username is taken')
-              return res.status(409).send({ message: 'Username is already taken', type: "email_exists" });
+              var rack = hat.rack();           
+              mixpanel.track('signup_error', {
+                distinct_id: 'id_'+rack(),
+                type: 'username_dup'
+              });
+              return res.status(409).send({ message: 'Username is already taken', type: "username_exists" });
             }    
             var verifyToken = utils.randomString(16);  
             var clientId = 'tok_'+utils.randomString(64);
@@ -142,25 +158,52 @@ UserController.prototype.register = function (req, res, next) {
             }); 
             logger.trace('about to save');
             user.save().then(function(user, err) {
+              // catch error
               if(err) {
                   logger.error(err);
-                  res.send({ message: err });                                
+                  var rack = hat.rack();           
+                  mixpanel.track('signup_error', {
+                    distinct_id: 'id_'+rack(),
+                    type: 'user_save'
+                  });
+                  return res.status(403).send({ message: err });                                
               }
+
+              // future verification
               logger.trace('inside save');
-              // change to req.body.country      
               process.env.ENVIRONMENT == 'DEV' || process.env.ENVIRONMENT == undefined ? link = 'http://localhost:5000/verify' + '?token=' + verifyToken : '';
               process.env.ENVIRONMENT == 'PROD' ? link = 'https://www.argentapp.com/verify' + '?token=' + verifyToken : '';  
-              res.send({ token: createJWT(user, user.username),  user: user, message: "Welcome to Argent" });                                                
-              // mailer.verifyEmail(user, link, function (err, info) {
-              //   if (err) {
-              //     logger.error('Error occured : ' + err);
-              //     // res.sendStatus(504);
-              //     res.send({ message: "Error occured" });                                
-              //   }
-              //   else {
-              //     res.send({ token: createJWT(user, user.username),  user: user, message: "Welcome to Argent" });                                
-              //   }
-              // });      
+
+              // start welcome email                                             
+              var helper = require('sendgrid').mail
+              var message = "Welcome to Argent! We are glad to have you on board. If you have any questions, comments, or concerns please email us at support@argent-tech.com"
+              from_email = new helper.Email(process.env.SUPPORT_EMAIL)
+              to_email = new helper.Email(user.email)
+              subject = "Welcome to Argent!"
+              content = new helper.Content("text/plain", message)
+              mail = new helper.Mail(from_email, subject, to_email, content)
+
+              var requestBody = mail.toJSON()
+              var request = sg.emptyRequest()
+              request.method = 'POST'
+              request.path = '/v3/mail/send'
+              request.body = requestBody
+              sg.API(request, function (response) {
+                logger.info(response.statusCode)
+                logger.info(response.body)
+                logger.info(response.headers)
+              })      
+              // end welcome email 
+
+              // track signup
+              mixpanel.track('signup_success', {
+                distinct_id: 'id_'+rack(),
+                email: user.email
+              });
+
+              // send response
+              res.send({ token: createJWT(user, user.username), user: user, message: "Welcome to Argent" });   
+
             });                
          });
         }
