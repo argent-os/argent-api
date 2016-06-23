@@ -7,7 +7,7 @@
 
 ###Introduction
 
-To get started with Running TimeKloud you will need the following system configuration
+To get started with Running Argent you will need the following system configuration
 
 Required dependencies
 
@@ -15,7 +15,7 @@ Required dependencies
 <br />
 ```defaults write com.apple.finder AppleShowAllFiles YES;```
 <br />```killall Finder /System/Library/CoreServices/Finder.app```
-<br /><br />Request the TimeKloud local ```.bash_profile``` file from a TimeKloud administrator
+<br /><br />Request the Argent local ```.bash_profile``` file from a Argent administrator
 
 Other environment variables should shadow production/dev env variables on Heroku
 
@@ -32,8 +32,8 @@ Other environment variables should shadow production/dev env variables on Heroku
 <br />```sudo npm i nodemon -g```
 
 #####Do not do the following unless absolutely necessary, it give files root permissions for installs to run
-```sudo chmod -R 0777 timekloud```  
-```sudo chmod -R 0777 timekloud-api```  
+```sudo chmod -R 0777 argent```  
+```sudo chmod -R 0777 argent-api```  
 
 Use Homebrew to install Mongo
 <br />```ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"```
@@ -187,6 +187,6 @@ openssl pkcs12 -in key.p12 -out key.pem -nodes
 ------------------------------
 ###QUESTIONS?
 
-For any questions please email [support](mailto:support@timekloud.com)
+For any questions please email [support](mailto:support@argent-tech.com)
 
 

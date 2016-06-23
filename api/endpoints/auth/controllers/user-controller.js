@@ -176,7 +176,7 @@ UserController.prototype.register = function (req, res, next) {
 
               // start welcome email                                             
               var helper = require('sendgrid').mail
-              var message = "Welcome to Argent! We are glad to have you on board. If you have any questions, comments, or concerns please email us at support@argent-tech.com"
+              var message = "Welcome to Argent! We are glad to have you on board. If you have any questions, comments, or concerns, please email us at support@argent-tech.com"
               from_email = new helper.Email(process.env.SUPPORT_EMAIL)
               to_email = new helper.Email(user.email)
               subject = "Welcome to Argent!"
@@ -196,6 +196,7 @@ UserController.prototype.register = function (req, res, next) {
               // end welcome email 
 
               // track signup
+              var rack = hat.rack();           
               mixpanel.track('signup_success', {
                 distinct_id: 'id_'+rack(),
                 email: user.email
