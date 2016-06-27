@@ -1145,6 +1145,11 @@ module.exports = function (app, options) {
       var user_id = req.params.uid
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
+        var statement_desc = req.body.statement_descriptor || ""
+        if(statement_desc.length > 20) {
+          logger.info("statement descriptor longer than 20")
+          statement_desc = statement_desc.subtring(0,20)
+        }
         var params = {
           id: req.body.id,          
           amount: req.body.amount,
@@ -1161,7 +1166,7 @@ module.exports = function (app, options) {
               logger.error(err)
               return res.json(400, { error: err })                                    
             } else {
-              logger.debug("plan creation success", plan);
+              logger.debug("plan creation success");
               res.json({ plan: plan })
             }
             // asynchronously called
