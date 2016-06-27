@@ -26,7 +26,7 @@ module.exports = function (app, options) {
 	}
 
 	app.post(endpoint.version + endpoint.base + "/:uid", userController.authorize, function(req, res, next) {
-		logger.trace('req message received');
+		logger.trace('support req message received');
 		var user_id = req.params.uid;
 		var subject = req.body.subject;
 		var message = req.body.message;
@@ -37,11 +37,11 @@ module.exports = function (app, options) {
 
 			var helper = require('sendgrid').mail
 			var rack = hat.rack();
-			var message = "Argent user @" + user.username + " sent you a message.  Message: \n\n" + message
+			var msg = "Argent user @" + user.username + " sent a message.  Message: \n\n" + message
 			from_email = new helper.Email(user.email)
-			to_email = new helper.Email(config.supportEmails)
+			to_email = new helper.Email(process.env.SUPPORT_EMAIL)
 			subject = subject + " id_"+rack()
-			content = new helper.Content("text/plain", message)
+			content = new helper.Content("text/plain", msg)
 			mail = new helper.Mail(from_email, subject, to_email, content)
 
 			var requestBody = mail.toJSON()
@@ -50,9 +50,9 @@ module.exports = function (app, options) {
 			request.path = '/v3/mail/send'
 			request.body = requestBody
 			sg.API(request, function (response) {
-				logger.info(response.statusCode)
-				logger.info(response.body)
-				logger.info(response.headers)
+				// logger.info(response.statusCode)
+				// logger.info(response.body)
+				// logger.info(response.headers)
 				res.json({status: response.statusCode, info: response, msg: 'message_sent'});
 			})	
 		});
@@ -83,9 +83,9 @@ module.exports = function (app, options) {
 			request.path = '/v3/mail/send'
 			request.body = requestBody
 			sg.API(request, function (response) {
-				logger.info(response.statusCode)
-				logger.info(response.body)
-				logger.info(response.headers)
+				// logger.info(response.statusCode)
+				// logger.info(response.body)
+				// logger.info(response.headers)
 				res.json({status: response.statusCode, info: response, msg: 'message_sent'});
 			})			
 		});
