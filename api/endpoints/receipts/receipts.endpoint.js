@@ -37,11 +37,11 @@ module.exports = function (app, options) {
 				return res.status(409).send({ err: err })
 			}
 			var helper = require('sendgrid').mail
-			var message = "Merchant's Argent username @" + user.username + " \n\n" + message
+			var msg = "Merchant's Argent username @" + user.username + " \n\n" + message
 			from_email = new helper.Email(config.mailerFrom)
 			to_email = new helper.Email(cust_email)
 			subject = "Your Receipt from Argent #" + rack() 
-			content = new helper.Content("text/plain", message)
+			content = new helper.Content("text/plain", msg)
 			mail = new helper.Mail(from_email, subject, to_email, content)
 
 			var requestBody = mail.toJSON()

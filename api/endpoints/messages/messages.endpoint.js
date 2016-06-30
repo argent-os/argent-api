@@ -37,7 +37,7 @@ module.exports = function (app, options) {
 
 			var helper = require('sendgrid').mail
 			var rack = hat.rack();
-			var msg = "Argent user @" + user.username + " sent a message.  Message: \n\n" + message
+			var msg = "Argent user @" + user.username + " | " + user.email + " sent a message.  Message: \n\n" + message
 			from_email = new helper.Email(user.email)
 			to_email = new helper.Email(process.env.SUPPORT_EMAIL)
 			subject = subject + " id_"+rack()
