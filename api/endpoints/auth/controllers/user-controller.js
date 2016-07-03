@@ -11,7 +11,7 @@ var moment      = require('moment');
 var logger      = require('../lib/logger')();
 var request     = require('request');
 var hat         = require('hat');
-var sg = require('sendgrid').SendGrid(process.env.SENDGRID_API_KEY)
+var sg          = require('sendgrid').SendGrid(process.env.SENDGRID_API_KEY)
 
 var tokenSecret = process.env.JWT_SECRET;
 var facebookSecret   = process.env.FACEBOOK_SECRET;
@@ -593,28 +593,30 @@ UserController.prototype.remindPassword = function(req, res) {
       var link = url + '?token=' + resetToken;
       user.save(function(err) {
         if (err) {
-          //logger.error('Error saving user new password');
-          // logger.info('error saving new user password');
+          logger.error('error user new password');
+          return res.status(401).json({status: "error", msg: 'error_sending_password', error: err});
         }
         else {
-          //logger.info('New password generated for user id: ' + user._id);
-          mailer.sendMessage(user, link, function (err, info) {
-            if (err) {
-              // logger.info(err);
-              //logger.error('Sending message error : ' + err);
-              res.status(401).json({status: "error", msg: 'error_sending_password', error: err});
-            }
-            else {
-              if (process.env.ENV === 'testing') {
-                // Write new password to a file
-                fs.writeFileSync("./testpass.txt", link);
-              }
-              //logger.info('Remind password message sent to email : ' + user.email);
-              var resp = {};
-              resp.msg = 'new_password_sent';
-              res.json({status:"success", message: 'Password reset link sent'});
-            }
-          });
+
+          var helper = require('sendgrid').mail
+          var rack = hat.rack();
+          var msg = 'Hello from Argent! Please use the following link to reset your password: ' + link
+          from_email = new helper.Email(process.env.SUPPORT_EMAIL)
+          to_email = new helper.Email(user.email)
+          subject = 'Password Reset'
+          content = new helper.Content("text/plain", msg)
+          mail = new helper.Mail(from_email, subject, to_email, content)
+          var requestBody = mail.toJSON()
+          var request = sg.emptyRequest()
+          request.method = 'POST'
+          request.path = '/v3/mail/send'
+          request.body = requestBody
+          sg.API(request, function (response) {
+            // logger.info(response.statusCode)
+            // logger.info(response.body)
+            // logger.info(response.headers)
+            res.json({status:"success", message: 'Password reset link sent'});
+          })  
         }
       });
     }

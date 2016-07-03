@@ -55,7 +55,6 @@ var options = {
   // Nodemailer settings, used for resetting password
   mailer: {
     mailerFrom    : process.env.SUPPORT_EMAIL,
-    passwordResetTitle   : 'Password Reset',
     supportTitle: 'Support Request',
     supportEmails: ['support@argent-tech.com', 'sinan@argent-tech.com', 'selin@argent-tech.com', 'semih@argent-tech.com'],
     verifyEmailTitle   : 'Verify Account for Argent',
@@ -63,7 +62,6 @@ var options = {
     quoteEmailTitle: 'Quote created',  
     quoteEmailTextLink: 'Please use the following link to accept or reject proposal ',
     mailerInfo    : 'Hello! ',
-    resetPasswordText    : 'Hello from Argent! Please use the following link to reset your password: ',
     transporter   : {
       service: 'Gmail',
       auth: {
@@ -202,7 +200,7 @@ app.use(function(err, req, res, next) {
 });
 
 app.get('/', function(req, res, next) {
-  res.json({message: "Welcome to the Argent API!", info: "To download our app please visit www.protonpayments.com"})
+  res.json({message: "Welcome to the Argent API!", info: "To download our app please visit https://www.argentapp.com/home"})
 })
 
 app.get('/ping', function(req, res) {
