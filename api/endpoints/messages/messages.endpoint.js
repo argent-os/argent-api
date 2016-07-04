@@ -70,11 +70,11 @@ module.exports = function (app, options) {
 
 			var helper = require('sendgrid').mail
 			var email = req.body.email;
-			var message = "@" + user.username + "messaged you! Message: \n\n" + message;
+			var msg = "@" + user.username + "messaged you! Message: \n\n" + message;
 			from_email = new helper.Email(process.env.SUPPORT_EMAIL)
 			to_email = new helper.Email(email)
 			subject = "Message from Argent User " + user.first_name + " #"+rack()
-			content = new helper.Content("text/plain", message)
+			content = new helper.Content("text/plain", msg)
 			mail = new helper.Mail(from_email, subject, to_email, content)
 
 			var requestBody = mail.toJSON()
