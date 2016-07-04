@@ -25,7 +25,7 @@ module.exports = function (app, options) {
 	  config = nconf.get('mailerSettings');
 	}
 
-	app.post(endpoint.version + endpoint.base + "/:uid", userController.authorize, function(req, res, next) {
+	app.post(endpoint.version + endpoint.base + "/:uid", function(req, res, next) {
 		logger.trace('support req message received');
 		var user_id = req.params.uid;
 		var subject = req.body.subject;
@@ -58,7 +58,7 @@ module.exports = function (app, options) {
 		});
 	});
 
-	app.post(endpoint.version + endpoint.base + endpoint.user + "/:username", userController.authorize, function(req, res, next) {
+	app.post(endpoint.version + endpoint.base + endpoint.user + "/:username", function(req, res, next) {
 		logger.trace('send message received');
 		var username = req.params.username;
 		var message = req.body.message;
