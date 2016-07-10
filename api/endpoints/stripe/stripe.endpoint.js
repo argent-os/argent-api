@@ -128,6 +128,11 @@ module.exports = function (app, options) {
   */
   app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/example", userController.authorize, function(req, res, next) {
     logger.trace('example charge request received');
+
+    if (req.body.amount > 150000) {
+      return res.status(407).send({ message: 'Amount cannot be greater than $500' });
+    }
+        
     var stripeToken = req.body.stripeToken;
     var amount = req.body.amount;
     var currency = req.body.currency;
@@ -582,13 +587,17 @@ module.exports = function (app, options) {
         return res.status(401).send({ message: 'Unauthorized' });
       }
 
+      if (req.body.amount > 150000) {
+        return res.status(407).send({ message: 'Amount cannot be greater than $500' });
+      }
+
       // TODO: Implement check of auth token
       logger.info("POS charge")
       var user_id = req.params.uid;
       userController.getUser(user_id).then(function (user) {
           var stripe = require('stripe')(user.stripe.secretKey);
           var amountInCents = req.body.amount;
-          var application_fee = Math.round((amountInCents*0.009));
+          var application_fee = Math.round((amountInCents*0.06));
           var description = "New charge in the amount of " + currencyFormat.getCommaSeparatedFormat("USD", amountInCents/100);
           logger.info(amountInCents);
           logger.info(application_fee);
@@ -618,6 +627,10 @@ module.exports = function (app, options) {
       return res.status(401).send({ message: 'Unauthorized' });
     }
 
+    if (req.body.amount > 150000) {
+      return res.status(407).send({ message: 'Amount cannot be greater than $500' });
+    }
+
     // TODO: Implement check of auth token
     logger.info("delegated charge request")
     var user_id = req.params.uid;
@@ -625,8 +638,8 @@ module.exports = function (app, options) {
     userController.getDelegatedUserByUsername(delegate_user).then(function (delegateUser) {
         var stripe = require('stripe')(delegateUser.stripe.secretKey);
         var amountInCents = req.body.amount;
-        var application_fee = Math.round((amountInCents*0.009));
-        var description = "New charge in the amount of " + currencyFormat.getCommaSeparatedFormat("USD", amountInCents/100);
+        var application_fee = Math.round((amountInCents*0.06));
+        var description = "New charge in the amount of " + currencyFormat.getCommaSeparatedFormat("USD", amountInCents/10000);
         logger.info(amountInCents);
         logger.info(application_fee);
         logger.info(description);
@@ -1143,6 +1156,11 @@ module.exports = function (app, options) {
   app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.plans, userController.authorize, function(req, res, next) {
       logger.info("creating new plan");
       var user_id = req.params.uid
+
+      if (req.body.amount > 150000) {
+        return res.status(407).send({ message: 'Amount cannot be greater than $500' });
+      }
+
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
         var statement_desc = req.body.statement_descriptor || ""
@@ -1240,6 +1258,11 @@ module.exports = function (app, options) {
   app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.plans + "/:plan_id", userController.authorize, function(req, res, next) {
       var plan_id = req.params.plan_id;
       var user_id = req.params.uid;
+
+      if (req.body.amount > 150000) {
+        return res.status(407).send({ message: 'Amount cannot be greater than $500' });
+      }
+
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
         var params = {
@@ -1441,6 +1464,11 @@ module.exports = function (app, options) {
       //logger.debug('creating transfer...');
       var user_id = req.params.uid
       //logger.debug('in transfer create')
+
+      if (req.body.amount > 150000) {
+        return res.status(407).send({ message: 'Amount cannot be greater than $500' });
+      }
+
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
         var params = {
@@ -1537,6 +1565,11 @@ module.exports = function (app, options) {
   // Use own stripe keys to create bitcoin receivers for now, then do a delegated charge
   app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.bitcoin, userController.authorize, function(req, res, next) {
       var user_id = req.params.uid;
+
+      if (req.body.amount > 150000) {
+          return res.status(407).send({ message: 'Amount cannot be greater than $500' });
+      }
+
       // use our own stripe account for now as a workaround
       var stripe = require("stripe")(options.apiKey);
       userController.getUser(user_id).then(function (user) {
