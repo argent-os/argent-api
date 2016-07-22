@@ -911,10 +911,6 @@ module.exports = function (app, options) {
     var params = {
       plan: req.body.plan_id
     }
-    print("subscription request body", req.body);
-    var amountInCents = req.body.amount;
-    var application_fee = Math.round((amountInCents*0.06));
-    print("application fee generated ", application_fee);
     logger.debug(params);
     userController.getDelegatedUserByUsername(req.params.delegate_username).then(function (delegateUser) {
       // get delegate user
@@ -969,7 +965,7 @@ module.exports = function (app, options) {
                     stripe.subscriptions.create({ 
                       customer: customer.id, 
                       plan: params.plan,
-                      application_fee: application_fee
+                      application_fee_percent: 1 
                     }).then(function(subscription, err) {
                         res.json({ subscription: subscription })
                     }, function(err) {
@@ -986,7 +982,7 @@ module.exports = function (app, options) {
                   stripe.subscriptions.create({ 
                     customer: customers.data[i].id, 
                     plan: params.plan,
-                    application_fee: application_fee
+                    application_fee_percent: 1
                   }).then(function(subscription, err) {
                       res.json({ subscription: subscription })
                   }, function(err) {
@@ -1011,7 +1007,11 @@ module.exports = function (app, options) {
                       }
                       //logger.info(customer);
                       // Create a customer, then create a plan for that customer
-                      stripe.subscriptions.create({ customer: customer.id, plan: params.plan }).then(function(subscription, err) {
+                      stripe.subscriptions.create({ 
+                        customer: customer.id, 
+                        plan: params.plan,
+                        application_fee_percent: 1
+                      }).then(function(subscription, err) {
                           res.json({ subscription: subscription })
                       }, function(err) {
                           logger.error(err)
