@@ -678,18 +678,18 @@ module.exports = function (app, options) {
 	});
 
 	// /v1/plaid/:uid/exchange_token/:acct_id
-	app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.exchange_token + "/:acct_id", userController.authorize, function(req, res, next) {
+	app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.exchange_token + "/:public_token" /*+ "/:acct_id"*/, function(req, res, next) {
 		logger.trace('req plaid exchange token received');
 		logger.debug(req.body);
 		// Used for Plaid Link
 		// The public_token is the access token returned by plaid link
 		var user_id = req.params.uid;
-		var acct_id = req.params.acct_id;
-		var public_token = req.body.public_token;
+		var public_token = req.params.public_token;
       	userController.getUser(user_id).then(function (user, err) { 
 			// Exchange a public_token and account_id for a Plaid access_token
   			// and a Stripe bank account token
-			plaidClient.exchangeToken(public_token, acct_id, function(err, tokenResponse) {
+  			// TODO: Remove account id for now
+			plaidClient.exchangeToken(public_token, function(err, tokenResponse) {
 			  if (err != null) {
 			  	logger.error(err);
 			    res.json({ error: err });
@@ -700,11 +700,61 @@ module.exports = function (app, options) {
 				// retrieve accounts and transactions
 				var access_token = tokenResponse.access_token;
 
-				// This is your Stripe bank account token - store somewhere
-				// persistent. The token can be used to move money via
-				// Stripe's ACH API.
-				var bank_account_token = tokenResponse.stripe_bank_account_token;
-			    res.json({ response: tokenResponse })
+				plaidClient.getAuthUser(access_token, function(err, data) {
+					// logger.info(data.accounts);
+					// use the account response data to create a stripe token
+        			var stripe = require('stripe')(user.stripe.secretKey);
+
+        			logger.info("about to create bank token")
+
+        			// TODO: Make dynamic
+					var routing_number = data.accounts[0].numbers.routing;
+					var account_number = data.accounts[0].numbers.account;
+
+					process.env.ENVIRONMENT == 'DEV' ? bank_account = {
+					  bank_account: {
+						country: 'US',
+						currency: 'usd',
+						account_holder_name: 'Jane Austen',
+						account_holder_type: 'individual',
+						routing_number: '110000000',
+						account_number: '000123456789'
+					  }
+					} : '';
+
+					process.env.ENVIRONMENT == 'PROD' ? bank_account = {
+					  bank_account: {
+					    country: user.country,
+					    currency: 'usd',
+					    account_holder_name: (user.first_name + user.last_name) || "No Name Provided",
+					    account_holder_type: user.legal_entity.type,
+					    routing_number: routing_number,
+					    account_number: account_number
+					  }
+					} : '';
+
+					stripe.tokens.create(bank_account, function(err, token) {
+						if(err) {
+							logger.error(err);
+							return res.json({ error: err })
+						} else {
+							// This is your Stripe bank account token - store somewhere
+							// persistent. The token can be used to move money via						
+							// For Stripe's ACH API.
+							var bank_account_token = token.id;
+							// asynchronously called
+							logger.info("got the bank tokens")
+							var resp = { 
+								response: {
+									stripe_bank_account_token: bank_account_token,
+									access_token: access_token
+								} 
+							}
+							logger.info(resp);
+							res.json(resp);
+						}
+					});
+				});
 			  }
 			});
       	})
