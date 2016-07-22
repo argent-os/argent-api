@@ -20,6 +20,10 @@ var oAuthSecret = 'B21F3EFCE39FDC5BDE7EEE987D7C8';
 var log4js = require('log4js');
 var logger = log4js.getLogger();
 
+var siftscience = require('yield-siftscience')({
+  api_key: siftScienceKey
+});
+
 var apiUrl;
 process.env.ENVIRONMENT == 'DEV' || process.env.ENVIRONMENT == undefined ? apiUrl = process.env.API_DEV_URL : '';
 process.env.ENVIRONMENT == 'PROD' ? apiUrl = process.env.API_URL : apiUrl = process.env.API_DEV_URL;
@@ -202,6 +206,13 @@ UserController.prototype.register = function (req, res, next) {
                 email: user.email
               });
 
+              var session_id = 'session_id_'+rack()       
+              siftscience.event.create_account({
+                '$session_id':   session_id,
+                '$user_id':      user._id,
+                '$user_email':   user.email
+              });
+
               // send response
               res.send({ token: createJWT(user, user.username), user: user, message: "Welcome to Argent" });   
 
@@ -212,7 +223,6 @@ UserController.prototype.register = function (req, res, next) {
 };
 
 UserController.prototype.ping = function (req, res, next) {
-  var self = this;
   // ping with either username or email
   logger.trace('ping req received');
   User.findOne({ $or: [ { email: req.body.email }, { username: req.body.username } ] }, function(err, user) {
@@ -226,9 +236,9 @@ UserController.prototype.ping = function (req, res, next) {
 };
 
 UserController.prototype.login = function (req, res, next) {
-  var self = this;
   // Login with either username or email
   logger.trace('login req received');
+  
   User.findOne({ $or: [ { email: req.body.email }, { username: req.body.username } ] }, function(err, user) {
     if (!user) {
       return res.status(401).send({ message: 'Wrong username/email and/or password' });
@@ -248,6 +258,14 @@ UserController.prototype.login = function (req, res, next) {
       logger.info('password match for user', user.username);      
       logger.debug("login data is");
       // logger.debug(user);
+
+      var rack = hat.rack();    
+      var session_id = 'session_id_'+rack()       
+      siftscience.event.login({
+        '$session_id':   session_id,
+        '$user_id':      user._id,
+        '$login_status': siftscience.CONSTANTS.STATUS.SUCCESS
+      });
 
       res.send({ token: createJWT(user), user: user });             
     });

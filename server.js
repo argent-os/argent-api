@@ -1,7 +1,7 @@
 // Init
 var express        = require('express');
-var path           = require('path');
 var favicon        = require('serve-favicon');
+var path           = require('path');
 var log4js         = require('log4js');
 var logger         = log4js.getLogger();
 var cookieParser   = require('cookie-parser');
@@ -35,47 +35,29 @@ var compress       = require('compression');
 
 var app = express();
 
+// MONGO URI
 process.env.ENVIRONMENT == 'DEV' ? mongooseUri = process.env.MONGOLAB_URI_DEV : '';
 process.env.ENVIRONMENT == 'PROD' ? mongooseUri = process.env.MONGOLAB_URI : '';
-
-logger.info('Running in ' + process.env.ENVIRONMENT + ' mode');
-
+// STRIPE KEYS
 process.env.ENVIRONMENT == 'DEV' || process.env.ENVIRONMENT == undefined ? stripeApiKey = process.env.STRIPE_TEST_KEY : '';
 process.env.ENVIRONMENT == 'DEV' || process.env.ENVIRONMENT == undefined ? stripePublishableKey = process.env.STRIPE_TEST_PUB_KEY : '';
-
 process.env.ENVIRONMENT == 'PROD' ? stripeApiKey = process.env.STRIPE_KEY : '';
 process.env.ENVIRONMENT == 'PROD' ? stripePublishableKey = process.env.STRIPE_PUB_KEY : '';
+// SIFT KEYS
+process.env.ENVIRONMENT == 'DEV' || process.env.ENVIRONMENT == undefined ? siftScienceKey = process.env.SIFT_SCIENCE_SANDBOX_REST_KEY : '';
+process.env.ENVIRONMENT == 'PROD' ? siftScienceKey = process.env.SIFT_SCIENCE_REST_KEY : '';
 
+logger.info('Running API in ' + process.env.ENVIRONMENT + ' mode');
 logger.info('Utilizing Stripe Key in ' + process.env.ENVIRONMENT + ' mode');
+logger.info('Utilizing Sift Science Key in ' + process.env.ENVIRONMENT + ' mode');
 
-var options = {
-  mongoconnection: mongooseUri,
-  logFile: path.join(__dirname, 'authlogger.log'),
-  corsDomains: ['*', 'http://localhost:5000'],
-  // Nodemailer settings, used for resetting password
-  mailer: {
-    mailerFrom    : process.env.SUPPORT_EMAIL,
-    supportTitle: 'Support Request',
-    supportEmails: ['support@argent-tech.com', 'sinan@argent-tech.com', 'selin@argent-tech.com', 'semih@argent-tech.com'],
-    verifyEmailTitle   : 'Verify Account for Argent',
-    verifyEmailLinkText   : 'Welcome to Argent!  Please verify your email using the following link: ',
-    quoteEmailTitle: 'Quote created',  
-    quoteEmailTextLink: 'Please use the following link to accept or reject proposal ',
-    mailerInfo    : 'Hello! ',
-    transporter   : {
-      service: 'Gmail',
-      auth: {
-        user: process.env.SUPPORT_EMAIL,
-        pass: process.env.SUPPORT_EMAIL_PW
-      }
-    }
-  }
-};
+// CONFIGURE APP OPTIONS
+var options = require('./api/options/config')
 
 // *****************************************************************************
 // ************************** SERVER STARTUP ***********************************
 // *****************************************************************************
-if (!options.mongoconnection) {
+if (!mongooseUri) {
   throw Error('You must specify db connection details! Try checking environment db variables.');
 }
 

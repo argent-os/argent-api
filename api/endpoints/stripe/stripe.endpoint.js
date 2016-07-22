@@ -30,7 +30,8 @@ module.exports = function (app, options) {
     bitcoin: '/bitcoin',
     transfers: '/transfers',  
     external: '/external',                 
-    upload: '/upload'                  
+    upload: '/upload',                
+    verify: '/verify'                  
   };
 
   // Set your secret key: remember to change this to your live secret key in production
@@ -132,7 +133,7 @@ module.exports = function (app, options) {
     if (req.body.amount > 150000) {
       return res.status(407).send({ message: 'Amount cannot be greater than $500' });
     }
-        
+
     var stripeToken = req.body.stripeToken;
     var amount = req.body.amount;
     var currency = req.body.currency;
@@ -350,23 +351,17 @@ module.exports = function (app, options) {
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.transactions, userController.authorize, function(req, res, next) {
       stripe.balance.retrieveTransaction(transactionId)
   });
-  //
-  // transaction history
-  //
-  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.history + "/:interval", function(req, res, next) {
-            logger.debug("inside")
 
+  // Transaction History
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.history + "/:interval", function(req, res, next) {
       var user_id = req.params.uid;
       var interval = req.params.interval;
       // /v1/stripe/09s8df0a9s8d/history?interval=year&currency=usd&number=10
       var currency = req.query.currency;
       userController.getUser(user_id).then(function (user) {
-        logger.debug("inside history")
         var stripe = require('stripe')(user.stripe.secretKey);
         var limit = req.query.limit || 100;
         var number = req.query.number;
-        logger.debug("stripe key is");
-        logger.debug(user.stripe.stripeKey);
         var starting_after;
         if(req.query.starting_after != undefined) {
           starting_after = req.query.starting_after;
@@ -514,7 +509,6 @@ module.exports = function (app, options) {
               }
             }
             
-            //
             totalMonth = [];
             for (var i = oneYearInMonths; i >= 0; i--) {
               totalMonth[i] = 0;
@@ -640,9 +634,9 @@ module.exports = function (app, options) {
         var amountInCents = req.body.amount;
         var application_fee = Math.round((amountInCents*0.06));
         var description = "New charge in the amount of " + currencyFormat.getCommaSeparatedFormat("USD", amountInCents/10000);
-        logger.info(amountInCents);
-        logger.info(application_fee);
-        logger.info(description);
+        // logger.info(amountInCents);
+        // logger.info(application_fee);
+        // logger.info(description);
         var params = {
           amount: amountInCents,
           application_fee: application_fee,
@@ -917,6 +911,10 @@ module.exports = function (app, options) {
     var params = {
       plan: req.body.plan_id
     }
+    print("subscription request body", req.body);
+    var amountInCents = req.body.amount;
+    var application_fee = Math.round((amountInCents*0.06));
+    print("application fee generated ", application_fee);
     logger.debug(params);
     userController.getDelegatedUserByUsername(req.params.delegate_username).then(function (delegateUser) {
       // get delegate user
@@ -968,7 +966,11 @@ module.exports = function (app, options) {
                       res.json({ error: err })                                                
                     }
                     // Create a customer, then create a plan for that customer
-                    stripe.subscriptions.create({ customer: customer.id, plan: params.plan }).then(function(subscription, err) {
+                    stripe.subscriptions.create({ 
+                      customer: customer.id, 
+                      plan: params.plan,
+                      application_fee: application_fee
+                    }).then(function(subscription, err) {
                         res.json({ subscription: subscription })
                     }, function(err) {
                         logger.error(err)
@@ -981,7 +983,11 @@ module.exports = function (app, options) {
               for (var i = 0; i < customers.data.length; i++) {
                 if(customers.data[i].email == requestingUser.email) {
                   logger.info("Customer email already exists in database! Adding plan to existing customer")
-                  stripe.subscriptions.create({ customer: customers.data[i].id, plan: params.plan }).then(function(subscription, err) {
+                  stripe.subscriptions.create({ 
+                    customer: customers.data[i].id, 
+                    plan: params.plan,
+                    application_fee: application_fee
+                  }).then(function(subscription, err) {
                       res.json({ subscription: subscription })
                   }, function(err) {
                       logger.error(err)
@@ -1681,5 +1687,29 @@ module.exports = function (app, options) {
         });
       });
   });
+
+  // VERIFICATION
+  // app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.verify, userController.authorize, function(req, res, next) {
+  //     var user_id = req.params.uid;
+  //     userController.getUser(user_id).then(function (user) {
+  //       // Set your secret key: remember to change this to your live secret key in production
+  //       // See your keys here https://dashboard.stripe.com/account/apikeys
+  //       var stripe = require('stripe')(user.stripe.secretKey);
+
+  //       var data = { amounts: [req.body.amount1, req.body.amount2] }
+  //       stripe.customers.verifySource(
+  //         'CUSTOMER_ID',
+  //         'BANK_TOKEN',
+  //         data,
+  //         function(err, bankAccount) {
+  //           if(err) {
+  //             logger.error(err);
+  //             return
+  //           } else {
+  //             res.json({bank: bankAccount});
+  //           }
+  //         });
+  //     });
+  // });  
 
 }
