@@ -622,7 +622,7 @@ module.exports = function (app, options) {
     }
 
     if (req.body.amount > 150000) {
-      return res.status(407).send({ message: 'Amount cannot be greater than $500' });
+      return res.status(407).send({ message: 'Amount cannot be greater than $1,500' });
     }
 
     // TODO: Implement check of auth token
@@ -640,18 +640,138 @@ module.exports = function (app, options) {
         var params = {
           amount: amountInCents,
           application_fee: application_fee,
-          currency: "usd",
+          currency: "usd", // currency ?? "usd" // currency = req.body.currency
           source: req.body.token,
           description: description
         }
-        // Charge a card based on customer ID, the customer must have a linked credit card
-        stripe.charges.create(params).then(function(charge) {
-            // logger.info(res)
-            res.json({msg: "success", charge: charge})
-        }, function(err) {
-            logger.error(err)
-            res.json({ error: err })                          
-        });
+
+        // e.g. request is /v1/stripe/5a6s6g87as888s/charge/johndoe?type=bank
+        if(req.query.type == "bank") {
+          userController.getUser(user_id).then(function (user) {
+            // get requesting user
+            var requestingUser = user
+            logger.info(requestingUser.username);
+            // Charge a card based on customer ID, the customer must have a linked bank
+            var limit = req.query.limit || 100;
+            var starting_after;
+            if(req.query.starting_after != undefined) {
+              starting_after = req.query.starting_after;
+            }
+            stripe.customers.list({ limit: limit, starting_after: starting_after }, function(err, customers) {
+                logger.trace('inside customer list')
+                // asynchronously called
+                if(err) {
+                  logger.error(err)
+                  res.json({ error: err })                                        
+                }
+
+                // list customers before creating charge
+                // check for existing customer by email
+                // so for example, list all customers and do
+                // a quick check to see if email matches any in
+                // customer list, if not create customer, if yes
+                // add new plan to existing customer
+
+                // First check if the delgated user has any customers, if not add the first one. Then loop
+                // through the current customers and do a match on whether customer already exists or not.  Then
+                // if no matches are found perform the secondary option of creating the customer and charge.
+                // The second part of the execution can only occur once the full loop has been performed
+
+                //logger.debug(customers.data.length)
+                if( customers.data.length == 0 ) {
+                    // if customer does not exist, create one and add a plan
+                    logger.info("No customers exist for this user, adding the first one!")   
+                    var customer_params = {
+                        email: requestingUser.email,
+                        source: req.body.token
+                    }                 
+                    stripe.customers.create(customer_params, function(err, customer) {
+                        // asynchronously called
+                        if(err) {
+                          logger.error(err)
+                          res.json({ error: err })                                                
+                        }
+                        // Create a customer, then create a plan for that customer
+                        // Charge a card based on customer ID, the customer must have a linked bank
+                        stripe.charges.create({
+                          currency: "usd",
+                          customer: customer.id, 
+                          amount: amountInCents,
+                          application_fee: Math.round((amountInCents*0.02))                     
+                        }).then(function(charge) {
+                            // logger.info(res)
+                            res.json({status: 200, charge: charge})
+                        }, function(err) {
+                            logger.error(err)
+                            res.json({ error: err })                          
+                        });                      
+                      }
+                    );  
+                } else {
+                  logger.info("Customers exist for this user, checking if requesting user is one of them")   
+                  for (var i = 0; i < customers.data.length; i++) {
+                    if(customers.data[i].email == requestingUser.email) {
+                      logger.info("Customer email already exists in database! Adding plan to existing customer")
+                      stripe.charges.create({
+                        currency: "usd",
+                        customer: customers.data[i].id, 
+                        amount: amountInCents,
+                        application_fee: Math.round((amountInCents*0.02))                     
+                      }).then(function(charge) {
+                          // logger.info(res)
+                          res.json({status: 200, charge: charge})
+                      }, function(err) {
+                          logger.error(err)
+                          res.json({ error: err })                          
+                      });   
+                      break;
+                    }
+                    // At the end of the data array if we still haven't found an existing customer add a new one with subscription
+                    if(i == customers.data.length - 1 && customers.data[i].email != requestingUser.email) {
+                      // if customer does not exist, create one and add a plan
+                      logger.info("Customer email does not currently exist. Adding new customer with subscription")   
+                      var customer_params = {
+                          email: requestingUser.email,
+                          source: req.body.token
+                      }                 
+                      stripe.customers.create(customer_params, function(err, customer) {
+                          // asynchronously called
+                          if(err) {
+                            logger.error(err)
+                            res.json({ error: err })                                                  
+                          }
+                          //logger.info(customer);
+                          // Create a customer, then create a plan for that customer
+                          stripe.charges.create({
+                            currency: "usd",
+                            customer: customer.id, 
+                            amount: amountInCents,
+                            application_fee: Math.round((amountInCents*0.02))                     
+                          }).then(function(charge) {
+                              // logger.info(res)
+                              res.json({status: 200, charge: charge})
+                          }, function(err) {
+                              logger.error(err)
+                              res.json({ error: err })                          
+                          });   
+                        }
+                      )    
+                    }
+                  } 
+                }           
+              }
+            )       
+          })      
+        } else {
+          // Charge a card based on customer ID, the customer must have a linked credit card
+          stripe.charges.create(params).then(function(charge) {
+              // logger.info(res)
+              res.json({status: 200, charge: charge})
+          }, function(err) {
+              logger.error(err)
+              res.json({ error: err })                          
+          });
+        }
     }) 
   })
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.charge, userController.authorize, function(req, res, next) {
@@ -723,33 +843,33 @@ module.exports = function (app, options) {
       });        
   });
   app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/close/dispute", userController.authorize, function(req, res, next) {
-      stripe.charges.closeDispute(chargeId, params)
+      //stripe.charges.closeDispute(chargeId, params)
   });
   app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/set/metadata", userController.authorize, function(req, res, next) {
-      stripe.charges.setMetadata(chargeId, metadataObject)
+      //stripe.charges.setMetadata(chargeId, metadataObject)
   });
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/get/metadata", userController.authorize, function(req, res, next) {
-      stripe.charges.getMetadata(chargeId)
+      //stripe.charges.getMetadata(chargeId)
   });
   app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/mark/safe", userController.authorize, function(req, res, next) {
-      stripe.charges.markAsSafe(chargeId)
+      //stripe.charges.markAsSafe(chargeId)
   });
   app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/mark/fraud", userController.authorize, function(req, res, next) {
-      stripe.charges.markAsFraudulent(chargeId)
+      //stripe.charges.markAsFraudulent(chargeId)
   });
 
   // COUPONS
   app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.coupons, userController.authorize, function(req, res, next) {
-      stripe.coupons.create(params)
+      //stripe.coupons.create(params)
   });
   app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.coupons, userController.authorize, function(req, res, next) {
-      stripe.coupons.list([params])
+      //stripe.coupons.list([params])
   });
   app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.coupons, userController.authorize, function(req, res, next) {
-      stripe.coupons.retrieve(chargeId)
+      //stripe.coupons.retrieve(chargeId)
   });
   app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.coupons, userController.authorize, function(req, res, next) {
-      stripe.coupons.del(chargeId)
+      //stripe.coupons.del(chargeId)
   });
 
 
@@ -1164,7 +1284,7 @@ module.exports = function (app, options) {
       var user_id = req.params.uid
 
       if (req.body.amount > 150000) {
-        return res.status(407).send({ message: 'Amount cannot be greater than $500' });
+        return res.status(407).send({ message: 'Amount cannot be greater than $1,500' });
       }
 
       userController.getUser(user_id).then(function (user) {

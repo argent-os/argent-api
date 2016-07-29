@@ -14,7 +14,7 @@ var pictureDef = {
 };
 
 var plaidDef = {
-  access_token: { type: String }
+  access_token: { type: String },
 }
 
 var iosDef = {
