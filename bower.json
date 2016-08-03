@@ -1,7 +1,7 @@
 {
-  "name": "praxicorp-api",
+  "name": "argent-api",
   "version": "1.0.0-beta",
-  "description": "Praxicorp API",
+  "description": "Argent API",
   "ignore": [
     "**/.*",
     "node_modules",

@@ -1,5 +1,4 @@
 var User        = require('../models/user');
-var Organization= require('../../organization/models/organization');
 var userHelper  = require('../lib/userhelper');
 var utils       = require('../lib/utils');
 var mailer      = require('../lib/mailer');
@@ -15,7 +14,7 @@ var sg          = require('sendgrid').SendGrid(process.env.SENDGRID_API_KEY)
 
 var tokenSecret = process.env.JWT_SECRET;
 var facebookSecret   = process.env.FACEBOOK_SECRET;
-var oAuthSecret = 'B21F3EFCE39FDC5BDE7EEE987D7C8';
+var oAuthSecret = 'B21F3EFCE39FDC5BDE7EEE987D7C8'; // convert to env
 
 var log4js = require('log4js');
 var logger = log4js.getLogger();
@@ -61,6 +60,7 @@ UserController.prototype.register = function (req, res, next) {
               return res.status(409).send({ message: 'Username is already taken', type: "username_exists" });
             }    
             var verifyToken = utils.randomString(16);  
+            var tenantId = 'tenant_'+utils.randomString(32);
             var clientId = 'tok_'+utils.randomString(64);
             var clientSecret = 'tok_'+utils.randomString(64);
             var accessToken = 'tok_'+utils.randomString(64);    
@@ -125,6 +125,7 @@ UserController.prototype.register = function (req, res, next) {
             }
 
             var user = new User({
+              tenant_id: tenantId,
               first_name: first_name,
               last_name: last_name,
               username: req.body.username,
@@ -630,9 +631,6 @@ UserController.prototype.remindPassword = function(req, res) {
           request.path = '/v3/mail/send'
           request.body = requestBody
           sg.API(request, function (response) {
-            // logger.info(response.statusCode)
-            // logger.info(response.body)
-            // logger.info(response.headers)
             res.json({status:"success", message: 'Password reset link sent'});
           })  
         }
@@ -850,12 +848,23 @@ function getToken(req) {
   }
 }
 
-var hat = require('hat');
 function createApiKey(user) {
   user = _.pick(user, '_id' ,'email', 'username'); 
   var rack = hat.rack(); 
+  var uuid = require('node-uuid');
+  var crypto = require('crypto');
+
+  var key = uuid();
+
+  key = crypto.createHash('sha256')
+          .update(key)
+          .update('salt')
+          .digest('hex');
+          
+  console.log(key);
   var payload = {
     user: user,
+    api_key: key,
     iat: new Date().getTime(),
     jti: rack(), // a unique id for this token (for revocation purposes)
   };

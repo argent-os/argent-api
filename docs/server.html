@@ -94,8 +94,8 @@
             <div class="content"><div class='highlight'><pre><span class="hljs-keyword">var</span> uriUtil        = <span class="hljs-built_in">require</span>(<span class="hljs-string">'mongodb-uri'</span>);
 <span class="hljs-keyword">var</span> mongoose       = <span class="hljs-built_in">require</span>(<span class="hljs-string">'mongoose'</span>);
 <span class="hljs-keyword">var</span> mongodbUri     = process.env.MONGOLAB_URI;
-<span class="hljs-keyword">var</span> mongooseUri    = uriUtil.formatMongoose(mongodbUri) + <span class="hljs-string">'/praxicorp'</span>;
-<span class="hljs-keyword">var</span> localMongo     = <span class="hljs-string">'mongodb://localhost:27017/praxicorp'</span>;</pre></div></div>
+<span class="hljs-keyword">var</span> mongooseUri    = uriUtil.formatMongoose(mongodbUri) + <span class="hljs-string">'/db'</span>;
+<span class="hljs-keyword">var</span> localMongo     = <span class="hljs-string">'mongodb://localhost:27017/db'</span>;</pre></div></div>
             
         </li>
         
@@ -150,7 +150,7 @@
             <div class="content"><div class='highlight'><pre>
 <span class="hljs-keyword">var</span> app = express();
 
-process.env.ENVIRONMENT == <span class="hljs-string">'DEV'</span> ? mongooseUri = <span class="hljs-string">'mongodb://localhost:27017/praxicorp'</span> : <span class="hljs-string">''</span>;
+process.env.ENVIRONMENT == <span class="hljs-string">'DEV'</span> ? mongooseUri = <span class="hljs-string">'mongodb://localhost:27017/db'</span> : <span class="hljs-string">''</span>;
 process.env.ENVIRONMENT == <span class="hljs-string">'PROD'</span> ? mongooseUri =process.env.MONGOLAB_URI : <span class="hljs-string">''</span>;
 
 <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'Running in '</span> + process.env.ENVIRONMENT + <span class="hljs-string">' mode'</span>);

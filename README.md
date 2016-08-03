@@ -113,6 +113,31 @@ Production Ready Checklist:
 Since our Heroku instance has two-factor authentication enabled you will need an app such as Google Authenticator to login
 
 ------------------------------
+###AWS
+
+In order to deploy API instance to AWS it is necessary to have a configured env.config with necessary environment variables.  In addition, the config.yml file must contain a branch default dev and master name such as {instance}-api-stage-v1
+
+------------------------------
+###Mongo
+
+For initializing Local DB
+<br />```sudo mkdir -p data/db```
+<br />```sudo chmod -R 0777 data/db```
+<br />```sudo mongod --dbpath data/db```
+<br />```mongo-express -u user -p password -d database```
+
+Updating a collection
+<br />```show dbs```
+<br />```use {db_name}```
+<br />```db.users.update({}, {$set: {tenant_id: 123}}, { multi: true })```
+
+Killing a process
+<br />```ps -ef | grep mongod```
+<br />```sudo kill -9 <pid> // for example sudo kill -9 12912```
+
+<br />https://docs.mongodb.com/manual/tutorial/write-scripts-for-the-mongo-shell/
+
+------------------------------
 ###Stripe
 
 Be sure to have correct public key and sandbox keys

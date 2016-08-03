@@ -7,7 +7,7 @@ process.env.ENVIRONMENT == 'DEV' || process.env.ENVIRONMENT == undefined ? strip
 process.env.ENVIRONMENT == 'PROD' ? stripeApiKey = process.env.STRIPE_KEY : '';
 process.env.ENVIRONMENT == 'PROD' ? stripePublishableKey = process.env.STRIPE_PUB_KEY : '';
 
-process.env.ENVIRONMENT == 'DEV' || process.env.ENVIRONMENT == undefined ? mongooseUri = 'mongodb://localhost:27017/praxicorp' : '';
+process.env.ENVIRONMENT == 'DEV' || process.env.ENVIRONMENT == undefined ? mongooseUri = 'mongodb://localhost:27017/ag-dev' : '';
 process.env.ENVIRONMENT == 'PROD' ? mongooseUri = process.env.MONGOLAB_URI : '';
 
 module.exports = {
@@ -18,7 +18,7 @@ module.exports = {
   sessionSecret: process.env.SESSION_SECRET || 'change this',
 
   mailgun: {
-    user: process.env.MAILGUN_USER || 'sulkuatam@gmail.com',
+    user: process.env.MAILGUN_USER || 'support@argent-tech.com',
     password: process.env.MAILGUN_PASSWORD || ''
   },
 

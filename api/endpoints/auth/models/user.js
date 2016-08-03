@@ -89,6 +89,7 @@ var credentialsDef = {
 }
 
 var UserSchema = new mongoose.Schema({
+  tenant_id: { type: String },
   first_name: { type: String },
   last_name: { type: String },
   username: { type: String, lowercase: true, trim: true, unique : true, required : true },

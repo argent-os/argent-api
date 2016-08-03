@@ -59,6 +59,7 @@ module.exports = function (app, options) {
     authorize:      '/v1/authorize',
     keepalive:      '/v1/keepalive',
     profile:        '/v1/profile',
+    sanitize:       '/v1/sanitize',
     apikey:         '/v1/apikey',
     remove:         '/v1/removeaccount',
     billing:        '/v1/billing',

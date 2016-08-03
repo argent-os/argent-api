@@ -42,8 +42,8 @@ module.exports = function (app, options) {
       as well as things like cors and bodyParser which makes handling JSON requests easier
   */
   var userController = require('../auth/controllers/user-controller');
-  var utils = require('./utils');
-  var currencyFormat = require('./currencyFormat');
+  var utils = require('./lib/utils');
+  var format = require('./lib/format');
   var secrets = require('../auth/config/secrets');
   var options = secrets.stripeOptions;
   var log4js = require('log4js');
@@ -441,19 +441,19 @@ module.exports = function (app, options) {
                     var transactionAmount = transactions.data[i].amount;
                     switch(currency){
                     case "usd":
-                      var transactionAmountFormatted = currencyFormat.getCommaSeparatedFormat(currencySymbol, transactionAmount);
+                      var transactionAmountFormatted = format.getCommaSeparatedFormat(currencySymbol, transactionAmount);
                       break;
                     case "cad":
-                      var transactionAmountFormatted = currencyFormat.getCommaSeparatedFormat(currencySymbol, transactionAmount);
+                      var transactionAmountFormatted = format.getCommaSeparatedFormat(currencySymbol, transactionAmount);
                       break;
                     case "aud":
-                      var transactionAmountFormatted = currencyFormat.getCommaSeparatedFormat(currencySymbol, transactionAmount);
+                      var transactionAmountFormatted = format.getCommaSeparatedFormat(currencySymbol, transactionAmount);
                       break;  
                     case "eur":
-                      var transactionAmountFormatted = currencyFormat.getDotSeparatedFormat(currencySymbol, transactionAmount);
+                      var transactionAmountFormatted = format.getDotSeparatedFormat(currencySymbol, transactionAmount);
                       break;
                     case "gbp":
-                      var transactionAmountFormatted = currencyFormat.getCommaSeparatedFormat(currencySymbol, transactionAmount);
+                      var transactionAmountFormatted = format.getCommaSeparatedFormat(currencySymbol, transactionAmount);
                       break;
                     default:
                       transactionAmountFormatted = transactionAmount;
@@ -591,8 +591,8 @@ module.exports = function (app, options) {
       userController.getUser(user_id).then(function (user) {
           var stripe = require('stripe')(user.stripe.secretKey);
           var amountInCents = req.body.amount;
-          var application_fee = Math.round((amountInCents*0.06));
-          var description = "New charge in the amount of " + currencyFormat.getCommaSeparatedFormat("USD", amountInCents/100);
+          var application_fee = Math.round((amountInCents*0.006));
+          var description = "New charge in the amount of " + format.getCommaSeparatedFormat("USD", amountInCents/100);
           logger.info(amountInCents);
           logger.info(application_fee);
           logger.info(description);
@@ -632,8 +632,8 @@ module.exports = function (app, options) {
     userController.getDelegatedUserByUsername(delegate_user).then(function (delegateUser) {
         var stripe = require('stripe')(delegateUser.stripe.secretKey);
         var amountInCents = req.body.amount;
-        var application_fee = Math.round((amountInCents*0.06));
-        var description = "New charge in the amount of " + currencyFormat.getCommaSeparatedFormat("USD", amountInCents/10000);
+        var application_fee = Math.round((amountInCents*0.006));
+        var description = "New charge in the amount of " + format.getCommaSeparatedFormat("USD", amountInCents/10000);
         // logger.info(amountInCents);
         // logger.info(application_fee);
         // logger.info(description);
@@ -697,7 +697,7 @@ module.exports = function (app, options) {
                           currency: "usd",
                           customer: customer.id, 
                           amount: amountInCents,
-                          application_fee: Math.round((amountInCents*0.02))                     
+                          application_fee: Math.round((amountInCents*0.002))                     
                         }).then(function(charge) {
                             // logger.info(res)
                             res.json({status: 200, charge: charge})
@@ -716,7 +716,7 @@ module.exports = function (app, options) {
                         currency: "usd",
                         customer: customers.data[i].id, 
                         amount: amountInCents,
-                        application_fee: Math.round((amountInCents*0.02))                     
+                        application_fee: Math.round((amountInCents*0.002))                     
                       }).then(function(charge) {
                           // logger.info(res)
                           res.json({status: 200, charge: charge})
@@ -746,7 +746,7 @@ module.exports = function (app, options) {
                             currency: "usd",
                             customer: customer.id, 
                             amount: amountInCents,
-                            application_fee: Math.round((amountInCents*0.02))                     
+                            application_fee: Math.round((amountInCents*0.002))                     
                           }).then(function(charge) {
                               // logger.info(res)
                               res.json({status: 200, charge: charge})
@@ -998,7 +998,7 @@ module.exports = function (app, options) {
       }); 
   });    
   // Get customer metadata     
-  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.customers + "/:cust_id", function(req, res, next) {
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.customers + "/:cust_id", userController.authorize, function(req, res, next) {
       var user_id = req.params.uid;
       var customer_id = req.params.cust_id;      
       userController.getUser(user_id).then(function (user) {
@@ -1020,6 +1020,11 @@ module.exports = function (app, options) {
   // SUBSCRIPTIONS
   // Delegated subscription creation
   app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.subscriptions + "/:delegate_username", function(req, res, next) {
+
+    if (!req.headers.authorization) {
+      return res.status(401).send({ message: 'Unauthorized' });
+    }
+
     // Flow
     // Create a subscription with the credit card token
     // Find the user in the database
@@ -1446,9 +1451,9 @@ module.exports = function (app, options) {
       });
   }); 
 
-  // // PRODUCTS
+  // PRODUCTS
   // stripe.products.create(params)
-    app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.products, userController.authorize, function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.products, userController.authorize, function(req, res, next) {
       var user_id = req.params.uid
       logger.info(req.body.attributes);
       userController.getUser(user_id).then(function (user) {
@@ -1735,8 +1740,8 @@ module.exports = function (app, options) {
             if (receiver.filled) {
               // create a bitcoin transfer on receiver filled
               var amountInCents = receiver.amount;
-              var application_fee = Math.round((amountInCents*0.01));
-              var description = "New transfer in the amount of " + currencyFormat.getCommaSeparatedFormat("USD", amountInCents/100);
+              var application_fee = Math.round((amountInCents*0.002));
+              var description = "New transfer in the amount of " + format.getCommaSeparatedFormat("USD", amountInCents/100);
               logger.info("receiver amount in cents", receiver.amount);
               logger.info("application fee", application_fee);
               logger.info("description", description);

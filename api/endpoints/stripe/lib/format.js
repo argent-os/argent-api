@@ -1,4 +1,4 @@
-// currencyFormat.js
+// format.js
 var accounting = require('accounting');
 module.exports = {
 	//

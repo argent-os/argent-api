@@ -90,14 +90,12 @@ process.on('SIGINT', function() {
 // Send the current and and options into the endpoints
 // Be sure name in package.json matches lib -> endpoint file name
 var home         = require('./api/routes/home');
-var prot_auth    = require('./api/endpoints/auth')(app, options);
-var prot_post    = require('./api/endpoints/post')(app, options);
-var prot_org     = require('./api/endpoints/organization')(app, options);
-var prot_company = require('./api/endpoints/company')(app, options);
+var auth         = require('./api/endpoints/auth')(app, options);
 var notification = require('./api/endpoints/notification')(app, options);
 var stripe       = require('./api/endpoints/stripe/stripe.endpoint')(app, options);
 var plaid        = require('./api/endpoints/plaid/plaid.endpoint')(app, options);
 var cloudinary   = require('./api/endpoints/cloudinary/cloudinary.endpoint')(app, options);
+var scribe       = require('./api/endpoints/scribe/scribe.endpoint')(app, options);
 var messages     = require('./api/endpoints/messages/messages.endpoint')(app, options);
 var email        = require('./api/endpoints/email/email.endpoint')(app, options);
 var messages     = require('./api/endpoints/receipts/receipts.endpoint')(app, options);
