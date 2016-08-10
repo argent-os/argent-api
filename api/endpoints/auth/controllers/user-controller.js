@@ -680,6 +680,7 @@ UserController.prototype.authorize = function (req, res, next) {
     payload = jwt.decode(token, tokenSecret);
   }
   catch (err) {
+    logger.error(err);
     return res.status(401).send({ message: err.message, err: err });
   }
 
@@ -688,6 +689,7 @@ UserController.prototype.authorize = function (req, res, next) {
   }
   // logger.debug('payload user is', payload.user);
   // logger.debug('payload is', payload);
+  // IMPORTANT: Do a check for authorize, once a req.user is set from payload, that the request :uid matches the req.user._id
   req.user = payload.user;
   next();
 }
@@ -872,11 +874,12 @@ function createApiKey(user) {
 }
 
 function createJWT(user, data) {
-  user = _.pick(user, '_id', 'email', 'username');  
+  user = _.pick(user, '_id', 'email', 'tenant_id', 'username');  
   var payload = {
     user: {
       _id: user["_id"],
       email: user["email"],
+      tenant_id: user["tenant_id"],
       username: user["username"]
     },
     iat: new Date().getTime(),

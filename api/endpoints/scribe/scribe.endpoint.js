@@ -28,11 +28,17 @@ module.exports = function (app, options) {
 		res.json({msg:"success", status: 200})
 	});
 
-	// CRUD Ops
+	// RESTful Operations
 
 	// GET a single subscription /v1/scribe/5758e81c2fbbb785695903d9/subscriptions/579d2468facee2f869ca04ad
 	app.get(endpoint.version + endpoint.base + "/:tenant_id" + endpoint.subscriptions + "/:sid", function(req, res, next) {
 		logger.trace('req get scribe received');
+
+		if(req.user.tenant_id !== req.params.tenant_id) {
+			logger.info("unauthorized tenant id");
+			return res.json({ status: 401, msg: "Unauthorized" });
+		}
+
 		// TODO: Provide check for tenant id matching & requesting user id
 		Scribe.findById(req.params.tenant_id, function(err, scribe) {
 			if(err) {
@@ -45,8 +51,15 @@ module.exports = function (app, options) {
 	});	
 
 	// GET all subscriptions /v1/scribe/5758e81c2fbbb785695903d9/subscriptions
-	app.get(endpoint.version + endpoint.base + "/:tenant_id" + endpoint.subscriptions, function(req, res, next) {
+	app.get(endpoint.version + endpoint.base + "/:tenant_id" + endpoint.subscriptions, userController.authorize, function(req, res, next) {
 		logger.trace('req get all scribe received');
+		//logger.info(req.user);
+		
+		if(req.user.tenant_id !== req.params.tenant_id) {
+			logger.info("unauthorized tenant id");
+			return res.json({ status: 401, msg: "Unauthorized" });
+		}
+
 		// TODO: Provide check for tenant id matching & requesting user id
 		Scribe.find({ tenant_id: req.params.tenant_id }, function(err, scribe) {
 			if(err) {
@@ -61,6 +74,12 @@ module.exports = function (app, options) {
 	// POST new subscription /v1/scribe/5758e81c2fbbb785695903d9/subscriptions
 	app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.subscriptions, function(req, res, next) {
 		logger.trace('req post new scribe received');
+		
+		if(req.user._id !== req.params.uid) {
+			logger.info("unauthorized uid");
+			return res.json({ status: 401, msg: "Unauthorized" });
+		}
+
 		var scribe = new Scribe(req.body.scribe);
 		logger.info(scribe);
 	    scribe.save(function(err) {
@@ -77,12 +96,24 @@ module.exports = function (app, options) {
 	// UPDATE subscription /v1/scribe/5758e81c2fbbb785695903d9/subscriptions/579d2468facee2f869ca04ad
 	app.put(endpoint.version + endpoint.base + "/:uid" + endpoint.subscriptions + "/:sid", function(req, res, next) {
 		logger.trace('req update scribe received');
+
+		if(req.user._id !== req.params.uid) {
+			logger.info("unauthorized uid");
+			return res.json({ status: 401, msg: "Unauthorized" });
+		}
+
 		res.json({msg:"success", status: 200})
 	});	
 
 	// DELETE a subscription /v1/scribe/5758e81c2fbbb785695903d9/subscriptions/579d2468facee2f869ca04ad
 	app.delete(endpoint.version + endpoint.base + "/:uid" + endpoint.subscriptions + "/:sid", function(req, res, next) {
 		logger.trace('req delete scribe received');
+
+		if(req.user._id !== req.params.uid) {
+			logger.info("unauthorized uid");
+			return res.json({ status: 401, msg: "Unauthorized" });
+		}
+
 		res.json({msg:"success", status: 200})
 	});	
 

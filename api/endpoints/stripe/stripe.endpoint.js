@@ -42,6 +42,7 @@ module.exports = function (app, options) {
       as well as things like cors and bodyParser which makes handling JSON requests easier
   */
   var userController = require('../auth/controllers/user-controller');
+  var Scribe = require('../scribe/models/scribe.model');
   var utils = require('./lib/utils');
   var format = require('./lib/format');
   var secrets = require('../auth/config/secrets');
@@ -57,6 +58,8 @@ module.exports = function (app, options) {
   var multer  = require('multer');
   var upload = multer({ dest: 'images/' });
   var fs = require('fs');
+  var jwt = require('jwt-simple');
+  var tokenSecret = process.env.JWT_SECRET;
   app.use(cors());
   app.use(bodyParser.json());
   app.use(expressValidator());
@@ -89,6 +92,12 @@ module.exports = function (app, options) {
 
   // /v1/stripe/oauth/callback
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.oauth + '/callback', userController.authorize, function(req, res) {
+    
+    if(req.user._id !== req.params.uid) {
+        logger.info("unauthorized uid");
+        return res.json({ status: 401, msg: "Unauthorized" });
+    }
+
     var code = req.query.code;
     // console.log('received code', code);
     // Make /oauth/token endpoint POST request
@@ -130,8 +139,13 @@ module.exports = function (app, options) {
   app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/example", userController.authorize, function(req, res, next) {
     logger.trace('example charge request received');
 
+    if(req.user._id !== req.params.uid) {
+        logger.info("unauthorized uid");
+        return res.json({ status: 401, msg: "Unauthorized" });
+    }
+
     if (req.body.amount > 150000) {
-      return res.status(407).send({ message: 'Amount cannot be greater than $500' });
+      return res.status(407).send({ message: 'Amount cannot be greater than $1,500' });
     }
 
     var stripeToken = req.body.stripeToken;
@@ -160,6 +174,12 @@ module.exports = function (app, options) {
   // TODO: Complete API
   // ACCOUNT
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.account, userController.authorize, function(req, res, next) {
+      
+      if(req.user._id !== req.params.uid) {
+          logger.info("unauthorized uid");
+          return res.json({ status: 401, msg: "Unauthorized" });
+      }
+
       logger.trace("request received | get account")
       var user_id = req.params.uid
       userController.getUser(user_id).then(function (user) {
@@ -177,12 +197,30 @@ module.exports = function (app, options) {
       });
   });
   app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.account, userController.authorize, function(req, res, next) {
+      
+      if(req.user._id !== req.params.uid) {
+          logger.info("unauthorized uid");
+          return res.json({ status: 401, msg: "Unauthorized" });
+      }
+
       stripe.account.create([params])
   }); 
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.account, userController.authorize, function(req, res, next) {
+      
+      if(req.user._id !== req.params.uid) {
+          logger.info("unauthorized uid");
+          return res.json({ status: 401, msg: "Unauthorized" });
+      }
+
       stripe.account.list([params])
   }); 
   app.put(endpoint.version + endpoint.base + "/:uid" + endpoint.account, userController.authorize, function(req, res, next) {
+        
+      if(req.user._id !== req.params.uid) {
+          logger.info("unauthorized uid");
+          return res.json({ status: 401, msg: "Unauthorized" });
+      }  
+
       logger.trace("request received | update stripe account")
       var user_id = req.params.uid;
       var parameters = req.body;
@@ -208,6 +246,12 @@ module.exports = function (app, options) {
   // Endpoint /v1/stripe/a7sd89f7a98df/external_account?type=bank
   // Add credit card external account
   app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.external_account, userController.authorize, function(req, res, next) {
+      
+      if(req.user._id !== req.params.uid) {
+          logger.info("unauthorized uid");
+          return res.json({ status: 401, msg: "Unauthorized" });
+      }
+
       logger.trace("request received | add account external account")
       var card_obj;
       if(req.query.type == "card") {
@@ -267,6 +311,12 @@ module.exports = function (app, options) {
   });   
 
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.external_account, userController.authorize, function(req, res, next) {
+      
+      if(req.user._id !== req.params.uid) {
+          logger.info("unauthorized uid");
+          return res.json({ status: 401, msg: "Unauthorized" });
+      }
+
       logger.trace("request received | list external accounts.");
       var user_id = req.params.uid
       userController.getUser(user_id).then(function (user) {
@@ -287,6 +337,12 @@ module.exports = function (app, options) {
 
 
   app.delete(endpoint.version + endpoint.base + "/:uid" + endpoint.external_account + "/:bank_acct_id", userController.authorize, function(req, res, next) {
+      
+      if(req.user._id !== req.params.uid) {
+          logger.info("unauthorized uid");
+          return res.json({ status: 401, msg: "Unauthorized" });
+      }
+
       logger.trace("request received | list external accounts.");
       var user_id = req.params.uid
       var bank_id = req.params.bank_acct_id
@@ -308,6 +364,12 @@ module.exports = function (app, options) {
 
   // BALANCE
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.balance, userController.authorize, function(req, res, next) {
+      
+      if(req.user._id !== req.params.uid) {
+          logger.info("unauthorized uid");
+          return res.json({ status: 401, msg: "Unauthorized" });
+      }
+
       logger.trace("getting user balance")      
       var user_id = req.params.uid;
       userController.getUser(user_id).then(function (user) {
@@ -326,6 +388,14 @@ module.exports = function (app, options) {
   // HISTORY
   // Get user transactions history
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.transactions, userController.authorize, function(req, res, next) {
+
+      if(req.user._id !== req.params.uid) {
+          logger.info("unauthorized uid");
+          return res.json({ status: 401, msg: "Unauthorized" });
+      }
+
+      // logger.info(req.user);
+      // logger.info(req.params.uid);
       logger.trace("getting user transaction history")
       var user_id = req.params.uid
       userController.getUser(user_id).then(function (user) {
@@ -349,11 +419,23 @@ module.exports = function (app, options) {
       })       
   });     
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.transactions, userController.authorize, function(req, res, next) {
+      
+      if(req.user._id !== req.params.uid) {
+          logger.info("unauthorized uid");
+          return res.json({ status: 401, msg: "Unauthorized" });
+      }
+
       stripe.balance.retrieveTransaction(transactionId)
   });
 
   // Transaction History
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.history + "/:interval", function(req, res, next) {
+      
+      if(req.user._id !== req.params.uid) {
+          logger.info("unauthorized uid");
+          return res.json({ status: 401, msg: "Unauthorized" });
+      }
+
       var user_id = req.params.uid;
       var interval = req.params.interval;
       // /v1/stripe/09s8df0a9s8d/history?interval=year&currency=usd&number=10
@@ -476,6 +558,11 @@ module.exports = function (app, options) {
 
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.history, userController.authorize, function(req, res, next) {
       
+      if(req.user._id !== req.params.uid) {
+          logger.info("unauthorized uid");
+          return res.json({ status: 401, msg: "Unauthorized" });
+      }
+
       var user_id = req.params.uid
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
@@ -575,15 +662,20 @@ module.exports = function (app, options) {
       with the charge in the response and send that back as JSON.  If there is an error we
       log the error.
   */
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge, function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge, userController.authorize, function(req, res, next) {
       // POS Charge, aka pay yourself through a terminal
       if (!req.headers.authorization) {
         return res.status(401).send({ message: 'Unauthorized' });
       }
 
       if (req.body.amount > 150000) {
-        return res.status(407).send({ message: 'Amount cannot be greater than $500' });
+        return res.status(407).send({ message: 'Amount cannot be greater than $1,500' });
       }
+
+      if(req.user._id !== req.params.uid) {
+          logger.info("unauthorized uid");
+          return res.json({ status: 401, msg: "Unauthorized" });
+      }      
 
       // TODO: Implement check of auth token
       logger.info("POS charge")
@@ -592,7 +684,7 @@ module.exports = function (app, options) {
           var stripe = require('stripe')(user.stripe.secretKey);
           var amountInCents = req.body.amount;
           var application_fee = Math.round((amountInCents*0.006));
-          var description = "New charge in the amount of " + format.getCommaSeparatedFormat("USD", amountInCents/100);
+          var description = "POS charge in the amount of " + format.getCommaSeparatedFormat("USD", amountInCents);
           logger.info(amountInCents);
           logger.info(application_fee);
           logger.info(description);
@@ -615,8 +707,11 @@ module.exports = function (app, options) {
   });
 
   // Delegated one time charge, pay another delegated user
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/:delegate_username", function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/:delegate_username", userController.authorize, function(req, res, next) {
     // Delegated charge, aka someone pays you
+    
+    logger.info("delegated charge request")
+
     if (!req.headers.authorization) {
       return res.status(401).send({ message: 'Unauthorized' });
     }
@@ -625,8 +720,11 @@ module.exports = function (app, options) {
       return res.status(407).send({ message: 'Amount cannot be greater than $1,500' });
     }
 
-    // TODO: Implement check of auth token
-    logger.info("delegated charge request")
+    if(req.user._id !== req.params.uid) {
+        logger.info("unauthorized uid");
+        return res.json({ status: 401, msg: "Unauthorized" });
+    }    
+
     var user_id = req.params.uid;
     var delegate_user = req.params.delegate_username;
     userController.getDelegatedUserByUsername(delegate_user).then(function (delegateUser) {
@@ -775,6 +873,12 @@ module.exports = function (app, options) {
     }) 
   })
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.charge, userController.authorize, function(req, res, next) {
+      
+      if(req.user._id !== req.params.uid) {
+          logger.info("unauthorized uid");
+          return res.json({ status: 401, msg: "Unauthorized" });
+      }
+
       var user_id = req.params.uid;
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey); 
@@ -797,6 +901,12 @@ module.exports = function (app, options) {
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/:charge_id", userController.authorize, function(req, res, next) {
       var user_id = req.params.uid;
       var charge_id = req.params.charge_id;
+      
+      if(req.user._id !== req.params.uid) {
+          logger.info("unauthorized uid");
+          return res.json({ status: 401, msg: "Unauthorized" });
+      }
+
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);      
         stripe.charges.retrieve(charge_id, function(err, charge) {
@@ -813,6 +923,12 @@ module.exports = function (app, options) {
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/:charge_id", userController.authorize, function(req, res, next) {
       var user_id = req.params.uid;
       var charge_id = req.params.charge_id;
+      
+      if(req.user._id !== req.params.uid) {
+          logger.info("unauthorized uid");
+          return res.json({ status: 401, msg: "Unauthorized" });
+      }
+
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);      
         stripe.charges.capture(charge_id, function(err, charge) {
@@ -829,6 +945,12 @@ module.exports = function (app, options) {
   app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/:charge_id", userController.authorize, function(req, res, next) {
       var user_id = req.params.uid;
       var charge_id = req.params.charge_id;
+      
+      if(req.user._id !== req.params.uid) {
+          logger.info("unauthorized uid");
+          return res.json({ status: 401, msg: "Unauthorized" });
+      }
+
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);      
         stripe.charges.update(charge_id, {}, function(err, charge) {
@@ -844,32 +966,68 @@ module.exports = function (app, options) {
   });
   app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/close/dispute", userController.authorize, function(req, res, next) {
       //stripe.charges.closeDispute(chargeId, params)
+      if(req.user._id !== req.params.uid) {
+          logger.info("unauthorized uid");
+          return res.json({ status: 401, msg: "Unauthorized" });
+      }      
   });
   app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/set/metadata", userController.authorize, function(req, res, next) {
       //stripe.charges.setMetadata(chargeId, metadataObject)
+      if(req.user._id !== req.params.uid) {
+          logger.info("unauthorized uid");
+          return res.json({ status: 401, msg: "Unauthorized" });
+      }      
   });
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/get/metadata", userController.authorize, function(req, res, next) {
       //stripe.charges.getMetadata(chargeId)
+      if(req.user._id !== req.params.uid) {
+          logger.info("unauthorized uid");
+          return res.json({ status: 401, msg: "Unauthorized" });
+      }      
   });
   app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/mark/safe", userController.authorize, function(req, res, next) {
       //stripe.charges.markAsSafe(chargeId)
+      if(req.user._id !== req.params.uid) {
+          logger.info("unauthorized uid");
+          return res.json({ status: 401, msg: "Unauthorized" });
+      }      
   });
   app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/mark/fraud", userController.authorize, function(req, res, next) {
       //stripe.charges.markAsFraudulent(chargeId)
+      if(req.user._id !== req.params.uid) {
+          logger.info("unauthorized uid");
+          return res.json({ status: 401, msg: "Unauthorized" });
+      }      
   });
 
   // COUPONS
   app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.coupons, userController.authorize, function(req, res, next) {
       //stripe.coupons.create(params)
+      if(req.user._id !== req.params.uid) {
+          logger.info("unauthorized uid");
+          return res.json({ status: 401, msg: "Unauthorized" });
+      }      
   });
   app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.coupons, userController.authorize, function(req, res, next) {
       //stripe.coupons.list([params])
+      if(req.user._id !== req.params.uid) {
+          logger.info("unauthorized uid");
+          return res.json({ status: 401, msg: "Unauthorized" });
+      }      
   });
   app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.coupons, userController.authorize, function(req, res, next) {
       //stripe.coupons.retrieve(chargeId)
+      if(req.user._id !== req.params.uid) {
+          logger.info("unauthorized uid");
+          return res.json({ status: 401, msg: "Unauthorized" });
+      }      
   });
   app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.coupons, userController.authorize, function(req, res, next) {
       //stripe.coupons.del(chargeId)
+      if(req.user._id !== req.params.uid) {
+          logger.info("unauthorized uid");
+          return res.json({ status: 401, msg: "Unauthorized" });
+      }      
   });
 
 
@@ -881,6 +1039,12 @@ module.exports = function (app, options) {
   */
   // Create customer
   app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.customers, userController.authorize, function(req, res, next) {
+      
+      if(req.user._id !== req.params.uid) {
+          logger.info("unauthorized uid");
+          return res.json({ status: 401, msg: "Unauthorized" });
+      }
+
       var user_id = req.params.uid;
       var params = {
         email: req.body.email,
@@ -903,6 +1067,12 @@ module.exports = function (app, options) {
   });  
   // List customers /v1/stripe/:uid/customers/
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.customers, userController.authorize, function(req, res, next) {
+      
+      if(req.user._id !== req.params.uid) {
+          logger.info("unauthorized uid");
+          return res.json({ status: 401, msg: "Unauthorized" });
+      }
+
       logger.trace('getting user customers');
       var user_id = req.params.uid;
       userController.getUser(user_id).then(function (user) {
@@ -927,6 +1097,12 @@ module.exports = function (app, options) {
 
   // Update customer 
   app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.customers + "/:cust_id", userController.authorize, function(req, res, next) {
+      
+      if(req.user._id !== req.params.uid) {
+          logger.info("unauthorized uid");
+          return res.json({ status: 401, msg: "Unauthorized" });
+      }
+
       var user_id = req.params.uid;
       var customer_id = req.params.cust_id
       userController.getUser(user_id).then(function (user) {
@@ -946,6 +1122,12 @@ module.exports = function (app, options) {
   });  
   // Retrieve single customer
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.customers + "/:cust_id", userController.authorize, function(req, res, next) {
+      
+      if(req.user._id !== req.params.uid) {
+          logger.info("unauthorized uid");
+          return res.json({ status: 401, msg: "Unauthorized" });
+      }
+
       var user_id = req.params.uid;
       var customer_id = req.params.cust_id;      
       userController.getUser(user_id).then(function (user) {
@@ -963,6 +1145,12 @@ module.exports = function (app, options) {
   });   
   // Delete customer
   app.delete(endpoint.version + endpoint.base + "/:uid" + endpoint.customers + "/:cust_id", userController.authorize, function(req, res, next) {
+      
+      if(req.user._id !== req.params.uid) {
+          logger.info("unauthorized uid");
+          return res.json({ status: 401, msg: "Unauthorized" });
+      }
+
       var user_id = req.params.uid;
       var customer_id = req.params.cust_id;      
       userController.getUser(user_id).then(function (user) {
@@ -980,6 +1168,12 @@ module.exports = function (app, options) {
   });    
   // Set customer metadata      
   app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.customers + "/:cust_id", userController.authorize, function(req, res, next) {
+      
+      if(req.user._id !== req.params.uid) {
+          logger.info("unauthorized uid");
+          return res.json({ status: 401, msg: "Unauthorized" });
+      }
+
       var metadata_obj = req.body.metadataObject;
       var user_id = req.params.uid;
       var customer_id = req.params.cust_id;      
@@ -999,6 +1193,12 @@ module.exports = function (app, options) {
   });    
   // Get customer metadata     
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.customers + "/:cust_id", userController.authorize, function(req, res, next) {
+      
+      if(req.user._id !== req.params.uid) {
+          logger.info("unauthorized uid");
+          return res.json({ status: 401, msg: "Unauthorized" });
+      }
+
       var user_id = req.params.uid;
       var customer_id = req.params.cust_id;      
       userController.getUser(user_id).then(function (user) {
@@ -1016,16 +1216,23 @@ module.exports = function (app, options) {
       }); 
   });        
 
-  // STATUS: IN PROGRESS
   // SUBSCRIPTIONS
   // Delegated subscription creation
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.subscriptions + "/:delegate_username", function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.subscriptions + "/:delegate_username", userController.authorize, function(req, res, next) {
+
+    if (!req.headers.authorization) {
+      return res.status(401).send({ message: 'Please make sure your request has an Authorization header' });
+    }
+      
+    if(req.user._id !== req.params.uid) {
+          logger.info("unauthorized uid");
+          return res.json({ status: 401, msg: "Unauthorized" });
+      }
 
     if (!req.headers.authorization) {
       return res.status(401).send({ message: 'Unauthorized' });
     }
 
-    // Flow
     // Create a subscription with the credit card token
     // Find the user in the database
     // Make a delegated request on behalf of the user
@@ -1040,12 +1247,12 @@ module.exports = function (app, options) {
     userController.getDelegatedUserByUsername(req.params.delegate_username).then(function (delegateUser) {
       // get delegate user
       var delegateUser = delegateUser;
-      logger.info(delegateUser.username);
+      logger.info("delegate", delegateUser.username);
       var stripe = require('stripe')(delegateUser.stripe.secretKey);
       userController.getUser(user_id).then(function (user) {
         // get requesting user
         var requestingUser = user
-        logger.info(requestingUser.username);
+        logger.info("is creating charge for", requestingUser.username);
         // TODO: CHANGE LIMIT TO INFINITE! or paginate it
         var limit = req.query.limit || 100;
         var starting_after;
@@ -1092,6 +1299,14 @@ module.exports = function (app, options) {
                       plan: params.plan,
                       application_fee_percent: 1 
                     }).then(function(subscription, err) {
+                        // use the var subscription to create a new scribe plan, and pass in the tenant id as well using plan.tenant_id = user.tenant_id                        
+                        var scribe = new Scribe(subscription);
+                        scribe.tenant_id = requestingUser.tenant_id;
+                        //logger.info(scribe);
+                        scribe.save().then(function (scribe, err) {
+                          logger.info("saved scribe");
+                          //logger.info(scribe);
+                        })                      
                         res.json({ subscription: subscription })
                     }, function(err) {
                         logger.error(err)
@@ -1109,6 +1324,14 @@ module.exports = function (app, options) {
                     plan: params.plan,
                     application_fee_percent: 1
                   }).then(function(subscription, err) {
+                      // use the var subscription to create a new scribe plan, and pass in the tenant id as well using plan.tenant_id = user.tenant_id                        
+                      var scribe = new Scribe(subscription);
+                      scribe.tenant_id = requestingUser.tenant_id;
+                      //logger.info(scribe);
+                      scribe.save().then(function (scribe, err) {
+                        logger.info("saved scribe");
+                        //logger.info(scribe);
+                      })                    
                       res.json({ subscription: subscription })
                   }, function(err) {
                       logger.error(err)
@@ -1137,6 +1360,14 @@ module.exports = function (app, options) {
                         plan: params.plan,
                         application_fee_percent: 1
                       }).then(function(subscription, err) {
+                          // use the var subscription to create a new scribe plan, and pass in the tenant id as well using plan.tenant_id = user.tenant_id                        
+                          var scribe = new Scribe(subscription);
+                          scribe.tenant_id = requestingUser.tenant_id;
+                          //logger.info(scribe);
+                          scribe.save().then(function (scribe, err) {
+                            logger.info("saved scribe");
+                            //logger.info(scribe);
+                          })
                           res.json({ subscription: subscription })
                       }, function(err) {
                           logger.error(err)
@@ -1153,16 +1384,34 @@ module.exports = function (app, options) {
     }) 
   })
 
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.subscriptions, function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.subscriptions, userController.authorize, function(req, res, next) {
+      if(req.user._id !== req.params.uid) {
+          logger.info("unauthorized uid");
+          return res.json({ status: 401, msg: "Unauthorized" });
+      }      
       stripe.subscriptions.createSubscription(customerId, params)
   });   
-  app.put(endpoint.version + endpoint.base + "/:uid" + endpoint.subscriptions, function(req, res, next) {
+  app.put(endpoint.version + endpoint.base + "/:uid" + endpoint.subscriptions, userController.authorize, function(req, res, next) {
+      if(req.user._id !== req.params.uid) {
+          logger.info("unauthorized uid");
+          return res.json({ status: 401, msg: "Unauthorized" });
+      }      
       stripe.subscriptions.updateSubscription(customerId, subscriptionId, params)
   });   
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.subscriptions, function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.subscriptions, userController.authorize, function(req, res, next) {
+      if(req.user._id !== req.params.uid) {
+          logger.info("unauthorized uid");
+          return res.json({ status: 401, msg: "Unauthorized" });
+      }      
       stripe.subscriptions.cancelSubscription(customerId, subscriptionId, params)
   });   
-  app.delete(endpoint.version + endpoint.base + "/:uid" + endpoint.subscriptions + "/:sub_id", function(req, res, next) {
+  app.delete(endpoint.version + endpoint.base + "/:uid" + endpoint.subscriptions + "/:sub_id", userController.authorize, function(req, res, next) {
+      
+      if(req.user._id !== req.params.uid) {
+          logger.info("unauthorized uid");
+          return res.json({ status: 401, msg: "Unauthorized" });
+      }
+
       var subscription_id = req.params.sub_id;
       var user_id = req.params.uid;    
       logger.debug("deleting subscription ", subscription_id)
@@ -1179,7 +1428,13 @@ module.exports = function (app, options) {
         });
       });
   });   
-  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.subscriptions, function(req, res, next) {
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.subscriptions, userController.authorize, function(req, res, next) {
+      
+      if(req.user._id !== req.params.uid) {
+          logger.info("unauthorized uid");
+          return res.json({ status: 401, msg: "Unauthorized" });
+      }
+
       logger.debug('getting user subscriptions')
       var user_id = req.params.uid
       userController.getUser(user_id).then(function (user) {
@@ -1202,27 +1457,57 @@ module.exports = function (app, options) {
         );
       });      
   });   
-  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.subscriptions, function(req, res, next) {
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.subscriptions, userController.authorize, function(req, res, next) {
+      
+      if(req.user._id !== req.params.uid) {
+          logger.info("unauthorized uid");
+          return res.json({ status: 401, msg: "Unauthorized" });
+      }
+
       stripe.subscriptions.retrieveSubscription(customerId, subscriptionId)
   });   
 
   // CARDS
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.cards, function(req, res, next) {
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.cards, userController.authorize, function(req, res, next) {
+      if(req.user._id !== req.params.uid) {
+          logger.info("unauthorized uid");
+          return res.json({ status: 401, msg: "Unauthorized" });
+      }      
       stripe.cards.createSource(customerId, params)
   });   
-  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.cards, function(req, res, next) {
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.cards, userController.authorize, function(req, res, next) {
+      if(req.user._id !== req.params.uid) {
+          logger.info("unauthorized uid");
+          return res.json({ status: 401, msg: "Unauthorized" });
+      }      
       stripe.cards.listCards(customerId)
   });   
-  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.cards, function(req, res, next) {
+  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.cards, userController.authorize, function(req, res, next) {
+      if(req.user._id !== req.params.uid) {
+          logger.info("unauthorized uid");
+          return res.json({ status: 401, msg: "Unauthorized" });
+      }      
       stripe.cards.retrieveCard(customerId, cardId)
   });   
-  app.put(endpoint.version + endpoint.base + "/:uid" + endpoint.cards, function(req, res, next) {
+  app.put(endpoint.version + endpoint.base + "/:uid" + endpoint.cards, userController.authorize, function(req, res, next) {
+      if(req.user._id !== req.params.uid) {
+          logger.info("unauthorized uid");
+          return res.json({ status: 401, msg: "Unauthorized" });
+      }      
       stripe.cards.updateCard(customerId, cardId, params)
   });   
-  app.delete(endpoint.version + endpoint.base + "/:uid" + endpoint.cards, function(req, res, next) {
+  app.delete(endpoint.version + endpoint.base + "/:uid" + endpoint.cards, userController.authorize, function(req, res, next) {
+      if(req.user._id !== req.params.uid) {
+          logger.info("unauthorized uid");
+          return res.json({ status: 401, msg: "Unauthorized" });
+      }      
       stripe.cards.deleteCard(customerId, cardId)
   });   
-  app.delete(endpoint.version + endpoint.base + "/:uid" + endpoint.cards, function(req, res, next) {
+  app.delete(endpoint.version + endpoint.base + "/:uid" + endpoint.cards, userController.authorize, function(req, res, next) {
+      if(req.user._id !== req.params.uid) {
+          logger.info("unauthorized uid");
+          return res.json({ status: 401, msg: "Unauthorized" });
+      }      
       stripe.cards.deleteDiscount(customerId)
   });     
 
@@ -1231,7 +1516,14 @@ module.exports = function (app, options) {
       Get user events and display in notifications list
   */
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.events, userController.authorize, function(req, res, next) {
+      
       logger.trace('getting user events history');
+      
+      if(req.user._id !== req.params.uid) {
+        logger.info("unauthorized uid");
+        return res.json({ status: 401, msg: "Unauthorized" });
+      }
+
       var user_id = req.params.uid
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
@@ -1292,6 +1584,11 @@ module.exports = function (app, options) {
         return res.status(407).send({ message: 'Amount cannot be greater than $1,500' });
       }
 
+      if(req.user._id !== req.params.uid) {
+        logger.info("unauthorized uid");
+        return res.json({ status: 401, msg: "Unauthorized" });
+      }
+
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
         var statement_desc = req.body.statement_descriptor || ""
@@ -1336,6 +1633,12 @@ module.exports = function (app, options) {
         - Use req.url to retrieve the query variables such as ?limit=10
   */
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.plans, userController.authorize, function(req, res, next) {
+      
+      if(req.user._id !== req.params.uid) {
+        logger.info("unauthorized uid");
+        return res.json({ status: 401, msg: "Unauthorized" });
+      }
+
       logger.debug('getting user plans')
       var user_id = req.params.uid
       userController.getUser(user_id).then(function (user) {
@@ -1359,8 +1662,8 @@ module.exports = function (app, options) {
       });
   });  
 
+  // delegated user plan retrieval
   app.get(endpoint.version + endpoint.base + endpoint.plans + "/:delegate_username", userController.authorize, function(req, res, next) {
-      // delegated user plan retrieval
       logger.debug('getting delegated user plans') // get user by username delegated // 2
       var username = req.params.delegate_username
       userController.getDelegatedUserByUsername(username).then(function (user) {
@@ -1386,21 +1689,34 @@ module.exports = function (app, options) {
 
 
   // Used to POST (update) a plan
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.plans + "/:plan_id", userController.authorize, function(req, res, next) {
+  app.put(endpoint.version + endpoint.base + "/:uid" + endpoint.plans + "/:plan_id", userController.authorize, function(req, res, next) {
+      
+      logger.info("update plan request");
+
+      if(req.user._id !== req.params.uid) {
+        logger.info("unauthorized uid");
+        return res.json({ status: 401, msg: "Unauthorized" });
+      }
+
+      if (req.body.amount > 150000) {
+        return res.status(407).send({ message: 'Amount cannot be greater than $1,500' });
+      }
+
       var plan_id = req.params.plan_id;
       var user_id = req.params.uid;
 
-      if (req.body.amount > 150000) {
-        return res.status(407).send({ message: 'Amount cannot be greater than $500' });
-      }
+      logger.info(req.body);
 
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
+        var statement_desc = req.body.statement_descriptor || ""
+        if(statement_desc.length > 20) {
+          logger.info("statement descriptor longer than 20")
+          statement_desc = statement_desc.subtring(0,20)
+        }
         var params = {
-          amount: req.body.amount,
-          interval: req.body.interval,
           name: req.body.name,
-          currency: req.body.currency
+          statement_descriptor: req.body.statement_descriptor || ""
         };
         stripe.plans.update(plan_id, params, function(err, plan) {
             if(err) {
@@ -1416,8 +1732,15 @@ module.exports = function (app, options) {
 
   // Used to GET (retrieve) a single plan
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.plans + "/:plan_id", userController.authorize, function(req, res, next) {
+      
+      if(req.user._id !== req.params.uid) {
+        logger.info("unauthorized uid");
+        return res.json({ status: 401, msg: "Unauthorized" });
+      }
+
       var plan_id = req.params.plan_id;
       var user_id = req.params.uid;
+      logger.info("getting individual plan info");
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
         stripe.plans.retrieve(plan_id, function(err, plan) {
@@ -1425,6 +1748,7 @@ module.exports = function (app, options) {
               logger.error(err)
               res.json({ error: err })                                        
             } else {
+              logger.info(plan);
               res.json({ plan: plan })              
             }
             // asynchronously called
@@ -1434,9 +1758,15 @@ module.exports = function (app, options) {
 
   // Used to DELETE a single plan
   app.delete(endpoint.version + endpoint.base + "/:uid" + endpoint.plans + "/:plan_id", userController.authorize, function(req, res, next) {
+      logger.debug("deleting plan ", plan_id)
+
+      if(req.user._id !== req.params.uid) {
+        logger.info("unauthorized uid");
+        return res.json({ status: 401, msg: "Unauthorized" });
+      }
+
       var plan_id = req.params.plan_id;
       var user_id = req.params.uid;    
-      logger.debug("deleting plan ", plan_id)
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
         stripe.plans.del(plan_id, function(err, confirmation) {
@@ -1454,6 +1784,12 @@ module.exports = function (app, options) {
   // PRODUCTS
   // stripe.products.create(params)
   app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.products, userController.authorize, function(req, res, next) {
+      
+      if(req.user._id !== req.params.uid) {
+        logger.info("unauthorized uid");
+        return res.json({ status: 401, msg: "Unauthorized" });
+      }
+
       var user_id = req.params.uid
       logger.info(req.body.attributes);
       userController.getUser(user_id).then(function (user) {
@@ -1478,6 +1814,12 @@ module.exports = function (app, options) {
   }); 
   // stripe.products.list([params])
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.products, userController.authorize, function(req, res, next) {
+      
+      if(req.user._id !== req.params.uid) {
+        logger.info("unauthorized uid");
+        return res.json({ status: 401, msg: "Unauthorized" });
+      }
+
       logger.debug('getting products')
       var user_id = req.params.uid
       userController.getUser(user_id).then(function (user) {
@@ -1501,7 +1843,15 @@ module.exports = function (app, options) {
       });
   });  
   // stripe.products.update(productId[, params])
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.products + "/:product_id", userController.authorize, function(req, res, next) {
+  app.put(endpoint.version + endpoint.base + "/:uid" + endpoint.products + "/:product_id", userController.authorize, function(req, res, next) {
+      
+      logger.info("update products request");
+
+      if(req.user._id !== req.params.uid) {
+        logger.info("unauthorized uid");
+        return res.json({ status: 401, msg: "Unauthorized" });
+      }
+
       var product_id = req.params.product_id;
       var user_id = req.params.uid;
       userController.getUser(user_id).then(function (user) {
@@ -1527,6 +1877,12 @@ module.exports = function (app, options) {
 
   // Used to GET (retrieve) a single product
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.products + "/:product_id", userController.authorize, function(req, res, next) {
+      
+      if(req.user._id !== req.params.uid) {
+        logger.info("unauthorized uid");
+        return res.json({ status: 401, msg: "Unauthorized" });
+      }
+
       var product_id = req.params.product_id;
       var user_id = req.params.uid;
       userController.getUser(user_id).then(function (user) {
@@ -1546,6 +1902,12 @@ module.exports = function (app, options) {
 
   // Used to delete a single product
   app.delete(endpoint.version + endpoint.base + "/:uid" + endpoint.products + "/:product_id", userController.authorize, function(req, res, next) {
+      
+      if(req.user._id !== req.params.uid) {
+        logger.info("unauthorized uid");
+        return res.json({ status: 401, msg: "Unauthorized" });
+      }
+
       //logger.info("deleting")
       var product_id = req.params.product_id;
       var user_id = req.params.uid;    
@@ -1596,8 +1958,13 @@ module.exports = function (app, options) {
       var user_id = req.params.uid
       //logger.debug('in transfer create')
 
+      if(req.user._id !== req.params.uid) {
+        logger.info("unauthorized uid");
+        return res.json({ status: 401, msg: "Unauthorized" });
+      }
+
       if (req.body.amount > 150000) {
-        return res.status(407).send({ message: 'Amount cannot be greater than $500' });
+        return res.status(407).send({ message: 'Amount cannot be greater than $1,500' });
       }
 
       userController.getUser(user_id).then(function (user) {
@@ -1621,6 +1988,12 @@ module.exports = function (app, options) {
   }); 
   // stripe.transfers.list([params])
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.transfers, userController.authorize, function(req, res, next) {
+      
+      if(req.user._id !== req.params.uid) {
+        logger.info("unauthorized uid");
+        return res.json({ status: 401, msg: "Unauthorized" });
+      }
+
       logger.debug('getting transfers')
       var user_id = req.params.uid
       userController.getUser(user_id).then(function (user) {
@@ -1646,6 +2019,12 @@ module.exports = function (app, options) {
 
   // stripe.transfers.retrieve(transferI_id)
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.transfers + "/:transfer_id", userController.authorize, function(req, res, next) {
+      
+      if(req.user._id !== req.params.uid) {
+        logger.info("unauthorized uid");
+        return res.json({ status: 401, msg: "Unauthorized" });
+      }
+
       var transfer_id = req.params.transfer_id;
       var user_id = req.params.uid;
       userController.getUser(user_id).then(function (user) {
@@ -1665,6 +2044,12 @@ module.exports = function (app, options) {
   
   // stripe.transfers.update(transferId[, params])
   app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.transfers + "/:transfer_id", userController.authorize, function(req, res, next) {
+      
+      if(req.user._id !== req.params.uid) {
+        logger.info("unauthorized uid");
+        return res.json({ status: 401, msg: "Unauthorized" });
+      }
+
       var transfer_id = req.params.transfer_id;
       var user_id = req.params.uid;
       userController.getUser(user_id).then(function (user) {
@@ -1691,14 +2076,20 @@ module.exports = function (app, options) {
   // stripe.transfers.setMetadata(transferId, key, value)
   // stripe.transfers.getMetadata(transferId)
 
-  // // BITCOIN (resource bitcoinReceivers)
+  // BITCOIN (resource bitcoinReceivers)
   // stripe.bitcoinReceivers.create(params)
   // Use own stripe keys to create bitcoin receivers for now, then do a delegated charge
   app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.bitcoin, userController.authorize, function(req, res, next) {
+      
+      if(req.user._id !== req.params.uid) {
+        logger.info("unauthorized uid");
+        return res.json({ status: 401, msg: "Unauthorized" });
+      }
+
       var user_id = req.params.uid;
 
       if (req.body.amount > 150000) {
-          return res.status(407).send({ message: 'Amount cannot be greater than $500' });
+          return res.status(407).send({ message: 'Amount cannot be greater than $1,500' });
       }
 
       // use our own stripe account for now as a workaround
@@ -1724,6 +2115,12 @@ module.exports = function (app, options) {
   });  
   // stripe.bitcoinReceivers.retrieve(receiverId)
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.bitcoin + "/:btc", userController.authorize, function(req, res, next) {
+      
+      if(req.user._id !== req.params.uid) {
+        logger.info("unauthorized uid");
+        return res.json({ status: 401, msg: "Unauthorized" });
+      }
+
       logger.trace("requesting bitcoin receiver")
       var user_id = req.params.uid;
       var bitcoin_receiver_id = req.params.btc;
@@ -1776,6 +2173,12 @@ module.exports = function (app, options) {
   // /v1/stripe/5asdg98a09sdf/upload/
   // note the file multipart name must be 'document' aka post with multi-part form data { document: "/path/to/file", purpose: identity_document }
   app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.upload, upload.single('document'), userController.authorize, function(req, res, next) {
+      
+      if(req.user._id !== req.params.uid) {
+        logger.info("unauthorized uid");
+        return res.json({ status: 401, msg: "Unauthorized" });
+      }
+
       logger.info("uploading document")
       var user_id = req.params.uid;
       userController.getUser(user_id).then(function (user) {
@@ -1815,6 +2218,10 @@ module.exports = function (app, options) {
 
   // VERIFICATION
   // app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.verify, userController.authorize, function(req, res, next) {
+  //     if(req.user._id !== req.params.uid) {
+  //       logger.info("unauthorized uid");
+  //       return res.json({ status: 401, msg: "Unauthorized" });
+  //     }
   //     var user_id = req.params.uid;
   //     userController.getUser(user_id).then(function (user) {
   //       // Set your secret key: remember to change this to your live secret key in production
