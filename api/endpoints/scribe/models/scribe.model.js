@@ -7,6 +7,7 @@ var Schema   = mongoose.Schema;
 var ScribeSchema = new mongoose.Schema({
   "id": { type: String },
   "tenant_id": { type: String },
+  "delegate_username": { type: String },
   "object": { type: String },
   "application_fee_percent": { type: Number },
   "cancel_at_period_end": { type: Boolean },

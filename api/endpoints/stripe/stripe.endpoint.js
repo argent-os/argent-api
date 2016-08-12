@@ -1227,7 +1227,7 @@ module.exports = function (app, options) {
     if(req.user._id !== req.params.uid) {
           logger.info("unauthorized uid");
           return res.json({ status: 401, msg: "Unauthorized" });
-      }
+    }
 
     if (!req.headers.authorization) {
       return res.status(401).send({ message: 'Unauthorized' });
@@ -1302,6 +1302,7 @@ module.exports = function (app, options) {
                         // use the var subscription to create a new scribe plan, and pass in the tenant id as well using plan.tenant_id = user.tenant_id                        
                         var scribe = new Scribe(subscription);
                         scribe.tenant_id = requestingUser.tenant_id;
+                        scribe.delegate_username = delegateUser.username;
                         //logger.info(scribe);
                         scribe.save().then(function (scribe, err) {
                           logger.info("saved scribe");
@@ -1327,6 +1328,7 @@ module.exports = function (app, options) {
                       // use the var subscription to create a new scribe plan, and pass in the tenant id as well using plan.tenant_id = user.tenant_id                        
                       var scribe = new Scribe(subscription);
                       scribe.tenant_id = requestingUser.tenant_id;
+                      scribe.delegate_username = delegateUser.username;
                       //logger.info(scribe);
                       scribe.save().then(function (scribe, err) {
                         logger.info("saved scribe");
@@ -1363,6 +1365,7 @@ module.exports = function (app, options) {
                           // use the var subscription to create a new scribe plan, and pass in the tenant id as well using plan.tenant_id = user.tenant_id                        
                           var scribe = new Scribe(subscription);
                           scribe.tenant_id = requestingUser.tenant_id;
+                          scribe.delegate_username = delegateUser.username;
                           //logger.info(scribe);
                           scribe.save().then(function (scribe, err) {
                             logger.info("saved scribe");
@@ -1398,36 +1401,88 @@ module.exports = function (app, options) {
       }      
       stripe.subscriptions.updateSubscription(customerId, subscriptionId, params)
   });   
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.subscriptions, userController.authorize, function(req, res, next) {
+
+  // DELETE Delegated request to cancel subscription
+  app.delete(endpoint.version + endpoint.base + "/:uid" + endpoint.subscriptions + "/:sub_id", userController.authorize, function(req, res, next) {
+      
+      logger.trace("cancel subscription req received")
+
+      // Based on a retrieved Scribe data object
+      // Perform a delegated cancellation of the subscription
+      // using the scribe.delegate_username and it's tenant_id
+
       if(req.user._id !== req.params.uid) {
           logger.info("unauthorized uid");
           return res.json({ status: 401, msg: "Unauthorized" });
       }      
-      stripe.subscriptions.cancelSubscription(customerId, subscriptionId, params)
-  });   
-  app.delete(endpoint.version + endpoint.base + "/:uid" + endpoint.subscriptions + "/:sub_id", userController.authorize, function(req, res, next) {
-      
-      if(req.user._id !== req.params.uid) {
-          logger.info("unauthorized uid");
-          return res.json({ status: 401, msg: "Unauthorized" });
-      }
 
       var subscription_id = req.params.sub_id;
-      var user_id = req.params.uid;    
-      logger.debug("deleting subscription ", subscription_id)
-      userController.getUser(user_id).then(function (user) {
-        var stripe = require('stripe')(user.stripe.secretKey);
-        stripe.subscriptions.del(subscription_id, function(err, confirmation) {
-            if(err) {
-              logger.error(err)
-              res.json({ error: err })                                        
-            } else {
-              res.json({ confirmation: confirmation })              
-            } 
-            // asynchronously called
-        });
-      });
+      var tenant_id = req.params.tenant_id;    
+      logger.debug("cancelling subscription", subscription_id);
+
+      /* Process | Delegated Subscription Cancellation
+         1. Retrieve the delegated user's subscription list
+         2. Retrieve a specific subscription based on the sub_id 
+         3. Cancel the subscription using cust_id and sub_id
+      */
+
+      // Find's the specific Scribe object in the database
+      Scribe.findOne({id: subscription_id}, function(err, scribe) {
+
+          if(err) {
+            logger.error(err);
+            return res.json({ err: err })
+          } 
+
+          try {
+            // Get the delegated user by the Scribe object delegate_username
+            userController.getDelegatedUserByUsername(scribe.delegate_username).then(function (user) {
+                var stripe = require('stripe')(user.stripe.secretKey);
+
+                // Cancel the user's subscription
+                logger.trace("cancelling user subscription", scribe.customer);
+                logger.trace("cancelling user subscription id", scribe.id);
+                stripe.subscriptions.del(scribe.id, function(err, confirmation) {
+                    if(err) {
+                      logger.error(err)
+                      return res.json({ error: err })                                        
+                    } else {
+                      logger.info("subscription removal confirmation");
+                      Scribe.find({id: subscription_id}).remove().exec()
+                      return res.json({ confirmation: confirmation });              
+                    } 
+                });
+            })
+          } catch(err) {
+            logger.error("caught err", err)
+            return res.json({ err: err })
+          }
+
+      })
   });   
+  // app.delete(endpoint.version + endpoint.base + "/:uid" + endpoint.subscriptions + "/:sub_id", userController.authorize, function(req, res, next) {
+      
+  //     if(req.user._id !== req.params.uid) {
+  //         logger.info("unauthorized uid");
+  //         return res.json({ status: 401, msg: "Unauthorized" });
+  //     }
+
+  //     var subscription_id = req.params.sub_id;
+  //     var user_id = req.params.uid;    
+  //     logger.debug("deleting subscription ", subscription_id)
+  //     userController.getUser(user_id).then(function (user) {
+  //       var stripe = require('stripe')(user.stripe.secretKey);
+  //       stripe.subscriptions.del(subscription_id, function(err, confirmation) {
+  //           if(err) {
+  //             logger.error(err)
+  //             res.json({ error: err })                                        
+  //           } else {
+  //             res.json({ confirmation: confirmation })              
+  //           } 
+  //           // asynchronously called
+  //       });
+  //     });
+  // });   
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.subscriptions, userController.authorize, function(req, res, next) {
       
       if(req.user._id !== req.params.uid) {
@@ -1592,9 +1647,9 @@ module.exports = function (app, options) {
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
         var statement_desc = req.body.statement_descriptor || ""
-        if(statement_desc.length > 20) {
-          logger.info("statement descriptor longer than 20")
-          statement_desc = statement_desc.subtring(0,20)
+        if(statement_desc.length > 22) {
+          logger.info("statement descriptor longer than 22")
+          statement_desc = statement_desc.subtring(0,22)
         }
         var params = {
           id: req.body.id,          
@@ -1710,9 +1765,9 @@ module.exports = function (app, options) {
       userController.getUser(user_id).then(function (user) {
         var stripe = require('stripe')(user.stripe.secretKey);
         var statement_desc = req.body.statement_descriptor || ""
-        if(statement_desc.length > 20) {
-          logger.info("statement descriptor longer than 20")
-          statement_desc = statement_desc.subtring(0,20)
+        if(statement_desc.length > 22) {
+          logger.info("statement descriptor longer than 22")
+          statement_desc = statement_desc.subtring(0,22)
         }
         var params = {
           name: req.body.name,

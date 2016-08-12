@@ -18,9 +18,6 @@ module.exports = function (app, options) {
 	app.use(bodyParser.json());
 	app.use(expressValidator());
 
-
-	// TODO: Secure Scribe endpoints with JWT Authentication middleware
-
 	// PING
 	// curl -X POST -i -H "Content-Type: application/json" http://localhost:5001/v1/scribe/ping or http://YOUR_IP_ADDRESS:5001/v1/scribe/ping
 	app.post(endpoint.version + endpoint.base + endpoint.ping, function(req, res, next) {
@@ -31,7 +28,7 @@ module.exports = function (app, options) {
 	// RESTful Operations
 
 	// GET a single subscription /v1/scribe/5758e81c2fbbb785695903d9/subscriptions/579d2468facee2f869ca04ad
-	app.get(endpoint.version + endpoint.base + "/:tenant_id" + endpoint.subscriptions + "/:sid", function(req, res, next) {
+	app.get(endpoint.version + endpoint.base + "/:tenant_id" + endpoint.subscriptions + "/:sub_id", function(req, res, next) {
 		logger.trace('req get scribe received');
 
 		if(req.user.tenant_id !== req.params.tenant_id) {
@@ -39,7 +36,6 @@ module.exports = function (app, options) {
 			return res.json({ status: 401, msg: "Unauthorized" });
 		}
 
-		// TODO: Provide check for tenant id matching & requesting user id
 		Scribe.findById(req.params.tenant_id, function(err, scribe) {
 			if(err) {
 				logger.error(err);
@@ -60,19 +56,23 @@ module.exports = function (app, options) {
 			return res.json({ status: 401, msg: "Unauthorized" });
 		}
 
-		// TODO: Provide check for tenant id matching & requesting user id
 		Scribe.find({ tenant_id: req.params.tenant_id }, function(err, scribe) {
+			// returns an array of scribes
 			if(err) {
 				logger.error(err);
-				res.json({ err: err })
+				return res.json({ err: err })
 			} else {
-				res.status(200).json({ scribe: scribe })
+				return res.status(200).json({ 
+					subscriptions: {
+						data: scribe
+					} 
+				})
 			}
 		})
 	});	
 
 	// POST new subscription /v1/scribe/5758e81c2fbbb785695903d9/subscriptions
-	app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.subscriptions, function(req, res, next) {
+	app.post(endpoint.version + endpoint.base + "/:tenant_id" + endpoint.subscriptions, function(req, res, next) {
 		logger.trace('req post new scribe received');
 		
 		if(req.user._id !== req.params.uid) {
@@ -93,8 +93,8 @@ module.exports = function (app, options) {
             }
         });
 	});
-	// UPDATE subscription /v1/scribe/5758e81c2fbbb785695903d9/subscriptions/579d2468facee2f869ca04ad
-	app.put(endpoint.version + endpoint.base + "/:uid" + endpoint.subscriptions + "/:sid", function(req, res, next) {
+	// UPDATE subscription /v1/scribe/5758e81c2fbbb785695903d9/subscriptions/sub_579d2468facee2f869ca04ad
+	app.put(endpoint.version + endpoint.base + "/:tenant_id" + endpoint.subscriptions + "/:sub_id", function(req, res, next) {
 		logger.trace('req update scribe received');
 
 		if(req.user._id !== req.params.uid) {
@@ -106,13 +106,18 @@ module.exports = function (app, options) {
 	});	
 
 	// DELETE a subscription /v1/scribe/5758e81c2fbbb785695903d9/subscriptions/579d2468facee2f869ca04ad
-	app.delete(endpoint.version + endpoint.base + "/:uid" + endpoint.subscriptions + "/:sid", function(req, res, next) {
+	app.delete(endpoint.version + endpoint.base + "/:tenant_id" + endpoint.subscriptions + "/:sub_id", function(req, res, next) {
 		logger.trace('req delete scribe received');
 
 		if(req.user._id !== req.params.uid) {
 			logger.info("unauthorized uid");
 			return res.json({ status: 401, msg: "Unauthorized" });
 		}
+
+
+		userController.getDelegatedUserByUsername(scribe.delegate_username).then(function (delegateUser) {
+			return res.status(200).json({ scribe: scribe })
+		})
 
 		res.json({msg:"success", status: 200})
 	});	

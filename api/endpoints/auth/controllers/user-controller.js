@@ -372,11 +372,21 @@ UserController.prototype.editProfile = function (req, res, next) {
   var data = req.body;
   logger.trace("update profile req received");
   var user_id = req.params.uid;
+
+  if (!req.headers.authorization) {
+      return res.status(401).send({ message: 'Please make sure your request has an Authorization header' });
+  }
+
+  if(req.user._id !== req.params.uid) {
+      logger.info("unauthorized uid");
+      return res.json({ status: 401, msg: "Unauthorized" });
+  }
+
   userHelper.checkIfUserExists(req.user, data, function (result) {
     if (result === 'user_uniq') {
       User.findOne({ $or: [ { _id: user_id }, { email: req.user.email } ] }, function (err, user) {
           if (!user) {
-            logger.info('User not found for account update. User id : ' + req.user._id);
+            logger.info('5 User not found for account update. User id : ' + req.user._id);
             res.status(404).json({msg: 'User not found, could not update'})
             return;
           }
@@ -391,10 +401,6 @@ UserController.prototype.editProfile = function (req, res, next) {
                 updated.push('email');
                 user.email = data.email;
               }
-              if (user.username !== data.username && data.username !== null && data.username !== undefined && data.username !== "") {
-                updated.push('username');
-                user.username = data.username;
-              }   
               if (user.role !== data.role && req.user.email !=null && data.role !== '' && data.role !== undefined) {
                 updated.push('role');
                 user.role = data.role;
@@ -461,7 +467,6 @@ UserController.prototype.editProfile = function (req, res, next) {
                   fullname: user.fullname,
                   first_name: user.first_name,
                   last_name: user.last_name,
-                  username: user.username,
                   stripe: user.stripe,
                   plaid: user.plaid,                
                   ios: user.ios,                
@@ -516,7 +521,7 @@ UserController.prototype.getProfile = function (req, res, next) {
   }
   User.findById(req.user._id, function (err, user) {
       if (!user) {
-        logger.info('User not found for account retrieval. User id : ' + req.user._id);
+        logger.info('1 User not found for account retrieval. User id : ' + req.user._id);
         res.json({err: "could not get profile"});
         return;
       }
@@ -530,7 +535,7 @@ UserController.prototype.getProfile = function (req, res, next) {
 UserController.prototype.getUser = function (userId, cb) {
   return User.findById(userId, function (err, user) {
       if (!user) {
-        logger.info('User not found for account | User id : ' + userId);
+        logger.info('2 User not found for account | User id : ' + userId);
         return;
       }
       else {
@@ -542,7 +547,7 @@ UserController.prototype.getUser = function (userId, cb) {
 UserController.prototype.getDelegatedUserByUsername = function (username, cb) {
   return User.findOne({ username: username }, function (err, user) {
       if (!user) {
-        logger.info('User not found for account | username : ' + username);
+        logger.info('3 User not found for account | username : ' + username);
         return;
       }
       else {
@@ -554,7 +559,7 @@ UserController.prototype.getDelegatedUserByUsername = function (username, cb) {
 UserController.prototype.editUserPicture = function (userId, picture) {
   return User.findById(userId, function (err, user) {
       if (!user) {
-        logger.info('User not found for account | User id : ' + userId);
+        logger.info('4 User not found for account | User id : ' + userId);
         return;
       }
       else {
