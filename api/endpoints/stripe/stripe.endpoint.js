@@ -120,58 +120,8 @@ module.exports = function (app, options) {
     });
   });
 
+  // API STATUS: IN PROGRESS
 
-
-  /* 
-      This is an example charge endpoint, currently we use test values
-      such as "usd" to denote currency and a static value of 100 ($1.00) which will eventually
-      be made into a request variable such as req.body.amount and req.body.currency.
-
-      EXAMPLE REQUEST
-      curl -X POST \
-      -H "Content-Type: application/json" \
-      -u sk_test_jqQvmd0K1WbTSgP25zIgIWyp: \
-      -d '{"customer":"cus_80JM7yd0HXslf6", "amount": 54322, "currency": "usd"}' \
-         http://192.168.1.232:5001/v1/stripe/charge
-
-      // To use this example change the request url to your own IP and keep the port the same
-  */
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/example", userController.authorize, function(req, res, next) {
-    logger.trace('example charge request received');
-
-    if(req.user._id !== req.params.uid) {
-        logger.info("unauthorized uid");
-        return res.json({ status: 401, msg: "Unauthorized" });
-    }
-
-    if (req.body.amount > 150000) {
-      return res.status(407).send({ message: 'Amount cannot be greater than $1,500' });
-    }
-
-    var stripeToken = req.body.stripeToken;
-    var amount = req.body.amount;
-    var currency = req.body.currency;
-    var customer = req.body.customer;
-    var source = req.body.token;
-    logger.debug('source is ', source)
-    var chargeObject = {
-        source: source,
-        amount: "0", // amount in cents, again
-        currency: "usd",
-        customer: customer
-    }
-
-    logger.debug('example charge object is', chargeObject)
-    stripe.charges.create(chargeObject).then(function(charge) {
-        logger.info("charge success", charge);
-        res.json({msg: "success", charge: charge})
-    }, function(err) {
-        logger.error(err);
-        res.json({ error: err })                          
-    });
-  })
-
-  // TODO: Complete API
   // ACCOUNT
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.account, userController.authorize, function(req, res, next) {
       
@@ -180,40 +130,27 @@ module.exports = function (app, options) {
           return res.json({ status: 401, msg: "Unauthorized" });
       }
 
-      logger.trace("request received | get account")
-      var user_id = req.params.uid
-      userController.getUser(user_id).then(function (user) {
-        var stripe = require('stripe')(user.stripe.secretKey); 
-        stripe.account.retrieve(user.stripe.accountId, function(err, account) {
-            // asynchronously called
-            if(err) {
-              logger.error(err);
-              res.json({ error: err })            
-            } else {
-              res.json({account: account})              
+      try {
+        logger.trace("request received | get account")
+        var user_id = req.params.uid
+        userController.getUser(user_id).then(function (user) {
+          var stripe = require('stripe')(user.stripe.secretKey); 
+          stripe.account.retrieve(user.stripe.accountId, function(err, account) {
+              // asynchronously called
+              if(err) {
+                logger.error(err);
+                res.json({ error: err })            
+              } else {
+                res.json({account: account})              
+              }
             }
-          }
-        );   
-      });
+          );   
+        });
+      } catch(err) {
+          logger.error(err);
+          return res.json({ err: err })        
+      }      
   });
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.account, userController.authorize, function(req, res, next) {
-      
-      if(req.user._id !== req.params.uid) {
-          logger.info("unauthorized uid");
-          return res.json({ status: 401, msg: "Unauthorized" });
-      }
-
-      stripe.account.create([params])
-  }); 
-  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.account, userController.authorize, function(req, res, next) {
-      
-      if(req.user._id !== req.params.uid) {
-          logger.info("unauthorized uid");
-          return res.json({ status: 401, msg: "Unauthorized" });
-      }
-
-      stripe.account.list([params])
-  }); 
   app.put(endpoint.version + endpoint.base + "/:uid" + endpoint.account, userController.authorize, function(req, res, next) {
         
       if(req.user._id !== req.params.uid) {
@@ -221,24 +158,29 @@ module.exports = function (app, options) {
           return res.json({ status: 401, msg: "Unauthorized" });
       }  
 
-      logger.trace("request received | update stripe account")
-      var user_id = req.params.uid;
-      var parameters = req.body;
-      logger.info(parameters)
-      userController.getUser(user_id).then(function (user) {
-        var stripe = require('stripe')(user.stripe.secretKey); 
-        stripe.account.update(user.stripe.accountId, parameters, function(err, account) {
-            // asynchronously called
-            if(err) {
-              logger.error(err);
-              res.json({ error: err })                          
-            } else {
-              logger.info("updated stripe account")
-              res.json({ account: account })              
+      try {
+        logger.trace("request received | update stripe account")
+        var user_id = req.params.uid;
+        var parameters = req.body;
+        logger.info(parameters)
+        userController.getUser(user_id).then(function (user) {
+          var stripe = require('stripe')(user.stripe.secretKey); 
+          stripe.account.update(user.stripe.accountId, parameters, function(err, account) {
+              // asynchronously called
+              if(err) {
+                logger.error(err);
+                res.json({ error: err })                          
+              } else {
+                logger.info("updated stripe account")
+                res.json({ account: account })              
+              }
             }
-          }
-        );   
-      });
+          );   
+        });
+      } catch(err) {
+          logger.error(err);
+          return res.json({ err: err })        
+      }      
   });
   
   // EXTERNAL ACCOUNTS
@@ -252,62 +194,67 @@ module.exports = function (app, options) {
           return res.json({ status: 401, msg: "Unauthorized" });
       }
 
-      logger.trace("request received | add account external account")
-      var card_obj;
-      if(req.query.type == "card") {
-        card_obj = {
-          card: {
-            "number": req.body.number,
-            "exp_month": req.body.exp_month,
-            "exp_year": req.body.exp_year,
-            "cvc": req.body.cvc,
-            "currency": "usd"
+      try {
+        logger.trace("request received | add account external account")
+        var card_obj;
+        if(req.query.type == "card") {
+          card_obj = {
+            card: {
+              "number": req.body.number,
+              "exp_month": req.body.exp_month,
+              "exp_year": req.body.exp_year,
+              "cvc": req.body.cvc,
+              "currency": "usd"
+            }
           }
         }
-      }
-      logger.trace("request received | add external account")
-      var user_id = req.params.uid
-      var token = req.body.external_account;
-      logger.info(token)
-      userController.getUser(user_id).then(function (user) {
-        // First create a tokenized card based on the request
-        var stripe = require('stripe')(user.stripe.secretKey); 
-        if(req.query.type == "card") {
-          stripe.tokens.create(card_obj, function(err, token) {
-              logger.debug(token);
-              // asynchronously called
-              if(err) {
-                logger.error(err);
-                res.json({ error: err })            
-              }
-              // Then add the source to Stripe using the token
-              stripe.accounts.createExternalAccount(user.stripe.accountId, { external_account: token.id }, function(err, card) {
-                  // asynchronously called
-                  if(err) {
-                    logger.error(err);
-                    res.json({ error: err })            
-                  } else {
-                    res.json({ msg:"card added!", card: card })                    
-                  }
+        logger.trace("request received | add external account")
+        var user_id = req.params.uid
+        var token = req.body.external_account;
+        logger.info(token)
+        userController.getUser(user_id).then(function (user) {
+          // First create a tokenized card based on the request
+          var stripe = require('stripe')(user.stripe.secretKey); 
+          if(req.query.type == "card") {
+            stripe.tokens.create(card_obj, function(err, token) {
+                logger.debug(token);
+                // asynchronously called
+                if(err) {
+                  logger.error(err);
+                  res.json({ error: err })            
                 }
-              );          
-          });          
-        } else {
-          logger.info("adding external account plaid bank")
-          logger.info("token is ", token)
-          stripe.accounts.createExternalAccount(user.stripe.accountId, { external_account: token }, function(err, externalAccount) {
-              // asynchronously called
-              if(err) {
-                logger.error("error occurred", err);
-                res.json({ error: err })                           
-              } else {
-                logger.trace('done')
-                res.json({ msg: "external account added!", external_account: externalAccount })
+                // Then add the source to Stripe using the token
+                stripe.accounts.createExternalAccount(user.stripe.accountId, { external_account: token.id }, function(err, card) {
+                    // asynchronously called
+                    if(err) {
+                      logger.error(err);
+                      res.json({ error: err })            
+                    } else {
+                      res.json({ msg:"card added!", card: card })                    
+                    }
+                  }
+                );          
+            });          
+          } else {
+            logger.info("adding external account plaid bank")
+            logger.info("token is ", token)
+            stripe.accounts.createExternalAccount(user.stripe.accountId, { external_account: token }, function(err, externalAccount) {
+                // asynchronously called
+                if(err) {
+                  logger.error("error occurred", err);
+                  res.json({ error: err })                           
+                } else {
+                  logger.trace('done')
+                  res.json({ msg: "external account added!", external_account: externalAccount })
+                }
               }
-            }
-          );   
-        }
-      });
+            );   
+          }
+        });
+      } catch(err) {
+          logger.error(err);
+          return res.json({ err: err })        
+      }      
   });   
 
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.external_account, userController.authorize, function(req, res, next) {
@@ -317,22 +264,27 @@ module.exports = function (app, options) {
           return res.json({ status: 401, msg: "Unauthorized" });
       }
 
-      logger.trace("request received | list external accounts.");
-      var user_id = req.params.uid
-      userController.getUser(user_id).then(function (user) {
-        // First create a tokenized card based on the request
-        var stripe = require('stripe')(user.stripe.secretKey);  
-        var acct_id = user.stripe.accountId;
-        stripe.accounts.listExternalAccounts(acct_id, function(err, externalAccounts) {
-          //logger.trace("accounts: " + externalAccounts);
-          if(err) {
-            logger.error(err);
-            res.json({ error: err })            
-          } else {
-            res.json({external_accounts:externalAccounts})
-          }
+      try {
+        logger.trace("request received | list external accounts.");
+        var user_id = req.params.uid
+        userController.getUser(user_id).then(function (user) {
+          // First create a tokenized card based on the request
+          var stripe = require('stripe')(user.stripe.secretKey);  
+          var acct_id = user.stripe.accountId;
+          stripe.accounts.listExternalAccounts(acct_id, function(err, externalAccounts) {
+            //logger.trace("accounts: " + externalAccounts);
+            if(err) {
+              logger.error(err);
+              res.json({ error: err })            
+            } else {
+              res.json({external_accounts:externalAccounts})
+            }
+          });
         });
-      });
+      } catch(err) {
+          logger.error(err);
+          return res.json({ err: err })        
+      }      
   });   
 
 
@@ -343,23 +295,28 @@ module.exports = function (app, options) {
           return res.json({ status: 401, msg: "Unauthorized" });
       }
 
-      logger.trace("request received | list external accounts.");
-      var user_id = req.params.uid
-      var bank_id = req.params.bank_acct_id
-      userController.getUser(user_id).then(function (user) {
-        // First create a tokenized card based on the request
-        var stripe = require('stripe')(user.stripe.secretKey);  
-        var acct_id = user.stripe.accountId;
-        stripe.accounts.deleteExternalAccount(acct_id, bank_id, function(err, confirmation) {
-          logger.trace("done: " + confirmation);
-          if(err) {
-            logger.error(err);
-            res.json({ error: err })            
-          } else {
-            res.json({ confirmation: confirmation })            
-          }
+      try {
+        logger.trace("request received | list external accounts.");
+        var user_id = req.params.uid
+        var bank_id = req.params.bank_acct_id
+        userController.getUser(user_id).then(function (user) {
+          // First create a tokenized card based on the request
+          var stripe = require('stripe')(user.stripe.secretKey);  
+          var acct_id = user.stripe.accountId;
+          stripe.accounts.deleteExternalAccount(acct_id, bank_id, function(err, confirmation) {
+            logger.trace("done: " + confirmation);
+            if(err) {
+              logger.error(err);
+              res.json({ error: err })            
+            } else {
+              res.json({ confirmation: confirmation })            
+            }
+          });
         });
-      });
+      } catch(err) {
+          logger.error(err);
+          return res.json({ err: err })        
+      }      
   });   
 
   // BALANCE
@@ -370,19 +327,24 @@ module.exports = function (app, options) {
           return res.json({ status: 401, msg: "Unauthorized" });
       }
 
-      logger.trace("getting user balance")      
-      var user_id = req.params.uid;
-      userController.getUser(user_id).then(function (user) {
-        var stripe = require('stripe')(user.stripe.secretKey);
-        stripe.balance.retrieve(function(err, balance) {
-            if(err) {
-                logger.error(err);
-                res.json({ error: err })            
-            } else {
-                res.json({balance:balance})              
-            }
-        })
-      })   
+      try {
+        logger.trace("getting user balance")      
+        var user_id = req.params.uid;
+        userController.getUser(user_id).then(function (user) {
+          var stripe = require('stripe')(user.stripe.secretKey);
+          stripe.balance.retrieve(function(err, balance) {
+              if(err) {
+                  logger.error(err);
+                  res.json({ error: err })            
+              } else {
+                  res.json({balance:balance})              
+              }
+          })
+        })  
+      } catch(err) {
+          logger.error(err);
+          return res.json({ err: err })        
+      }       
   });  
 
   // HISTORY
@@ -394,29 +356,34 @@ module.exports = function (app, options) {
           return res.json({ status: 401, msg: "Unauthorized" });
       }
 
-      // logger.info(req.user);
-      // logger.info(req.params.uid);
-      logger.trace("getting user transaction history")
-      var user_id = req.params.uid
-      userController.getUser(user_id).then(function (user) {
-        var stripe = require('stripe')(user.stripe.secretKey);
-        var limit = req.query.limit || 100;
-        var starting_after;
-        if(req.query.starting_after != undefined) {
-          starting_after = req.query.starting_after;
-        }       
-        stripe.balance.listTransactions({ limit: limit, starting_after: starting_after }, function(err, transactions) {
-          if(err) {
-            logger.error(err)
-            res.json({ error: err })                        
-          } else {
-            res.json({ transactions:transactions })            
-          }
-          // logger.info(transactions)
-          // asynchronously called
+      try {
+        // logger.info(req.user);
+        // logger.info(req.params.uid);
+        logger.trace("getting user transaction history")
+        var user_id = req.params.uid
+        userController.getUser(user_id).then(function (user) {
+          var stripe = require('stripe')(user.stripe.secretKey);
+          var limit = req.query.limit || 100;
+          var starting_after;
+          if(req.query.starting_after != undefined) {
+            starting_after = req.query.starting_after;
+          }       
+          stripe.balance.listTransactions({ limit: limit, starting_after: starting_after }, function(err, transactions) {
+            if(err) {
+              logger.error(err)
+              res.json({ error: err })                        
+            } else {
+              res.json({ transactions:transactions })            
+            }
+            // logger.info(transactions)
+            // asynchronously called
 
-        });
-      })       
+          });
+        })   
+      } catch(err) {
+          logger.error(err);
+          return res.json({ err: err })        
+      }          
   });     
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.transactions, userController.authorize, function(req, res, next) {
       
@@ -436,124 +403,129 @@ module.exports = function (app, options) {
           return res.json({ status: 401, msg: "Unauthorized" });
       }
 
-      var user_id = req.params.uid;
-      var interval = req.params.interval;
-      // /v1/stripe/09s8df0a9s8d/history?interval=year&currency=usd&number=10
-      var currency = req.query.currency;
-      userController.getUser(user_id).then(function (user) {
-        var stripe = require('stripe')(user.stripe.secretKey);
-        var limit = req.query.limit || 100;
-        var number = req.query.number;
-        var starting_after;
-        if(req.query.starting_after != undefined) {
-          starting_after = req.query.starting_after;
-        }        
-        stripe.balance.listTransactions({ limit: limit, starting_after: starting_after }, function(err, transactions) {
-          if(err) {
-            logger.error(err)
-            res.json({ error: err })                        
-          }
-          switch (interval) {
-            case "year":
-              numberOfYears = number;
-              var yearBegin = utils.getYearBegin(number);
-              var yearEnd = utils.getYearEnd(number);
-              beginInterval = yearBegin;
-              endInterval = yearEnd;
-              break;
-            case "month":
-              numberOfMonths = number;
-              var monthBegin = utils.getMonthBegin(number);
-              var monthEnd = utils.getMonthEnd(number);
-              beginInterval = monthBegin;
-              endInterval = monthEnd;
-              break;
-            case "week":
-              numberOfWeeks = number;
-              var weekBegin = utils.getWeekBegin(number);
-              var weekEnd = utils.getWeekEnd(number);
-              beginInterval = weekBegin;
-              endInterval = weekEnd;
-              break;
-            case "day":
-              numberOfDays = number;
-              var dayBegin = utils.getDayBegin(number);
-              var dayEnd = utils.getDayEnd(number);
-              beginInterval = dayBegin;
-              endInterval = dayEnd;
-              break;
-            default:
-              break;  
-          }
-          //
-          switch(currency){
-            case "usd":
-              var currencySymbol = getSymbolFromCurrency('USD');
-              break;
-            case "cad":
-              var currencySymbol = getSymbolFromCurrency('CAD');
-              break;
-            case "aud":
-              var currencySymbol = getSymbolFromCurrency('AUD');
-              break;  
-            case "eur":
-              var currencySymbol = getSymbolFromCurrency('EUR');
-              break;
-            case "gbp":
-              var currencySymbol = getSymbolFromCurrency('GBP');
-              break;
-            default:
-              var currencySymbol = "RAW"
-              break;
-          }
+      try {
+        var user_id = req.params.uid;
+        var interval = req.params.interval;
+        // /v1/stripe/09s8df0a9s8d/history?interval=year&currency=usd&number=10
+        var currency = req.query.currency;
+        userController.getUser(user_id).then(function (user) {
+          var stripe = require('stripe')(user.stripe.secretKey);
+          var limit = req.query.limit || 100;
+          var number = req.query.number;
+          var starting_after;
+          if(req.query.starting_after != undefined) {
+            starting_after = req.query.starting_after;
+          }        
+          stripe.balance.listTransactions({ limit: limit, starting_after: starting_after }, function(err, transactions) {
+            if(err) {
+              logger.error(err)
+              res.json({ error: err })                        
+            }
+            switch (interval) {
+              case "year":
+                numberOfYears = number;
+                var yearBegin = utils.getYearBegin(number);
+                var yearEnd = utils.getYearEnd(number);
+                beginInterval = yearBegin;
+                endInterval = yearEnd;
+                break;
+              case "month":
+                numberOfMonths = number;
+                var monthBegin = utils.getMonthBegin(number);
+                var monthEnd = utils.getMonthEnd(number);
+                beginInterval = monthBegin;
+                endInterval = monthEnd;
+                break;
+              case "week":
+                numberOfWeeks = number;
+                var weekBegin = utils.getWeekBegin(number);
+                var weekEnd = utils.getWeekEnd(number);
+                beginInterval = weekBegin;
+                endInterval = weekEnd;
+                break;
+              case "day":
+                numberOfDays = number;
+                var dayBegin = utils.getDayBegin(number);
+                var dayEnd = utils.getDayEnd(number);
+                beginInterval = dayBegin;
+                endInterval = dayEnd;
+                break;
+              default:
+                break;  
+            }
+            //
+            switch(currency){
+              case "usd":
+                var currencySymbol = getSymbolFromCurrency('USD');
+                break;
+              case "cad":
+                var currencySymbol = getSymbolFromCurrency('CAD');
+                break;
+              case "aud":
+                var currencySymbol = getSymbolFromCurrency('AUD');
+                break;  
+              case "eur":
+                var currencySymbol = getSymbolFromCurrency('EUR');
+                break;
+              case "gbp":
+                var currencySymbol = getSymbolFromCurrency('GBP');
+                break;
+              default:
+                var currencySymbol = "RAW"
+                break;
+            }
 
-          var transactionArray = [];
-          var transactionJSON = {
-            data: []
-          };
-          if(transactions != null) {
-            for (var i=0;i<transactions.data.length;i++) {
-              var transactionDate = transactions.data[i].created;
-              var dateString = moment.unix(transactionDate).format("MM/DD/YYYY");
-              
-              var dateW = transactions.data[i].created;
-              for (var j= 0; j <= number; j++) {
-                if((dateW > beginInterval[j]/1000) && (dateW < endInterval[j]/1000)) {
-                    
-                    var transactionAmount = transactions.data[i].amount;
-                    switch(currency){
-                    case "usd":
-                      var transactionAmountFormatted = format.getCommaSeparatedFormat(currencySymbol, transactionAmount);
-                      break;
-                    case "cad":
-                      var transactionAmountFormatted = format.getCommaSeparatedFormat(currencySymbol, transactionAmount);
-                      break;
-                    case "aud":
-                      var transactionAmountFormatted = format.getCommaSeparatedFormat(currencySymbol, transactionAmount);
-                      break;  
-                    case "eur":
-                      var transactionAmountFormatted = format.getDotSeparatedFormat(currencySymbol, transactionAmount);
-                      break;
-                    case "gbp":
-                      var transactionAmountFormatted = format.getCommaSeparatedFormat(currencySymbol, transactionAmount);
-                      break;
-                    default:
-                      transactionAmountFormatted = transactionAmount;
-                      break;
+            var transactionArray = [];
+            var transactionJSON = {
+              data: []
+            };
+            if(transactions != null) {
+              for (var i=0;i<transactions.data.length;i++) {
+                var transactionDate = transactions.data[i].created;
+                var dateString = moment.unix(transactionDate).format("MM/DD/YYYY");
+                
+                var dateW = transactions.data[i].created;
+                for (var j= 0; j <= number; j++) {
+                  if((dateW > beginInterval[j]/1000) && (dateW < endInterval[j]/1000)) {
+                      
+                      var transactionAmount = transactions.data[i].amount;
+                      switch(currency){
+                      case "usd":
+                        var transactionAmountFormatted = format.getCommaSeparatedFormat(currencySymbol, transactionAmount);
+                        break;
+                      case "cad":
+                        var transactionAmountFormatted = format.getCommaSeparatedFormat(currencySymbol, transactionAmount);
+                        break;
+                      case "aud":
+                        var transactionAmountFormatted = format.getCommaSeparatedFormat(currencySymbol, transactionAmount);
+                        break;  
+                      case "eur":
+                        var transactionAmountFormatted = format.getDotSeparatedFormat(currencySymbol, transactionAmount);
+                        break;
+                      case "gbp":
+                        var transactionAmountFormatted = format.getCommaSeparatedFormat(currencySymbol, transactionAmount);
+                        break;
+                      default:
+                        transactionAmountFormatted = transactionAmount;
+                        break;
+                    }
+                    transactionJSON.data.push({
+                      "date"    : dateW,
+                      "amount"  : transactionAmountFormatted
+                    })
                   }
-                  transactionJSON.data.push({
-                    "date"    : dateW,
-                    "amount"  : transactionAmountFormatted
-                  })
                 }
               }
+              res.json({
+                transactions: transactionJSON  
+              })
             }
-            res.json({
-              transactions: transactionJSON  
-            })
-          }
+          })
         })
-      })
+      } catch(err) {
+          logger.error(err);
+          return res.json({ err: err })        
+      }
   })
 
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.history, userController.authorize, function(req, res, next) {
@@ -563,79 +535,84 @@ module.exports = function (app, options) {
           return res.json({ status: 401, msg: "Unauthorized" });
       }
 
-      var user_id = req.params.uid
-      userController.getUser(user_id).then(function (user) {
-        var stripe = require('stripe')(user.stripe.secretKey);
-        var limit = req.query.limit || 100;
-        var starting_after;
-        if(req.query.starting_after != undefined) {
-          starting_after = req.query.starting_after;
-        }        
-        stripe.balance.listTransactions({ limit: limit, starting_after: starting_after }, function(err, transactions) {
-          if(err) {
-            logger.error(err)
-            res.json({ error: err })                        
-          }
+      try {
+        var user_id = req.params.uid
+        userController.getUser(user_id).then(function (user) {
+          var stripe = require('stripe')(user.stripe.secretKey);
+          var limit = req.query.limit || 100;
+          var starting_after;
+          if(req.query.starting_after != undefined) {
+            starting_after = req.query.starting_after;
+          }        
+          stripe.balance.listTransactions({ limit: limit, starting_after: starting_after }, function(err, transactions) {
+            if(err) {
+              logger.error(err)
+              res.json({ error: err })                        
+            }
 
-          if(transactions != null) {
-            var oneYearInWeeks = 51;
-            var oneYearInMonths = 11;
-            var totalWeek = [];
-            var weekBegin = utils.getWeekBegin(oneYearInWeeks);
-            var weekEnd = utils.getWeekEnd(oneYearInWeeks);
-            for (var i = oneYearInWeeks; i >= 0; i--) {
-              totalWeek[i] = 0;
-            }
-            
-            for(var i=0;i<transactions.data.length;i++) {
-              var dateW = transactions.data[i].created;
-              for (var j= 0; j <= oneYearInWeeks; j++) {
-                if((dateW > weekBegin[j]/1000) && (dateW < weekEnd[j]/1000)) {
-                    totalWeek[j] = totalWeek[j] + transactions.data[i].amount;
-                }
+            if(transactions != null) {
+              var oneYearInWeeks = 51;
+              var oneYearInMonths = 11;
+              var totalWeek = [];
+              var weekBegin = utils.getWeekBegin(oneYearInWeeks);
+              var weekEnd = utils.getWeekEnd(oneYearInWeeks);
+              for (var i = oneYearInWeeks; i >= 0; i--) {
+                totalWeek[i] = 0;
               }
-            }
-            
-            totalMonth = [];
-            for (var i = oneYearInMonths; i >= 0; i--) {
-              totalMonth[i] = 0;
-            }
-            var monthBegin = utils.getMonthBegin(oneYearInMonths);
-            var monthEnd = utils.getMonthEnd(oneYearInMonths);
-            
-            for(var i=0;i<transactions.data.length;i++) {
-              var dateM = transactions.data[i].created;
-              for (var j= 0; j <= oneYearInMonths; j++) {
-                if((dateM > monthBegin[j]/1000) && (dateM < monthEnd[j]/1000)) {
-                  totalMonth[j] = totalMonth[j] + transactions.data[i].amount;
-                }
-              }
-            }
-            
-            var transactionArray = [];
-            var transactionJSON = {
               
-            };
-            for (var i=0;i<transactions.data.length;i++) {
-              var transactionDate = transactions.data[i].created;
-              var dateString = moment.unix(transactionDate).format("MM/DD/YYYY");
-              var transactionAmount = transactions.data[i].amount;
-              transactionJSON[dateString] = transactionAmount;
-            }
-            
-            res.json({
-              history: {
-                "1W":[totalWeek[0]],
-                "2W":[totalWeek[1],totalWeek[2]],
-                "1M":[totalWeek[0],totalWeek[1],totalWeek[2],totalWeek[3]],
-                "3M":[totalMonth[0],totalMonth[1],totalMonth[2]],
-                "6M":[totalMonth[0],totalMonth[1],totalMonth[2],totalMonth[3],totalMonth[4],totalMonth[5]],
-                "1Y":[totalMonth[0],totalMonth[1],totalMonth[2],totalMonth[3],totalMonth[4],totalMonth[5],totalMonth[6],totalMonth[7],totalMonth[8],totalMonth[9],totalMonth[10],totalMonth[11]],
+              for(var i=0;i<transactions.data.length;i++) {
+                var dateW = transactions.data[i].created;
+                for (var j= 0; j <= oneYearInWeeks; j++) {
+                  if((dateW > weekBegin[j]/1000) && (dateW < weekEnd[j]/1000)) {
+                      totalWeek[j] = totalWeek[j] + transactions.data[i].amount;
+                  }
+                }
               }
-            })            
-          }
-        });
-      })   
+              
+              totalMonth = [];
+              for (var i = oneYearInMonths; i >= 0; i--) {
+                totalMonth[i] = 0;
+              }
+              var monthBegin = utils.getMonthBegin(oneYearInMonths);
+              var monthEnd = utils.getMonthEnd(oneYearInMonths);
+              
+              for(var i=0;i<transactions.data.length;i++) {
+                var dateM = transactions.data[i].created;
+                for (var j= 0; j <= oneYearInMonths; j++) {
+                  if((dateM > monthBegin[j]/1000) && (dateM < monthEnd[j]/1000)) {
+                    totalMonth[j] = totalMonth[j] + transactions.data[i].amount;
+                  }
+                }
+              }
+              
+              var transactionArray = [];
+              var transactionJSON = {
+                
+              };
+              for (var i=0;i<transactions.data.length;i++) {
+                var transactionDate = transactions.data[i].created;
+                var dateString = moment.unix(transactionDate).format("MM/DD/YYYY");
+                var transactionAmount = transactions.data[i].amount;
+                transactionJSON[dateString] = transactionAmount;
+              }
+              
+              res.json({
+                history: {
+                  "1W":[totalWeek[0]],
+                  "2W":[totalWeek[1],totalWeek[2]],
+                  "1M":[totalWeek[0],totalWeek[1],totalWeek[2],totalWeek[3]],
+                  "3M":[totalMonth[0],totalMonth[1],totalMonth[2]],
+                  "6M":[totalMonth[0],totalMonth[1],totalMonth[2],totalMonth[3],totalMonth[4],totalMonth[5]],
+                  "1Y":[totalMonth[0],totalMonth[1],totalMonth[2],totalMonth[3],totalMonth[4],totalMonth[5],totalMonth[6],totalMonth[7],totalMonth[8],totalMonth[9],totalMonth[10],totalMonth[11]],
+                }
+              })            
+            }
+          });
+        })   
+      } catch(err) {
+          logger.error(err);
+          return res.json({ err: err })          
+      }
   })
 
 
@@ -677,33 +654,38 @@ module.exports = function (app, options) {
           return res.json({ status: 401, msg: "Unauthorized" });
       }      
 
-      // TODO: Implement check of auth token
-      logger.info("POS charge")
-      var user_id = req.params.uid;
-      userController.getUser(user_id).then(function (user) {
-          var stripe = require('stripe')(user.stripe.secretKey);
-          var amountInCents = req.body.amount;
-          var application_fee = Math.round((amountInCents*0.006));
-          var description = "POS charge in the amount of " + format.getCommaSeparatedFormat("USD", amountInCents);
-          logger.info(amountInCents);
-          logger.info(application_fee);
-          logger.info(description);
-          var params = {
-            amount: amountInCents,
-            application_fee: application_fee,
-            currency: "usd",
-            source: req.body.token,
-            description: description
-          }
-          // Charge a card based on customer ID, the customer must have a linked credit card
-          stripe.charges.create(params).then(function(charge, err) {
-              // logger.info(res)
-              res.json({msg: "success", charge: charge})
-          }, function(err) {
-              logger.error(err)
-              res.json({ error: err })                          
-          });
-      }) 
+      try {
+        // TODO: Implement check of auth token
+        logger.info("POS charge")
+        var user_id = req.params.uid;
+        userController.getUser(user_id).then(function (user) {
+            var stripe = require('stripe')(user.stripe.secretKey);
+            var amountInCents = req.body.amount;
+            var application_fee = Math.round((amountInCents*0.006));
+            var description = "POS charge in the amount of " + format.getCommaSeparatedFormat("USD", amountInCents);
+            logger.info(amountInCents);
+            logger.info(application_fee);
+            logger.info(description);
+            var params = {
+              amount: amountInCents,
+              application_fee: application_fee,
+              currency: "usd",
+              source: req.body.token,
+              description: description
+            }
+            // Charge a card based on customer ID, the customer must have a linked credit card
+            stripe.charges.create(params).then(function(charge, err) {
+                // logger.info(res)
+                res.json({msg: "success", charge: charge})
+            }, function(err) {
+                logger.error(err)
+                res.json({ error: err })                          
+            });
+        }) 
+      } catch(err) {
+          logger.error(err);
+          return res.json({ err: err })          
+      }        
   });
 
   // Delegated one time charge, pay another delegated user
@@ -725,109 +707,61 @@ module.exports = function (app, options) {
         return res.json({ status: 401, msg: "Unauthorized" });
     }    
 
-    var user_id = req.params.uid;
-    var delegate_user = req.params.delegate_username;
-    userController.getDelegatedUserByUsername(delegate_user).then(function (delegateUser) {
-        var stripe = require('stripe')(delegateUser.stripe.secretKey);
-        var amountInCents = req.body.amount;
-        var application_fee = Math.round((amountInCents*0.006));
-        var description = "New charge in the amount of " + format.getCommaSeparatedFormat("USD", amountInCents/10000);
-        // logger.info(amountInCents);
-        // logger.info(application_fee);
-        // logger.info(description);
-        var params = {
-          amount: amountInCents,
-          application_fee: application_fee,
-          currency: "usd", // currency ?? "usd" // currency = req.body.currency
-          source: req.body.token,
-          description: description
-        }
+    try {
+      var user_id = req.params.uid;
+      var delegate_user = req.params.delegate_username;
+      userController.getDelegatedUserByUsername(delegate_user).then(function (delegateUser) {
+          var stripe = require('stripe')(delegateUser.stripe.secretKey);
+          var amountInCents = req.body.amount;
+          var application_fee = Math.round((amountInCents*0.006));
+          var description = "New charge in the amount of " + format.getCommaSeparatedFormat("USD", amountInCents/10000);
+          // logger.info(amountInCents);
+          // logger.info(application_fee);
+          // logger.info(description);
+          var params = {
+            amount: amountInCents,
+            application_fee: application_fee,
+            currency: "usd", // currency ?? "usd" // currency = req.body.currency
+            source: req.body.token,
+            description: description
+          }
 
-        // e.g. request is /v1/stripe/5a6s6g87as888s/charge/johndoe?type=bank
-        if(req.query.type == "bank") {
-          userController.getUser(user_id).then(function (user) {
-            // get requesting user
-            var requestingUser = user
-            logger.info(requestingUser.username);
-            // Charge a card based on customer ID, the customer must have a linked bank
-            var limit = req.query.limit || 100;
-            var starting_after;
-            if(req.query.starting_after != undefined) {
-              starting_after = req.query.starting_after;
-            }
-            stripe.customers.list({ limit: limit, starting_after: starting_after }, function(err, customers) {
-                logger.trace('inside customer list')
-                // asynchronously called
-                if(err) {
-                  logger.error(err)
-                  res.json({ error: err })                                        
-                }
+          // e.g. request is /v1/stripe/5a6s6g87as888s/charge/johndoe?type=bank
+          if(req.query.type == "bank") {
+            userController.getUser(user_id).then(function (user) {
+              // get requesting user
+              var requestingUser = user
+              logger.info(requestingUser.username);
+              // Charge a card based on customer ID, the customer must have a linked bank
+              var limit = req.query.limit || 100;
+              var starting_after;
+              if(req.query.starting_after != undefined) {
+                starting_after = req.query.starting_after;
+              }
+              stripe.customers.list({ limit: limit, starting_after: starting_after }, function(err, customers) {
+                  logger.trace('inside customer list')
+                  // asynchronously called
+                  if(err) {
+                    logger.error(err)
+                    res.json({ error: err })                                        
+                  }
 
-                // list customers before creating charge
-                // check for existing customer by email
-                // so for example, list all customers and do
-                // a quick check to see if email matches any in
-                // customer list, if not create customer, if yes
-                // add new plan to existing customer
+                  // list customers before creating charge
+                  // check for existing customer by email
+                  // so for example, list all customers and do
+                  // a quick check to see if email matches any in
+                  // customer list, if not create customer, if yes
+                  // add new plan to existing customer
 
-                // First check if the delgated user has any customers, if not add the first one. Then loop
-                // through the current customers and do a match on whether customer already exists or not.  Then
-                // if no matches are found perform the secondary option of creating the customer and charge.
-                // The second part of the execution can only occur once the full loop has been performed
+                  // First check if the delgated user has any customers, if not add the first one. Then loop
+                  // through the current customers and do a match on whether customer already exists or not.  Then
+                  // if no matches are found perform the secondary option of creating the customer and charge.
+                  // The second part of the execution can only occur once the full loop has been performed
 
-                //logger.debug(customers.data.length)
-                if( customers.data.length == 0 ) {
-                    // if customer does not exist, create one and add a plan
-                    logger.info("No customers exist for this user, adding the first one!")   
-                    var customer_params = {
-                        email: requestingUser.email,
-                        source: req.body.token
-                    }                 
-                    stripe.customers.create(customer_params, function(err, customer) {
-                        // asynchronously called
-                        if(err) {
-                          logger.error(err)
-                          res.json({ error: err })                                                
-                        }
-                        // Create a customer, then create a plan for that customer
-                        // Charge a card based on customer ID, the customer must have a linked bank
-                        stripe.charges.create({
-                          currency: "usd",
-                          customer: customer.id, 
-                          amount: amountInCents,
-                          application_fee: Math.round((amountInCents*0.002))                     
-                        }).then(function(charge) {
-                            // logger.info(res)
-                            res.json({status: 200, charge: charge})
-                        }, function(err) {
-                            logger.error(err)
-                            res.json({ error: err })                          
-                        });                      
-                      }
-                    );  
-                } else {
-                  logger.info("Customers exist for this user, checking if requesting user is one of them")   
-                  for (var i = 0; i < customers.data.length; i++) {
-                    if(customers.data[i].email == requestingUser.email) {
-                      logger.info("Customer email already exists in database! Adding plan to existing customer")
-                      stripe.charges.create({
-                        currency: "usd",
-                        customer: customers.data[i].id, 
-                        amount: amountInCents,
-                        application_fee: Math.round((amountInCents*0.002))                     
-                      }).then(function(charge) {
-                          // logger.info(res)
-                          res.json({status: 200, charge: charge})
-                      }, function(err) {
-                          logger.error(err)
-                          res.json({ error: err })                          
-                      });   
-                      break;
-                    }
-                    // At the end of the data array if we still haven't found an existing customer add a new one with subscription
-                    if(i == customers.data.length - 1 && customers.data[i].email != requestingUser.email) {
+                  //logger.debug(customers.data.length)
+                  if( customers.data.length == 0 ) {
                       // if customer does not exist, create one and add a plan
-                      logger.info("Customer email does not currently exist. Adding new customer with subscription")   
+                      logger.info("No customers exist for this user, adding the first one!")   
                       var customer_params = {
                           email: requestingUser.email,
                           source: req.body.token
@@ -836,10 +770,10 @@ module.exports = function (app, options) {
                           // asynchronously called
                           if(err) {
                             logger.error(err)
-                            res.json({ error: err })                                                  
+                            res.json({ error: err })                                                
                           }
-                          //logger.info(customer);
                           // Create a customer, then create a plan for that customer
+                          // Charge a card based on customer ID, the customer must have a linked bank
                           stripe.charges.create({
                             currency: "usd",
                             customer: customer.id, 
@@ -851,26 +785,79 @@ module.exports = function (app, options) {
                           }, function(err) {
                               logger.error(err)
                               res.json({ error: err })                          
-                          });   
+                          });                      
                         }
-                      )    
-                    }
-                  } 
-                }           
-              }
-            )       
-          })      
-        } else {
-          // Charge a card based on customer ID, the customer must have a linked credit card
-          stripe.charges.create(params).then(function(charge) {
-              // logger.info(res)
-              res.json({status: 200, charge: charge})
-          }, function(err) {
-              logger.error(err)
-              res.json({ error: err })                          
-          });
-        }
-    }) 
+                      );  
+                  } else {
+                    logger.info("Customers exist for this user, checking if requesting user is one of them")   
+                    for (var i = 0; i < customers.data.length; i++) {
+                      if(customers.data[i].email == requestingUser.email) {
+                        logger.info("Customer email already exists in database! Adding plan to existing customer")
+                        stripe.charges.create({
+                          currency: "usd",
+                          customer: customers.data[i].id, 
+                          amount: amountInCents,
+                          application_fee: Math.round((amountInCents*0.002))                     
+                        }).then(function(charge) {
+                            // logger.info(res)
+                            res.json({status: 200, charge: charge})
+                        }, function(err) {
+                            logger.error(err)
+                            res.json({ error: err })                          
+                        });   
+                        break;
+                      }
+                      // At the end of the data array if we still haven't found an existing customer add a new one with subscription
+                      if(i == customers.data.length - 1 && customers.data[i].email != requestingUser.email) {
+                        // if customer does not exist, create one and add a plan
+                        logger.info("Customer email does not currently exist. Adding new customer with subscription")   
+                        var customer_params = {
+                            email: requestingUser.email,
+                            source: req.body.token
+                        }                 
+                        stripe.customers.create(customer_params, function(err, customer) {
+                            // asynchronously called
+                            if(err) {
+                              logger.error(err)
+                              res.json({ error: err })                                                  
+                            }
+                            //logger.info(customer);
+                            // Create a customer, then create a plan for that customer
+                            stripe.charges.create({
+                              currency: "usd",
+                              customer: customer.id, 
+                              amount: amountInCents,
+                              application_fee: Math.round((amountInCents*0.002))                     
+                            }).then(function(charge) {
+                                // logger.info(res)
+                                res.json({status: 200, charge: charge})
+                            }, function(err) {
+                                logger.error(err)
+                                res.json({ error: err })                          
+                            });   
+                          }
+                        )    
+                      }
+                    } 
+                  }           
+                }
+              )       
+            })      
+          } else {
+            // Charge a card based on customer ID, the customer must have a linked credit card
+            stripe.charges.create(params).then(function(charge) {
+                // logger.info(res)
+                res.json({status: 200, charge: charge})
+            }, function(err) {
+                logger.error(err)
+                res.json({ error: err })                          
+            });
+          }
+      }) 
+    } catch(err) {
+        logger.error(err);
+        return res.json({ err: err })        
+    }
   })
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.charge, userController.authorize, function(req, res, next) {
       
@@ -879,24 +866,29 @@ module.exports = function (app, options) {
           return res.json({ status: 401, msg: "Unauthorized" });
       }
 
-      var user_id = req.params.uid;
-      userController.getUser(user_id).then(function (user) {
-        var stripe = require('stripe')(user.stripe.secretKey); 
-        var limit = req.query.limit || 100;
-        var starting_after;
-        if(req.query.starting_after != undefined) {
-          starting_after = req.query.starting_after;
-        }            
-        stripe.charges.list({ limit: limit, starting_after: starting_after }, userController.authorize, function(err, charges) {
-          // asynchronously called
-            if(err) {
-              logger.error(err)
-              res.json({ error: err })                                        
-            } else {
-              res.json({ charges: charges })                        
-            }
-        });    
-      });     
+      try {
+        var user_id = req.params.uid;
+        userController.getUser(user_id).then(function (user) {
+          var stripe = require('stripe')(user.stripe.secretKey); 
+          var limit = req.query.limit || 100;
+          var starting_after;
+          if(req.query.starting_after != undefined) {
+            starting_after = req.query.starting_after;
+          }            
+          stripe.charges.list({ limit: limit, starting_after: starting_after }, userController.authorize, function(err, charges) {
+            // asynchronously called
+              if(err) {
+                logger.error(err)
+                res.json({ error: err })                                        
+              } else {
+                res.json({ charges: charges })                        
+              }
+          });    
+        });     
+      } catch(err) {
+          logger.error(err);
+          return res.json({ err: err })          
+      }        
   });
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/:charge_id", userController.authorize, function(req, res, next) {
       var user_id = req.params.uid;
@@ -907,18 +899,23 @@ module.exports = function (app, options) {
           return res.json({ status: 401, msg: "Unauthorized" });
       }
 
-      userController.getUser(user_id).then(function (user) {
-        var stripe = require('stripe')(user.stripe.secretKey);      
-        stripe.charges.retrieve(charge_id, function(err, charge) {
-          // asynchronously called
-            if(err) {
-              logger.error(err)
-              res.json({ error: err })                                        
-            } else {
-              res.json({ charge: charge })                        
-            }
-        });        
-      });
+      try {
+        userController.getUser(user_id).then(function (user) {
+          var stripe = require('stripe')(user.stripe.secretKey);      
+          stripe.charges.retrieve(charge_id, function(err, charge) {
+            // asynchronously called
+              if(err) {
+                logger.error(err)
+                res.json({ error: err })                                        
+              } else {
+                res.json({ charge: charge })                        
+              }
+          });        
+        });
+      } catch(err) {
+          logger.error(err);
+          return res.json({ err: err })          
+      }      
   });
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/:charge_id", userController.authorize, function(req, res, next) {
       var user_id = req.params.uid;
@@ -929,18 +926,23 @@ module.exports = function (app, options) {
           return res.json({ status: 401, msg: "Unauthorized" });
       }
 
-      userController.getUser(user_id).then(function (user) {
-        var stripe = require('stripe')(user.stripe.secretKey);      
-        stripe.charges.capture(charge_id, function(err, charge) {
-          // asynchronously called
-            if(err) {
-              logger.error(err)
-              res.json({ error: err })                                        
-            } else {
-              res.json({ charge: charge })                          
-            }
-        });        
-      });      
+      try {
+        userController.getUser(user_id).then(function (user) {
+          var stripe = require('stripe')(user.stripe.secretKey);      
+          stripe.charges.capture(charge_id, function(err, charge) {
+            // asynchronously called
+              if(err) {
+                logger.error(err)
+                res.json({ error: err })                                        
+              } else {
+                res.json({ charge: charge })                          
+              }
+          });        
+        }); 
+      } catch(err) {
+          logger.error(err);
+          return res.json({ err: err })          
+      }           
   });
   app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/:charge_id", userController.authorize, function(req, res, next) {
       var user_id = req.params.uid;
@@ -951,84 +953,89 @@ module.exports = function (app, options) {
           return res.json({ status: 401, msg: "Unauthorized" });
       }
 
-      userController.getUser(user_id).then(function (user) {
-        var stripe = require('stripe')(user.stripe.secretKey);      
-        stripe.charges.update(charge_id, {}, function(err, charge) {
-          // asynchronously called
-            if(err) {
-              logger.error(err)
-              res.json({ error: err })                                        
-            } else {
-              res.json({ charge: charge })                        
-            }
-        });        
-      });        
+      try {
+        userController.getUser(user_id).then(function (user) {
+          var stripe = require('stripe')(user.stripe.secretKey);      
+          stripe.charges.update(charge_id, {}, function(err, charge) {
+            // asynchronously called
+              if(err) {
+                logger.error(err)
+                res.json({ error: err })                                        
+              } else {
+                res.json({ charge: charge })                        
+              }
+          });        
+        });  
+      } catch(err) {
+          logger.error(err);
+          return res.json({ err: err })          
+      }            
   });
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/close/dispute", userController.authorize, function(req, res, next) {
-      //stripe.charges.closeDispute(chargeId, params)
-      if(req.user._id !== req.params.uid) {
-          logger.info("unauthorized uid");
-          return res.json({ status: 401, msg: "Unauthorized" });
-      }      
-  });
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/set/metadata", userController.authorize, function(req, res, next) {
-      //stripe.charges.setMetadata(chargeId, metadataObject)
-      if(req.user._id !== req.params.uid) {
-          logger.info("unauthorized uid");
-          return res.json({ status: 401, msg: "Unauthorized" });
-      }      
-  });
-  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/get/metadata", userController.authorize, function(req, res, next) {
-      //stripe.charges.getMetadata(chargeId)
-      if(req.user._id !== req.params.uid) {
-          logger.info("unauthorized uid");
-          return res.json({ status: 401, msg: "Unauthorized" });
-      }      
-  });
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/mark/safe", userController.authorize, function(req, res, next) {
-      //stripe.charges.markAsSafe(chargeId)
-      if(req.user._id !== req.params.uid) {
-          logger.info("unauthorized uid");
-          return res.json({ status: 401, msg: "Unauthorized" });
-      }      
-  });
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/mark/fraud", userController.authorize, function(req, res, next) {
-      //stripe.charges.markAsFraudulent(chargeId)
-      if(req.user._id !== req.params.uid) {
-          logger.info("unauthorized uid");
-          return res.json({ status: 401, msg: "Unauthorized" });
-      }      
-  });
+  // app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/close/dispute", userController.authorize, function(req, res, next) {
+  //     //stripe.charges.closeDispute(chargeId, params)
+  //     if(req.user._id !== req.params.uid) {
+  //         logger.info("unauthorized uid");
+  //         return res.json({ status: 401, msg: "Unauthorized" });
+  //     }      
+  // });
+  // app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/set/metadata", userController.authorize, function(req, res, next) {
+  //     //stripe.charges.setMetadata(chargeId, metadataObject)
+  //     if(req.user._id !== req.params.uid) {
+  //         logger.info("unauthorized uid");
+  //         return res.json({ status: 401, msg: "Unauthorized" });
+  //     }      
+  // });
+  // app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/get/metadata", userController.authorize, function(req, res, next) {
+  //     //stripe.charges.getMetadata(chargeId)
+  //     if(req.user._id !== req.params.uid) {
+  //         logger.info("unauthorized uid");
+  //         return res.json({ status: 401, msg: "Unauthorized" });
+  //     }      
+  // });
+  // app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/mark/safe", userController.authorize, function(req, res, next) {
+  //     //stripe.charges.markAsSafe(chargeId)
+  //     if(req.user._id !== req.params.uid) {
+  //         logger.info("unauthorized uid");
+  //         return res.json({ status: 401, msg: "Unauthorized" });
+  //     }      
+  // });
+  // app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/mark/fraud", userController.authorize, function(req, res, next) {
+  //     //stripe.charges.markAsFraudulent(chargeId)
+  //     if(req.user._id !== req.params.uid) {
+  //         logger.info("unauthorized uid");
+  //         return res.json({ status: 401, msg: "Unauthorized" });
+  //     }      
+  // });
 
   // COUPONS
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.coupons, userController.authorize, function(req, res, next) {
-      //stripe.coupons.create(params)
-      if(req.user._id !== req.params.uid) {
-          logger.info("unauthorized uid");
-          return res.json({ status: 401, msg: "Unauthorized" });
-      }      
-  });
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.coupons, userController.authorize, function(req, res, next) {
-      //stripe.coupons.list([params])
-      if(req.user._id !== req.params.uid) {
-          logger.info("unauthorized uid");
-          return res.json({ status: 401, msg: "Unauthorized" });
-      }      
-  });
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.coupons, userController.authorize, function(req, res, next) {
-      //stripe.coupons.retrieve(chargeId)
-      if(req.user._id !== req.params.uid) {
-          logger.info("unauthorized uid");
-          return res.json({ status: 401, msg: "Unauthorized" });
-      }      
-  });
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.coupons, userController.authorize, function(req, res, next) {
-      //stripe.coupons.del(chargeId)
-      if(req.user._id !== req.params.uid) {
-          logger.info("unauthorized uid");
-          return res.json({ status: 401, msg: "Unauthorized" });
-      }      
-  });
+  // app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.coupons, userController.authorize, function(req, res, next) {
+  //     //stripe.coupons.create(params)
+  //     if(req.user._id !== req.params.uid) {
+  //         logger.info("unauthorized uid");
+  //         return res.json({ status: 401, msg: "Unauthorized" });
+  //     }      
+  // });
+  // app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.coupons, userController.authorize, function(req, res, next) {
+  //     //stripe.coupons.list([params])
+  //     if(req.user._id !== req.params.uid) {
+  //         logger.info("unauthorized uid");
+  //         return res.json({ status: 401, msg: "Unauthorized" });
+  //     }      
+  // });
+  // app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.coupons, userController.authorize, function(req, res, next) {
+  //     //stripe.coupons.retrieve(chargeId)
+  //     if(req.user._id !== req.params.uid) {
+  //         logger.info("unauthorized uid");
+  //         return res.json({ status: 401, msg: "Unauthorized" });
+  //     }      
+  // });
+  // app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.coupons, userController.authorize, function(req, res, next) {
+  //     //stripe.coupons.del(chargeId)
+  //     if(req.user._id !== req.params.uid) {
+  //         logger.info("unauthorized uid");
+  //         return res.json({ status: 401, msg: "Unauthorized" });
+  //     }      
+  // });
 
 
   // CUSTOMERS
@@ -1045,25 +1052,30 @@ module.exports = function (app, options) {
           return res.json({ status: 401, msg: "Unauthorized" });
       }
 
-      var user_id = req.params.uid;
-      var params = {
-        email: req.body.email,
-        description: req.body.description,
-        source: req.body.token
-      };
-      userController.getUser(user_id).then(function (user) {
-        var stripe = require('stripe')(user.stripe.secretKey);
-        stripe.customers.create(params, function(err, customer) {
-            // asynchronously called
-            if(err) {
-              logger.error(err)
-              res.json({ error: err })                                        
-            } else {
-              res.json({ customer: customer })              
+      try {
+        var user_id = req.params.uid;
+        var params = {
+          email: req.body.email,
+          description: req.body.description,
+          source: req.body.token
+        };
+        userController.getUser(user_id).then(function (user) {
+          var stripe = require('stripe')(user.stripe.secretKey);
+          stripe.customers.create(params, function(err, customer) {
+              // asynchronously called
+              if(err) {
+                logger.error(err)
+                res.json({ error: err })                                        
+              } else {
+                res.json({ customer: customer })              
+              }
             }
-          }
-        );
-      });
+          );
+        });
+      } catch(err) {
+          logger.error(err);
+          return res.json({ err: err })          
+      }      
   });  
   // List customers /v1/stripe/:uid/customers/
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.customers, userController.authorize, function(req, res, next) {
@@ -1073,26 +1085,31 @@ module.exports = function (app, options) {
           return res.json({ status: 401, msg: "Unauthorized" });
       }
 
-      logger.trace('getting user customers');
-      var user_id = req.params.uid;
-      userController.getUser(user_id).then(function (user) {
-        var stripe = require('stripe')(user.stripe.secretKey);
-        var limit = req.query.limit || 100;
-        var starting_after;
-        if(req.query.starting_after != undefined) {
-          starting_after = req.query.starting_after;
-        }
-        stripe.customers.list({ limit: limit, starting_after: starting_after }, function(err, customers) {
-            // asynchronously called
-            if(err) {
-              logger.error(err)
-              res.json({ error: err })                                        
-            } else {
-              res.json({ customers: customers })              
-            }
+      try {
+        logger.trace('getting user customers');
+        var user_id = req.params.uid;
+        userController.getUser(user_id).then(function (user) {
+          var stripe = require('stripe')(user.stripe.secretKey);
+          var limit = req.query.limit || 100;
+          var starting_after;
+          if(req.query.starting_after != undefined) {
+            starting_after = req.query.starting_after;
           }
-        );
-      });
+          stripe.customers.list({ limit: limit, starting_after: starting_after }, function(err, customers) {
+              // asynchronously called
+              if(err) {
+                logger.error(err)
+                res.json({ error: err })                                        
+              } else {
+                res.json({ customers: customers })              
+              }
+            }
+          );
+        });
+      } catch(err) {
+          logger.error(err);
+          return res.json({ err: err })          
+      }      
   });   
 
   // Update customer 
@@ -1103,22 +1120,27 @@ module.exports = function (app, options) {
           return res.json({ status: 401, msg: "Unauthorized" });
       }
 
-      var user_id = req.params.uid;
-      var customer_id = req.params.cust_id
-      userController.getUser(user_id).then(function (user) {
-        var stripe = require('stripe')(user.stripe.secretKey);
-        stripe.customers.update(customer_id, {
-          description: "Customer for test@example.com"
-        }, function(err, customer) {
-          // asynchronously called
-            if(err) {
-              logger.error(err)
-              res.json({ error: err })                                        
-            } else {
-              res.json({ customer: customer })                        
-            }
-        });        
-      });    
+      try {
+        var user_id = req.params.uid;
+        var customer_id = req.params.cust_id
+        userController.getUser(user_id).then(function (user) {
+          var stripe = require('stripe')(user.stripe.secretKey);
+          stripe.customers.update(customer_id, {
+            description: "Customer for test@example.com"
+          }, function(err, customer) {
+            // asynchronously called
+              if(err) {
+                logger.error(err)
+                res.json({ error: err })                                        
+              } else {
+                res.json({ customer: customer })                        
+              }
+          });        
+        });    
+      } catch(err) {
+          logger.error(err);
+          return res.json({ err: err })          
+      }      
   });  
   // Retrieve single customer
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.customers + "/:cust_id", userController.authorize, function(req, res, next) {
@@ -1128,20 +1150,25 @@ module.exports = function (app, options) {
           return res.json({ status: 401, msg: "Unauthorized" });
       }
 
-      var user_id = req.params.uid;
-      var customer_id = req.params.cust_id;      
-      userController.getUser(user_id).then(function (user) {
-        var stripe = require('stripe')(user.stripe.secretKey);
-        stripe.customers.retrieve(customer_id, function(err, customer) {
-          // asynchronously called
-            if(err) {
-              logger.error(err)
-              res.json({ error: err })                                        
-            } else {
-              res.json({ customer: customer })                          
-            }
-        });        
-      });       
+      try {
+        var user_id = req.params.uid;
+        var customer_id = req.params.cust_id;      
+        userController.getUser(user_id).then(function (user) {
+          var stripe = require('stripe')(user.stripe.secretKey);
+          stripe.customers.retrieve(customer_id, function(err, customer) {
+            // asynchronously called
+              if(err) {
+                logger.error(err)
+                res.json({ error: err })                                        
+              } else {
+                res.json({ customer: customer })                          
+              }
+          });        
+        }); 
+      } catch(err) {
+          logger.error(err);
+          return res.json({ err: err })          
+      }            
   });   
   // Delete customer
   app.delete(endpoint.version + endpoint.base + "/:uid" + endpoint.customers + "/:cust_id", userController.authorize, function(req, res, next) {
@@ -1151,20 +1178,25 @@ module.exports = function (app, options) {
           return res.json({ status: 401, msg: "Unauthorized" });
       }
 
-      var user_id = req.params.uid;
-      var customer_id = req.params.cust_id;      
-      userController.getUser(user_id).then(function (user) {
-        var stripe = require('stripe')(user.stripe.secretKey);
-        stripe.customers.del(customer_id, function(err, confirmation) {
-          // asynchronously called
-            if(err) {
-              logger.error(err)
-              res.json({ error: err })                                        
-            } else {
-              res.json({ confirmation: confirmation })                        
-            }
-        });        
-      });     
+      try {
+        var user_id = req.params.uid;
+        var customer_id = req.params.cust_id;      
+        userController.getUser(user_id).then(function (user) {
+          var stripe = require('stripe')(user.stripe.secretKey);
+          stripe.customers.del(customer_id, function(err, confirmation) {
+            // asynchronously called
+              if(err) {
+                logger.error(err)
+                res.json({ error: err })                                        
+              } else {
+                res.json({ confirmation: confirmation })                        
+              }
+          });        
+        });   
+      } catch(err) {
+          logger.error(err);
+          return res.json({ err: err })          
+      }        
   });    
   // Set customer metadata      
   app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.customers + "/:cust_id", userController.authorize, function(req, res, next) {
@@ -1174,22 +1206,27 @@ module.exports = function (app, options) {
           return res.json({ status: 401, msg: "Unauthorized" });
       }
 
-      var metadata_obj = req.body.metadataObject;
-      var user_id = req.params.uid;
-      var customer_id = req.params.cust_id;      
-      userController.getUser(user_id).then(function (user) {
-        var stripe = require('stripe')(user.stripe.secretKey);
-        var customer_id = req.body.customerId;
-        stripe.customers.setMetadata(customer_id, metadata_obj, function(err, customer) {
-          // asynchronously called
-            if(err) {
-              logger.error(err)
-              res.json({ error: err })                                        
-            } else {
-              res.json({ customer: customer })                        
-            }
-        });         
-      }); 
+      try {
+        var metadata_obj = req.body.metadataObject;
+        var user_id = req.params.uid;
+        var customer_id = req.params.cust_id;      
+        userController.getUser(user_id).then(function (user) {
+          var stripe = require('stripe')(user.stripe.secretKey);
+          var customer_id = req.body.customerId;
+          stripe.customers.setMetadata(customer_id, metadata_obj, function(err, customer) {
+            // asynchronously called
+              if(err) {
+                logger.error(err)
+                res.json({ error: err })                                        
+              } else {
+                res.json({ customer: customer })                        
+              }
+          });         
+        }); 
+      } catch(err) {
+          logger.error(err);
+          return res.json({ err: err })          
+      }      
   });    
   // Get customer metadata     
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.customers + "/:cust_id", userController.authorize, function(req, res, next) {
@@ -1199,21 +1236,26 @@ module.exports = function (app, options) {
           return res.json({ status: 401, msg: "Unauthorized" });
       }
 
-      var user_id = req.params.uid;
-      var customer_id = req.params.cust_id;      
-      userController.getUser(user_id).then(function (user) {
-        var stripe = require('stripe')(user.stripe.secretKey);
-        var customer_id = req.body.customerId;
-        stripe.customers.getMetadata(customer_id, function(err, customer) {
-          // asynchronously called
-            if(err) {
-              logger.error(err)
-              res.json({ error: err })                                        
-            } else {
-              res.json({ customer: customer })                        
-            }
-        });        
-      }); 
+      try {
+        var user_id = req.params.uid;
+        var customer_id = req.params.cust_id;      
+        userController.getUser(user_id).then(function (user) {
+          var stripe = require('stripe')(user.stripe.secretKey);
+          var customer_id = req.body.customerId;
+          stripe.customers.getMetadata(customer_id, function(err, customer) {
+            // asynchronously called
+              if(err) {
+                logger.error(err)
+                res.json({ error: err })                                        
+              } else {
+                res.json({ customer: customer })                        
+              }
+          });        
+        }); 
+      } catch(err) {
+          logger.error(err);
+          return res.json({ err: err })          
+      }      
   });        
 
   // SUBSCRIPTIONS
@@ -1233,118 +1275,57 @@ module.exports = function (app, options) {
       return res.status(401).send({ message: 'Unauthorized' });
     }
 
-    // Create a subscription with the credit card token
-    // Find the user in the database
-    // Make a delegated request on behalf of the user
-    logger.debug("delegated subscription creation called")
-    //logger.debug(req.body);
-    //logger.debug(req.params);
-    var user_id = req.params.uid;
-    var params = {
-      plan: req.body.plan_id
-    }
-    logger.debug(params);
-    userController.getDelegatedUserByUsername(req.params.delegate_username).then(function (delegateUser) {
-      // get delegate user
-      var delegateUser = delegateUser;
-      logger.info("delegate", delegateUser.username);
-      var stripe = require('stripe')(delegateUser.stripe.secretKey);
-      userController.getUser(user_id).then(function (user) {
-        // get requesting user
-        var requestingUser = user
-        logger.info("is creating charge for", requestingUser.username);
-        // TODO: CHANGE LIMIT TO INFINITE! or paginate it
-        var limit = req.query.limit || 100;
-        var starting_after;
-        if(req.query.starting_after != undefined) {
-          starting_after = req.query.starting_after;
-        }        
-        stripe.customers.list({ limit: limit, starting_after: starting_after }, function(err, customers) {
-            logger.trace('inside customer list')
-            // asynchronously called
-            if(err) {
-              logger.error(err)
-              res.json({ error: err })                                        
-            }
+    try {
+      // Create a subscription with the credit card token
+      // Find the user in the database
+      // Make a delegated request on behalf of the user
+      logger.debug("delegated subscription creation called")
+      //logger.debug(req.body);
+      //logger.debug(req.params);
+      var user_id = req.params.uid;
+      var params = {
+        plan: req.body.plan_id
+      }
+      logger.debug(params);
+      userController.getDelegatedUserByUsername(req.params.delegate_username).then(function (delegateUser) {
+        // get delegate user
+        var delegateUser = delegateUser;
+        logger.info("delegate", delegateUser.username);
+        var stripe = require('stripe')(delegateUser.stripe.secretKey);
+        userController.getUser(user_id).then(function (user) {
+          // get requesting user
+          var requestingUser = user
+          logger.info("is creating charge for", requestingUser.username);
+          // TODO: CHANGE LIMIT TO INFINITE! or paginate it
+          var limit = req.query.limit || 100;
+          var starting_after;
+          if(req.query.starting_after != undefined) {
+            starting_after = req.query.starting_after;
+          }        
+          stripe.customers.list({ limit: limit, starting_after: starting_after }, function(err, customers) {
+              logger.trace('inside customer list')
+              // asynchronously called
+              if(err) {
+                logger.error(err)
+                res.json({ error: err })                                        
+              }
 
-            // list customers before adding plan
-            // check for existing customer by email
-            // so for example, list all customers and do
-            // a quick check to see if email matches any in
-            // customer list, if not create customer, if yes
-            // add new plan to existing customer
+              // list customers before adding plan
+              // check for existing customer by email
+              // so for example, list all customers and do
+              // a quick check to see if email matches any in
+              // customer list, if not create customer, if yes
+              // add new plan to existing customer
 
-            // First check if the delgated user has any customers, if not add the first one. Then loop
-            // through the current customers and do a match on whether customer already exists or not.  Then
-            // if no matches are found perform the secondary option of creating the customer and subscription.
-            // The second part of the execution can only occur once the full loop has been performed
+              // First check if the delgated user has any customers, if not add the first one. Then loop
+              // through the current customers and do a match on whether customer already exists or not.  Then
+              // if no matches are found perform the secondary option of creating the customer and subscription.
+              // The second part of the execution can only occur once the full loop has been performed
 
-            //logger.debug(customers.data.length)
-            if( customers.data.length == 0 ) {
-                // if customer does not exist, create one and add a plan
-                logger.info("No customers exist for this user, adding the first one!")   
-                var customer_params = {
-                    email: requestingUser.email,
-                    source: req.body.token
-                }                 
-                stripe.customers.create(customer_params, function(err, customer) {
-                    // asynchronously called
-                    if(err) {
-                      logger.error(err)
-                      res.json({ error: err })                                                
-                    }
-                    // Create a customer, then create a plan for that customer
-                    stripe.subscriptions.create({ 
-                      customer: customer.id, 
-                      plan: params.plan,
-                      application_fee_percent: 1 
-                    }).then(function(subscription, err) {
-                        // use the var subscription to create a new scribe plan, and pass in the tenant id as well using plan.tenant_id = user.tenant_id                        
-                        var scribe = new Scribe(subscription);
-                        scribe.tenant_id = requestingUser.tenant_id;
-                        scribe.delegate_username = delegateUser.username;
-                        //logger.info(scribe);
-                        scribe.save().then(function (scribe, err) {
-                          logger.info("saved scribe");
-                          //logger.info(scribe);
-                        })                      
-                        res.json({ subscription: subscription })
-                    }, function(err) {
-                        logger.error(err)
-                        res.json({ error: err })                                                  
-                    })
-                  }
-                );  
-            } else {
-              logger.info("Customers exist for this user, checking if requesting user is one of them")   
-              for (var i = 0; i < customers.data.length; i++) {
-                if(customers.data[i].email == requestingUser.email) {
-                  logger.info("Customer email already exists in database! Adding plan to existing customer")
-                  stripe.subscriptions.create({ 
-                    customer: customers.data[i].id, 
-                    plan: params.plan,
-                    application_fee_percent: 1
-                  }).then(function(subscription, err) {
-                      // use the var subscription to create a new scribe plan, and pass in the tenant id as well using plan.tenant_id = user.tenant_id                        
-                      var scribe = new Scribe(subscription);
-                      scribe.tenant_id = requestingUser.tenant_id;
-                      scribe.delegate_username = delegateUser.username;
-                      //logger.info(scribe);
-                      scribe.save().then(function (scribe, err) {
-                        logger.info("saved scribe");
-                        //logger.info(scribe);
-                      })                    
-                      res.json({ subscription: subscription })
-                  }, function(err) {
-                      logger.error(err)
-                      res.json({ error: err })                          
-                  });
-                  break;
-                }
-                // At the end of the data array if we still haven't found an existing customer add a new one with subscription
-                if(i == customers.data.length - 1 && customers.data[i].email != requestingUser.email) {
+              //logger.debug(customers.data.length)
+              if( customers.data.length == 0 ) {
                   // if customer does not exist, create one and add a plan
-                  logger.info("Customer email does not currently exist. Adding new customer with subscription")   
+                  logger.info("No customers exist for this user, adding the first one!")   
                   var customer_params = {
                       email: requestingUser.email,
                       source: req.body.token
@@ -1353,14 +1334,13 @@ module.exports = function (app, options) {
                       // asynchronously called
                       if(err) {
                         logger.error(err)
-                        res.json({ error: err })                                                  
+                        res.json({ error: err })                                                
                       }
-                      //logger.info(customer);
                       // Create a customer, then create a plan for that customer
                       stripe.subscriptions.create({ 
                         customer: customer.id, 
                         plan: params.plan,
-                        application_fee_percent: 1
+                        application_fee_percent: 1 
                       }).then(function(subscription, err) {
                           // use the var subscription to create a new scribe plan, and pass in the tenant id as well using plan.tenant_id = user.tenant_id                        
                           var scribe = new Scribe(subscription);
@@ -1370,40 +1350,107 @@ module.exports = function (app, options) {
                           scribe.save().then(function (scribe, err) {
                             logger.info("saved scribe");
                             //logger.info(scribe);
-                          })
+                          })                      
                           res.json({ subscription: subscription })
                       }, function(err) {
                           logger.error(err)
-                          res.json({ error: err })                          
+                          res.json({ error: err })                                                  
                       })
                     }
-                  )    
-                }
-              } 
-            }           
-          }
-        )        
-      })
-    }) 
+                  );  
+              } else {
+                logger.info("Customers exist for this user, checking if requesting user is one of them")   
+                for (var i = 0; i < customers.data.length; i++) {
+                  if(customers.data[i].email == requestingUser.email) {
+                    logger.info("Customer email already exists in database! Adding plan to existing customer")
+                    stripe.subscriptions.create({ 
+                      customer: customers.data[i].id, 
+                      plan: params.plan,
+                      application_fee_percent: 1
+                    }).then(function(subscription, err) {
+                        // use the var subscription to create a new scribe plan, and pass in the tenant id as well using plan.tenant_id = user.tenant_id                        
+                        var scribe = new Scribe(subscription);
+                        scribe.tenant_id = requestingUser.tenant_id;
+                        scribe.delegate_username = delegateUser.username;
+                        //logger.info(scribe);
+                        scribe.save().then(function (scribe, err) {
+                          logger.info("saved scribe");
+                          //logger.info(scribe);
+                        })                    
+                        res.json({ subscription: subscription })
+                    }, function(err) {
+                        logger.error(err)
+                        res.json({ error: err })                          
+                    });
+                    break;
+                  }
+                  // At the end of the data array if we still haven't found an existing customer add a new one with subscription
+                  if(i == customers.data.length - 1 && customers.data[i].email != requestingUser.email) {
+                    // if customer does not exist, create one and add a plan
+                    logger.info("Customer email does not currently exist. Adding new customer with subscription")   
+                    var customer_params = {
+                        email: requestingUser.email,
+                        source: req.body.token
+                    }                 
+                    stripe.customers.create(customer_params, function(err, customer) {
+                        // asynchronously called
+                        if(err) {
+                          logger.error(err)
+                          res.json({ error: err })                                                  
+                        }
+                        //logger.info(customer);
+                        // Create a customer, then create a plan for that customer
+                        stripe.subscriptions.create({ 
+                          customer: customer.id, 
+                          plan: params.plan,
+                          application_fee_percent: 1
+                        }).then(function(subscription, err) {
+                            // use the var subscription to create a new scribe plan, and pass in the tenant id as well using plan.tenant_id = user.tenant_id                        
+                            var scribe = new Scribe(subscription);
+                            scribe.tenant_id = requestingUser.tenant_id;
+                            scribe.delegate_username = delegateUser.username;
+                            //logger.info(scribe);
+                            scribe.save().then(function (scribe, err) {
+                              logger.info("saved scribe");
+                              //logger.info(scribe);
+                            })
+                            res.json({ subscription: subscription })
+                        }, function(err) {
+                            logger.error(err)
+                            res.json({ error: err })                          
+                        })
+                      }
+                    )    
+                  }
+                } 
+              }           
+            }
+          )        
+        })
+      }) 
+    } catch(err) {
+        logger.error(err);
+        return res.json({ err: err })        
+    }
   })
 
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.subscriptions, userController.authorize, function(req, res, next) {
-      if(req.user._id !== req.params.uid) {
-          logger.info("unauthorized uid");
-          return res.json({ status: 401, msg: "Unauthorized" });
-      }      
-      stripe.subscriptions.createSubscription(customerId, params)
-  });   
-  app.put(endpoint.version + endpoint.base + "/:uid" + endpoint.subscriptions, userController.authorize, function(req, res, next) {
-      if(req.user._id !== req.params.uid) {
-          logger.info("unauthorized uid");
-          return res.json({ status: 401, msg: "Unauthorized" });
-      }      
-      stripe.subscriptions.updateSubscription(customerId, subscriptionId, params)
-  });   
+  // app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.subscriptions, userController.authorize, function(req, res, next) {
+  //     if(req.user._id !== req.params.uid) {
+  //         logger.info("unauthorized uid");
+  //         return res.json({ status: 401, msg: "Unauthorized" });
+  //     }      
+  //     stripe.subscriptions.createSubscription(customerId, params)
+  // });   
+  // app.put(endpoint.version + endpoint.base + "/:uid" + endpoint.subscriptions, userController.authorize, function(req, res, next) {
+  //     if(req.user._id !== req.params.uid) {
+  //         logger.info("unauthorized uid");
+  //         return res.json({ status: 401, msg: "Unauthorized" });
+  //     }      
+  //     stripe.subscriptions.updateSubscription(customerId, subscriptionId, params)
+  // });   
 
   // DELETE Delegated request to cancel subscription
-  app.delete(endpoint.version + endpoint.base + "/:uid" + endpoint.subscriptions + "/:sub_id", userController.authorize, function(req, res, next) {
+  app.delete(endpoint.version + endpoint.base + "/:tenant_id" + endpoint.subscriptions + "/:sub_id", userController.authorize, function(req, res, next) {
       
       logger.trace("cancel subscription req received")
 
@@ -1411,55 +1458,73 @@ module.exports = function (app, options) {
       // Perform a delegated cancellation of the subscription
       // using the scribe.delegate_username and it's tenant_id
 
-      if(req.user._id !== req.params.uid) {
-          logger.info("unauthorized uid");
+      if(req.user.tenant_id !== req.params.tenant_id) {
+          logger.info("unauthorized tenant id");
           return res.json({ status: 401, msg: "Unauthorized" });
       }      
 
-      var subscription_id = req.params.sub_id;
-      var tenant_id = req.params.tenant_id;    
-      logger.debug("cancelling subscription", subscription_id);
+      try {
+        var subscription_id = req.params.sub_id;
+        var tenant_id = req.params.tenant_id;    
 
-      /* Process | Delegated Subscription Cancellation
-         1. Retrieve the delegated user's subscription list
-         2. Retrieve a specific subscription based on the sub_id 
-         3. Cancel the subscription using cust_id and sub_id
-      */
+        /* Process | Delegated Subscription Cancellation
+           1. Retrieve the delegated user's subscription list
+           2. Retrieve a specific subscription based on the sub_id 
+           3. Cancel the subscription using cust_id and sub_id
+        */
 
-      // Find's the specific Scribe object in the database
-      Scribe.findOne({id: subscription_id}, function(err, scribe) {
+        // Find's the specific Scribe object in the database
+        Scribe.findOne({id: subscription_id}, function(err, scribe) {
 
-          if(err) {
-            logger.error(err);
-            return res.json({ err: err })
-          } 
+            var legacy_scribe_delegate_username = scribe.delegate_username;
+            var legacy_scribe_tenant_id = scribe.tenant_id;
+            var legacy_scribe_id = scribe._id;
 
-          try {
-            // Get the delegated user by the Scribe object delegate_username
-            userController.getDelegatedUserByUsername(scribe.delegate_username).then(function (user) {
-                var stripe = require('stripe')(user.stripe.secretKey);
+            if(err) {
+              logger.error(err);
+              return res.json({ err: err })
+            } 
 
-                // Cancel the user's subscription
-                logger.trace("cancelling user subscription", scribe.customer);
-                logger.trace("cancelling user subscription id", scribe.id);
-                stripe.subscriptions.del(scribe.id, function(err, confirmation) {
-                    if(err) {
-                      logger.error(err)
-                      return res.json({ error: err })                                        
-                    } else {
-                      logger.info("subscription removal confirmation");
-                      Scribe.find({id: subscription_id}).remove().exec()
-                      return res.json({ confirmation: confirmation });              
-                    } 
-                });
-            })
-          } catch(err) {
-            logger.error("caught err", err)
-            return res.json({ err: err })
-          }
+            try {
+              // Get the delegated user by the Scribe object delegate_username
+              userController.getDelegatedUserByUsername(scribe.delegate_username).then(function (user) {
+                  var stripe = require('stripe')(user.stripe.secretKey);
 
-      })
+                  // Cancel the user's subscription
+                  stripe.subscriptions.del(scribe.id, function(err, confirmation) {
+                      if(err) {
+                        logger.error(err)
+                        return res.json({ error: err })                                        
+                      } else {
+                        if(req.query.type=="delete") {
+                          Scribe.find({id: subscription_id}).remove().exec()                          
+                        } else {
+                          // Delete old scribe and save the confirmation object as a new scribe object
+                          // Use old scribe definitions for tenant_id and delegate_username                          
+                          var updated_scribe = new Scribe(confirmation);
+                          updated_scribe.tenant_id = legacy_scribe_tenant_id;
+                          updated_scribe.delegate_username = legacy_scribe_delegate_username;
+                          updated_scribe.save().then(function (updated_scribe, err) {
+                            // Delete the old scribe
+                            Scribe.findById(legacy_scribe_id).remove().exec()                          
+                          })                            
+                        }
+
+                        return res.json({ confirmation: confirmation });                                                        
+                      } 
+                  });
+              })
+            } catch(err) {
+              logger.error(err)
+              return res.json({ err: err })
+            }
+        })
+      } catch(err) {
+          logger.error(err);
+          return res.json({ err: err })          
+      }      
   });   
+
   // app.delete(endpoint.version + endpoint.base + "/:uid" + endpoint.subscriptions + "/:sub_id", userController.authorize, function(req, res, next) {
       
   //     if(req.user._id !== req.params.uid) {
@@ -1490,81 +1555,86 @@ module.exports = function (app, options) {
           return res.json({ status: 401, msg: "Unauthorized" });
       }
 
-      logger.debug('getting user subscriptions')
-      var user_id = req.params.uid
-      userController.getUser(user_id).then(function (user) {
-        var stripe = require('stripe')(user.stripe.secretKey);
-        var limit = req.query.limit || 100;
-        var starting_after;
-        if(req.query.starting_after != undefined) {
-          starting_after = req.query.starting_after;
-        }
-        stripe.subscriptions.list({ limit: limit, starting_after: starting_after },
-          function(err, subscriptions) {
-            // asynchronously called
-            if(err) {
-              logger.error(err)
-              res.json({ error: err })                                        
-            } else {
-              res.json({ subscriptions: subscriptions })              
-            }
+      try {
+        logger.debug('getting user subscriptions')
+        var user_id = req.params.uid
+        userController.getUser(user_id).then(function (user) {
+          var stripe = require('stripe')(user.stripe.secretKey);
+          var limit = req.query.limit || 100;
+          var starting_after;
+          if(req.query.starting_after != undefined) {
+            starting_after = req.query.starting_after;
           }
-        );
-      });      
+          stripe.subscriptions.list({ limit: limit, starting_after: starting_after },
+            function(err, subscriptions) {
+              // asynchronously called
+              if(err) {
+                logger.error(err)
+                res.json({ error: err })                                        
+              } else {
+                res.json({ subscriptions: subscriptions })              
+              }
+            }
+          );
+        });     
+      } catch(err) {
+          logger.error(err);
+          return res.json({ err: err })          
+      }       
   });   
-  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.subscriptions, userController.authorize, function(req, res, next) {
+  // app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.subscriptions, userController.authorize, function(req, res, next) {
       
-      if(req.user._id !== req.params.uid) {
-          logger.info("unauthorized uid");
-          return res.json({ status: 401, msg: "Unauthorized" });
-      }
+  //     if(req.user._id !== req.params.uid) {
+  //         logger.info("unauthorized uid");
+  //         return res.json({ status: 401, msg: "Unauthorized" });
+  //     }
 
-      stripe.subscriptions.retrieveSubscription(customerId, subscriptionId)
-  });   
+  //     stripe.subscriptions.retrieveSubscription(customerId, subscriptionId)
+  // });   
 
   // CARDS
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.cards, userController.authorize, function(req, res, next) {
-      if(req.user._id !== req.params.uid) {
-          logger.info("unauthorized uid");
-          return res.json({ status: 401, msg: "Unauthorized" });
-      }      
-      stripe.cards.createSource(customerId, params)
-  });   
-  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.cards, userController.authorize, function(req, res, next) {
-      if(req.user._id !== req.params.uid) {
-          logger.info("unauthorized uid");
-          return res.json({ status: 401, msg: "Unauthorized" });
-      }      
-      stripe.cards.listCards(customerId)
-  });   
-  app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.cards, userController.authorize, function(req, res, next) {
-      if(req.user._id !== req.params.uid) {
-          logger.info("unauthorized uid");
-          return res.json({ status: 401, msg: "Unauthorized" });
-      }      
-      stripe.cards.retrieveCard(customerId, cardId)
-  });   
-  app.put(endpoint.version + endpoint.base + "/:uid" + endpoint.cards, userController.authorize, function(req, res, next) {
-      if(req.user._id !== req.params.uid) {
-          logger.info("unauthorized uid");
-          return res.json({ status: 401, msg: "Unauthorized" });
-      }      
-      stripe.cards.updateCard(customerId, cardId, params)
-  });   
-  app.delete(endpoint.version + endpoint.base + "/:uid" + endpoint.cards, userController.authorize, function(req, res, next) {
-      if(req.user._id !== req.params.uid) {
-          logger.info("unauthorized uid");
-          return res.json({ status: 401, msg: "Unauthorized" });
-      }      
-      stripe.cards.deleteCard(customerId, cardId)
-  });   
-  app.delete(endpoint.version + endpoint.base + "/:uid" + endpoint.cards, userController.authorize, function(req, res, next) {
-      if(req.user._id !== req.params.uid) {
-          logger.info("unauthorized uid");
-          return res.json({ status: 401, msg: "Unauthorized" });
-      }      
-      stripe.cards.deleteDiscount(customerId)
-  });     
+  // app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.cards, userController.authorize, function(req, res, next) {
+  //     if(req.user._id !== req.params.uid) {
+  //         logger.info("unauthorized uid");
+  //         return res.json({ status: 401, msg: "Unauthorized" });
+  //     }      
+  //     stripe.cards.createSource(customerId, params)
+  // });   
+  // app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.cards, userController.authorize, function(req, res, next) {
+  //     if(req.user._id !== req.params.uid) {
+  //         logger.info("unauthorized uid");
+  //         return res.json({ status: 401, msg: "Unauthorized" });
+  //     }      
+  //     stripe.cards.listCards(customerId)
+  // });   
+  // app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.cards, userController.authorize, function(req, res, next) {
+  //     if(req.user._id !== req.params.uid) {
+  //         logger.info("unauthorized uid");
+  //         return res.json({ status: 401, msg: "Unauthorized" });
+  //     }      
+  //     stripe.cards.retrieveCard(customerId, cardId)
+  // });   
+  // app.put(endpoint.version + endpoint.base + "/:uid" + endpoint.cards, userController.authorize, function(req, res, next) {
+  //     if(req.user._id !== req.params.uid) {
+  //         logger.info("unauthorized uid");
+  //         return res.json({ status: 401, msg: "Unauthorized" });
+  //     }      
+  //     stripe.cards.updateCard(customerId, cardId, params)
+  // });   
+  // app.delete(endpoint.version + endpoint.base + "/:uid" + endpoint.cards, userController.authorize, function(req, res, next) {
+  //     if(req.user._id !== req.params.uid) {
+  //         logger.info("unauthorized uid");
+  //         return res.json({ status: 401, msg: "Unauthorized" });
+  //     }      
+  //     stripe.cards.deleteCard(customerId, cardId)
+  // });   
+  // app.delete(endpoint.version + endpoint.base + "/:uid" + endpoint.cards, userController.authorize, function(req, res, next) {
+  //     if(req.user._id !== req.params.uid) {
+  //         logger.info("unauthorized uid");
+  //         return res.json({ status: 401, msg: "Unauthorized" });
+  //     }      
+  //     stripe.cards.deleteDiscount(customerId)
+  // });     
 
   // // EVENTS (types of events)
   /*
@@ -1579,24 +1649,29 @@ module.exports = function (app, options) {
         return res.json({ status: 401, msg: "Unauthorized" });
       }
 
-      var user_id = req.params.uid
-      userController.getUser(user_id).then(function (user) {
-        var stripe = require('stripe')(user.stripe.secretKey);
-        var limit = req.query.limit || 100;
-        var starting_after;
-        if(req.query.starting_after != undefined) {
-          starting_after = req.query.starting_after;
-        }
-        stripe.events.list({ limit: limit, starting_after: starting_after }, function(err, events) {
-            if(err) {
-              logger.error(err)
-              res.json({ error: err })                                     
-            } else {
-              logger.info("events sent");
-              res.json({events:events})
-            }
-        });
-      })       
+      try {
+        var user_id = req.params.uid
+        userController.getUser(user_id).then(function (user) {
+          var stripe = require('stripe')(user.stripe.secretKey);
+          var limit = req.query.limit || 100;
+          var starting_after;
+          if(req.query.starting_after != undefined) {
+            starting_after = req.query.starting_after;
+          }
+          stripe.events.list({ limit: limit, starting_after: starting_after }, function(err, events) {
+              if(err) {
+                logger.error(err)
+                res.json({ error: err })                                     
+              } else {
+                logger.info("events sent");
+                res.json({events:events})
+              }
+          });
+        })  
+      } catch(err) {
+          logger.error(err);
+          return res.json({ err: err })          
+      }           
   });
 
   // Implement retrieve single event for detail event view 
@@ -1644,35 +1719,40 @@ module.exports = function (app, options) {
         return res.json({ status: 401, msg: "Unauthorized" });
       }
 
-      userController.getUser(user_id).then(function (user) {
-        var stripe = require('stripe')(user.stripe.secretKey);
-        var statement_desc = req.body.statement_descriptor || ""
-        if(statement_desc.length > 22) {
-          logger.info("statement descriptor longer than 22")
-          statement_desc = statement_desc.subtring(0,22)
-        }
-        var params = {
-          id: req.body.id,          
-          amount: req.body.amount,
-          interval: req.body.interval,
-          interval_count: req.body.interval_count,
-          name: req.body.name,
-          currency: req.body.currency,
-          trial_period_days: req.body.trial_period_days || 0,
-          statement_descriptor: req.body.statement_descriptor || ""
-        };
-        logger.debug(params);
-        stripe.plans.create(params, function(err, plan) {
-            if(err) {
-              logger.error(err)
-              return res.json(400, { error: err })                                    
-            } else {
-              logger.debug("plan creation success");
-              res.json({ plan: plan })
-            }
-            // asynchronously called
+      try {
+        userController.getUser(user_id).then(function (user) {
+          var stripe = require('stripe')(user.stripe.secretKey);
+          var statement_desc = req.body.statement_descriptor || ""
+          if(statement_desc.length > 22) {
+            logger.info("statement descriptor longer than 22")
+            statement_desc = statement_desc.subtring(0,22)
+          }
+          var params = {
+            id: req.body.id,          
+            amount: req.body.amount,
+            interval: req.body.interval,
+            interval_count: req.body.interval_count,
+            name: req.body.name,
+            currency: req.body.currency,
+            trial_period_days: req.body.trial_period_days || 0,
+            statement_descriptor: req.body.statement_descriptor || ""
+          };
+          logger.debug(params);
+          stripe.plans.create(params, function(err, plan) {
+              if(err) {
+                logger.error(err)
+                return res.json(400, { error: err })                                    
+              } else {
+                logger.debug("plan creation success");
+                res.json({ plan: plan })
+              }
+              // asynchronously called
+          });
         });
-      });
+      } catch(err) {
+          logger.error(err);
+          return res.json({ err: err })          
+      }      
   });  
 
   /* Used to GET a list of plans of a user
@@ -1694,52 +1774,63 @@ module.exports = function (app, options) {
         return res.json({ status: 401, msg: "Unauthorized" });
       }
 
-      logger.debug('getting user plans')
-      var user_id = req.params.uid
-      userController.getUser(user_id).then(function (user) {
-        var stripe = require('stripe')(user.stripe.secretKey);
-        var limit = req.query.limit || 100;
-        var starting_after;
-        if(req.query.starting_after != undefined) {
-          starting_after = req.query.starting_after;
-        }        
-        stripe.plans.list({ limit: limit, starting_after: starting_after },
-          function(err, plans) {
-            // asynchronously called
-            if(err) {
-              logger.error(err)
-              res.json({ error: err })                                        
-            } else {
-              res.json({ plans: plans })              
+      try {
+        logger.debug('getting user plans')
+        var user_id = req.params.uid
+        userController.getUser(user_id).then(function (user) {
+          var stripe = require('stripe')(user.stripe.secretKey);
+          var limit = req.query.limit || 100;
+          var starting_after;
+          if(req.query.starting_after != undefined) {
+            starting_after = req.query.starting_after;
+          }        
+          stripe.plans.list({ limit: limit, starting_after: starting_after },
+            function(err, plans) {
+              // asynchronously called
+              if(err) {
+                logger.error(err)
+                res.json({ error: err })                                        
+              } else {
+                res.json({ plans: plans })              
+              }
             }
-          }
-        );
-      });
+          );
+        });
+      } catch(err) {
+          logger.error(err);
+          return res.json({ err: err })        
+      }      
   });  
 
   // delegated user plan retrieval
   app.get(endpoint.version + endpoint.base + endpoint.plans + "/:delegate_username", userController.authorize, function(req, res, next) {
       logger.debug('getting delegated user plans') // get user by username delegated // 2
-      var username = req.params.delegate_username
-      userController.getDelegatedUserByUsername(username).then(function (user) {
-        var stripe = require('stripe')(user.stripe.secretKey);
-        var limit = req.query.limit || 100;
-        var starting_after;
-        if(req.query.starting_after != undefined) {
-          starting_after = req.query.starting_after;
-        }        
-        stripe.plans.list({ limit: limit, starting_after: starting_after },
-          function(err, plans) {
-            // asynchronously called
-            if(err) {
-              logger.error(err)
-              res.json({ error: err })                                        
-            } else {
-              res.json({ plans: plans })              
+      
+      try {
+        var username = req.params.delegate_username
+        userController.getDelegatedUserByUsername(username).then(function (user) {
+          var stripe = require('stripe')(user.stripe.secretKey);
+          var limit = req.query.limit || 100;
+          var starting_after;
+          if(req.query.starting_after != undefined) {
+            starting_after = req.query.starting_after;
+          }        
+          stripe.plans.list({ limit: limit, starting_after: starting_after },
+            function(err, plans) {
+              // asynchronously called
+              if(err) {
+                logger.error(err)
+                res.json({ error: err })                                        
+              } else {
+                res.json({ plans: plans })              
+              }
             }
-          }
-        );
-      });
+          );
+        });
+      } catch(err) {
+          logger.error(err);
+          return res.json({ err: err })        
+      }      
   });  
 
 
@@ -1757,32 +1848,37 @@ module.exports = function (app, options) {
         return res.status(407).send({ message: 'Amount cannot be greater than $1,500' });
       }
 
-      var plan_id = req.params.plan_id;
-      var user_id = req.params.uid;
+      try {
+        var plan_id = req.params.plan_id;
+        var user_id = req.params.uid;
 
-      logger.info(req.body);
+        logger.info(req.body);
 
-      userController.getUser(user_id).then(function (user) {
-        var stripe = require('stripe')(user.stripe.secretKey);
-        var statement_desc = req.body.statement_descriptor || ""
-        if(statement_desc.length > 22) {
-          logger.info("statement descriptor longer than 22")
-          statement_desc = statement_desc.subtring(0,22)
-        }
-        var params = {
-          name: req.body.name,
-          statement_descriptor: req.body.statement_descriptor || ""
-        };
-        stripe.plans.update(plan_id, params, function(err, plan) {
-            if(err) {
-              logger.error(err)
-              res.json({ error: err })                                        
-            } else {
-              res.json({ plan: plan })              
-            }     
-            // asynchronously called
+        userController.getUser(user_id).then(function (user) {
+          var stripe = require('stripe')(user.stripe.secretKey);
+          var statement_desc = req.body.statement_descriptor || ""
+          if(statement_desc.length > 22) {
+            logger.info("statement descriptor longer than 22")
+            statement_desc = statement_desc.subtring(0,22)
+          }
+          var params = {
+            name: req.body.name,
+            statement_descriptor: req.body.statement_descriptor || ""
+          };
+          stripe.plans.update(plan_id, params, function(err, plan) {
+              if(err) {
+                logger.error(err)
+                res.json({ error: err })                                        
+              } else {
+                res.json({ plan: plan })              
+              }     
+              // asynchronously called
+          });
         });
-      });
+      } catch(err) {
+          logger.error(err);
+          return res.json({ err: err })        
+      }      
   }); 
 
   // Used to GET (retrieve) a single plan
@@ -1793,22 +1889,27 @@ module.exports = function (app, options) {
         return res.json({ status: 401, msg: "Unauthorized" });
       }
 
-      var plan_id = req.params.plan_id;
-      var user_id = req.params.uid;
-      logger.info("getting individual plan info");
-      userController.getUser(user_id).then(function (user) {
-        var stripe = require('stripe')(user.stripe.secretKey);
-        stripe.plans.retrieve(plan_id, function(err, plan) {
-            if(err) {
-              logger.error(err)
-              res.json({ error: err })                                        
-            } else {
-              logger.info(plan);
-              res.json({ plan: plan })              
-            }
-            // asynchronously called
+      try {
+        var plan_id = req.params.plan_id;
+        var user_id = req.params.uid;
+        logger.info("getting individual plan info");
+        userController.getUser(user_id).then(function (user) {
+          var stripe = require('stripe')(user.stripe.secretKey);
+          stripe.plans.retrieve(plan_id, function(err, plan) {
+              if(err) {
+                logger.error(err)
+                res.json({ error: err })                                        
+              } else {
+                logger.info(plan);
+                res.json({ plan: plan })              
+              }
+              // asynchronously called
+          });
         });
-      });
+      } catch(err) {
+          logger.error(err);
+          return res.json({ err: err })        
+      }      
   }); 
 
   // Used to DELETE a single plan
@@ -1820,20 +1921,25 @@ module.exports = function (app, options) {
         return res.json({ status: 401, msg: "Unauthorized" });
       }
 
-      var plan_id = req.params.plan_id;
-      var user_id = req.params.uid;    
-      userController.getUser(user_id).then(function (user) {
-        var stripe = require('stripe')(user.stripe.secretKey);
-        stripe.plans.del(plan_id, function(err, confirmation) {
-            if(err) {
-              logger.error(err)
-              res.json({ error: err })                                        
-            } else {
-              res.json({ confirmation: confirmation })              
-            }   
-            // asynchronously called
+      try {
+        var plan_id = req.params.plan_id;
+        var user_id = req.params.uid;    
+        userController.getUser(user_id).then(function (user) {
+          var stripe = require('stripe')(user.stripe.secretKey);
+          stripe.plans.del(plan_id, function(err, confirmation) {
+              if(err) {
+                logger.error(err)
+                res.json({ error: err })                                        
+              } else {
+                res.json({ confirmation: confirmation })              
+              }   
+              // asynchronously called
+          });
         });
-      });
+      } catch(err) {
+          logger.error(err);
+          return res.json({ err: err })        
+      }      
   }); 
 
   // PRODUCTS
@@ -1845,27 +1951,32 @@ module.exports = function (app, options) {
         return res.json({ status: 401, msg: "Unauthorized" });
       }
 
-      var user_id = req.params.uid
-      logger.info(req.body.attributes);
-      userController.getUser(user_id).then(function (user) {
-        var stripe = require('stripe')(user.stripe.secretKey);
-        var params = {
-          id: req.body.id,
-          name: req.body.name,          
-          description: req.body.description,
-          metadata: req.body.metadata,
-          attributes: req.body.attributes
-        };
-        stripe.products.create(params, function(err, product) {
-            if(err) {
-              logger.error(err)
-              res.json({ error: err })                                        
-            } else {
-              res.json({ product: product })              
-            }  
-            // asynchronously called
+      try {
+        var user_id = req.params.uid
+        logger.info(req.body.attributes);
+        userController.getUser(user_id).then(function (user) {
+          var stripe = require('stripe')(user.stripe.secretKey);
+          var params = {
+            id: req.body.id,
+            name: req.body.name,          
+            description: req.body.description,
+            metadata: req.body.metadata,
+            attributes: req.body.attributes
+          };
+          stripe.products.create(params, function(err, product) {
+              if(err) {
+                logger.error(err)
+                res.json({ error: err })                                        
+              } else {
+                res.json({ product: product })              
+              }  
+              // asynchronously called
+          });
         });
-      });
+      } catch(err) {
+          logger.error(err);
+          return res.json({ err: err })        
+      }      
   }); 
   // stripe.products.list([params])
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.products, userController.authorize, function(req, res, next) {
@@ -1875,27 +1986,32 @@ module.exports = function (app, options) {
         return res.json({ status: 401, msg: "Unauthorized" });
       }
 
-      logger.debug('getting products')
-      var user_id = req.params.uid
-      userController.getUser(user_id).then(function (user) {
-        var stripe = require('stripe')(user.stripe.secretKey);
-        var limit = req.query.limit || 100;
-        var starting_after;
-        if(req.query.starting_after != undefined) {
-          starting_after = req.query.starting_after;
-        }        
-        stripe.products.list({ limit: limit, starting_after: starting_after },
-          function(err, products) {
-            // asynchronously called
-            if(err) {
-              logger.error(err)
-              res.json({ error: err })                                        
-            } else {
-              res.json({ products: products })              
+      try {
+        logger.debug('getting products')
+        var user_id = req.params.uid
+        userController.getUser(user_id).then(function (user) {
+          var stripe = require('stripe')(user.stripe.secretKey);
+          var limit = req.query.limit || 100;
+          var starting_after;
+          if(req.query.starting_after != undefined) {
+            starting_after = req.query.starting_after;
+          }        
+          stripe.products.list({ limit: limit, starting_after: starting_after },
+            function(err, products) {
+              // asynchronously called
+              if(err) {
+                logger.error(err)
+                res.json({ error: err })                                        
+              } else {
+                res.json({ products: products })              
+              }
             }
-          }
-        );
-      });
+          );
+        });
+      } catch(err) {
+          logger.error(err);
+          return res.json({ err: err })        
+      }      
   });  
   // stripe.products.update(productId[, params])
   app.put(endpoint.version + endpoint.base + "/:uid" + endpoint.products + "/:product_id", userController.authorize, function(req, res, next) {
@@ -1907,27 +2023,32 @@ module.exports = function (app, options) {
         return res.json({ status: 401, msg: "Unauthorized" });
       }
 
-      var product_id = req.params.product_id;
-      var user_id = req.params.uid;
-      userController.getUser(user_id).then(function (user) {
-        var stripe = require('stripe')(user.stripe.secretKey);
-        var params = {
-          active:req.body.active,
-          description: req.body.description,
-          name: req.body.name,
-          metadata: req.body.metadata,
-          attributes: req.body.attributes
-        };
-        stripe.products.update(product_id, params, function(err, product) {
-            if(err) {
-              logger.error(err)
-              res.json({ error: err })                                        
-            } else {
-              res.json({ product: product })              
-            }
-            // asynchronously called
+      try {
+        var product_id = req.params.product_id;
+        var user_id = req.params.uid;
+        userController.getUser(user_id).then(function (user) {
+          var stripe = require('stripe')(user.stripe.secretKey);
+          var params = {
+            active:req.body.active,
+            description: req.body.description,
+            name: req.body.name,
+            metadata: req.body.metadata,
+            attributes: req.body.attributes
+          };
+          stripe.products.update(product_id, params, function(err, product) {
+              if(err) {
+                logger.error(err)
+                res.json({ error: err })                                        
+              } else {
+                res.json({ product: product })              
+              }
+              // asynchronously called
+          });
         });
-      });
+      } catch(err) {
+          logger.error(err);
+          return res.json({ err: err })        
+      }      
   }); 
 
   // Used to GET (retrieve) a single product
@@ -1938,20 +2059,25 @@ module.exports = function (app, options) {
         return res.json({ status: 401, msg: "Unauthorized" });
       }
 
-      var product_id = req.params.product_id;
-      var user_id = req.params.uid;
-      userController.getUser(user_id).then(function (user) {
-        var stripe = require('stripe')(user.stripe.secretKey);
-        stripe.products.retrieve(product_id, function(err, product) {
-            if(err) {
-              logger.error(err)
-              res.json({ error: err })                                        
-            } else {
-              res.json({ product: product })              
-            }    
-            // asynchronously called
+      try {
+        var product_id = req.params.product_id;
+        var user_id = req.params.uid;
+        userController.getUser(user_id).then(function (user) {
+          var stripe = require('stripe')(user.stripe.secretKey);
+          stripe.products.retrieve(product_id, function(err, product) {
+              if(err) {
+                logger.error(err)
+                res.json({ error: err })                                        
+              } else {
+                res.json({ product: product })              
+              }    
+              // asynchronously called
+          });
         });
-      });
+      } catch(err) {
+          logger.error(err);
+          return res.json({ err: err })        
+      }      
   });
 
 
@@ -1963,25 +2089,30 @@ module.exports = function (app, options) {
         return res.json({ status: 401, msg: "Unauthorized" });
       }
 
-      //logger.info("deleting")
-      var product_id = req.params.product_id;
-      var user_id = req.params.uid;    
-      userController.getUser(user_id).then(function (user) {
-        //logger.trace('found user' + user.username)
-        var stripe = require('stripe')(user.stripe.secretKey);
-        //logger.debug(product_id)
-        stripe.products.del(product_id, function(err, confirmation) {
-            //logger.info('inside product del')
-            if(err) {
-              logger.error(err)
-              res.json({ error: err })                                        
-            } else {
-              logger.info(confirmation)    
-              res.json({ confirmation: confirmation })              
-            }     
-            // asynchronously called
+      try {
+        //logger.info("deleting")
+        var product_id = req.params.product_id;
+        var user_id = req.params.uid;    
+        userController.getUser(user_id).then(function (user) {
+          //logger.trace('found user' + user.username)
+          var stripe = require('stripe')(user.stripe.secretKey);
+          //logger.debug(product_id)
+          stripe.products.del(product_id, function(err, confirmation) {
+              //logger.info('inside product del')
+              if(err) {
+                logger.error(err)
+                res.json({ error: err })                                        
+              } else {
+                logger.info(confirmation)    
+                res.json({ confirmation: confirmation })              
+              }     
+              // asynchronously called
+          });
         });
-      });
+      } catch(err) {
+          logger.error(err);
+          return res.json({ err: err })        
+      }      
   }); 
 
   // // RECIPIENTS
@@ -2022,24 +2153,29 @@ module.exports = function (app, options) {
         return res.status(407).send({ message: 'Amount cannot be greater than $1,500' });
       }
 
-      userController.getUser(user_id).then(function (user) {
-        var stripe = require('stripe')(user.stripe.secretKey);
-        var params = {
-          amount: req.body.amount,
-          currency: req.body.currency,          
-          destination: req.body.destination,
-          description: req.body.description
-        };
-        stripe.transfers.create(params, function(err, transfer) {
-            if(err) {
-              logger.error(err)
-              res.json({ error: err })                                        
-            } else {
-              res.json({ transfer: transfer })              
-            }
-            // asynchronously called
+      try {
+        userController.getUser(user_id).then(function (user) {
+          var stripe = require('stripe')(user.stripe.secretKey);
+          var params = {
+            amount: req.body.amount,
+            currency: req.body.currency,          
+            destination: req.body.destination,
+            description: req.body.description
+          };
+          stripe.transfers.create(params, function(err, transfer) {
+              if(err) {
+                logger.error(err)
+                res.json({ error: err })                                        
+              } else {
+                res.json({ transfer: transfer })              
+              }
+              // asynchronously called
+          });
         });
-      });
+      } catch(err) {
+          logger.error(err);
+          return res.json({ err: err })        
+      }      
   }); 
   // stripe.transfers.list([params])
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.transfers, userController.authorize, function(req, res, next) {
@@ -2049,27 +2185,32 @@ module.exports = function (app, options) {
         return res.json({ status: 401, msg: "Unauthorized" });
       }
 
-      logger.debug('getting transfers')
-      var user_id = req.params.uid
-      userController.getUser(user_id).then(function (user) {
-        var stripe = require('stripe')(user.stripe.secretKey);
-        var limit = req.query.limit || 100;
-        var starting_after;
-        if(req.query.starting_after != undefined) {
-          starting_after = req.query.starting_after;
-        }        
-        stripe.transfers.list({ limit: limit, starting_after: starting_after },
-          function(err, transfers) {
-            // asynchronously called
-            if(err) {
-              logger.error(err)
-              res.json({ error: err })                                        
-            } else {
-              res.json({ transfers: transfers })              
+      try {
+        logger.debug('getting transfers')
+        var user_id = req.params.uid
+        userController.getUser(user_id).then(function (user) {
+          var stripe = require('stripe')(user.stripe.secretKey);
+          var limit = req.query.limit || 100;
+          var starting_after;
+          if(req.query.starting_after != undefined) {
+            starting_after = req.query.starting_after;
+          }        
+          stripe.transfers.list({ limit: limit, starting_after: starting_after },
+            function(err, transfers) {
+              // asynchronously called
+              if(err) {
+                logger.error(err)
+                res.json({ error: err })                                        
+              } else {
+                res.json({ transfers: transfers })              
+              }
             }
-          }
-        );
-      });
+          );
+        });
+      } catch(err) {
+          logger.error(err);
+          return res.json({ err: err })        
+      }      
   });  
 
   // stripe.transfers.retrieve(transferI_id)
@@ -2080,21 +2221,26 @@ module.exports = function (app, options) {
         return res.json({ status: 401, msg: "Unauthorized" });
       }
 
-      var transfer_id = req.params.transfer_id;
-      var user_id = req.params.uid;
-      userController.getUser(user_id).then(function (user) {
-        var stripe = require('stripe')(user.stripe.secretKey);
-        //logger.debug(transfer_id);
-        stripe.transfers.retrieve(transfer_id, function(err, transfer) {
-            if(err) {
-              logger.error(err)
-              res.json({ error: err })                                        
-            } else {
-              res.json({ transfer: transfer })              
-            }     
-            // asynchronously called
+      try {
+        var transfer_id = req.params.transfer_id;
+        var user_id = req.params.uid;
+        userController.getUser(user_id).then(function (user) {
+          var stripe = require('stripe')(user.stripe.secretKey);
+          //logger.debug(transfer_id);
+          stripe.transfers.retrieve(transfer_id, function(err, transfer) {
+              if(err) {
+                logger.error(err)
+                res.json({ error: err })                                        
+              } else {
+                res.json({ transfer: transfer })              
+              }     
+              // asynchronously called
+          });
         });
-      });
+      } catch(err) {
+          logger.error(err);
+          return res.json({ err: err })        
+      }      
   });
   
   // stripe.transfers.update(transferId[, params])
@@ -2105,24 +2251,29 @@ module.exports = function (app, options) {
         return res.json({ status: 401, msg: "Unauthorized" });
       }
 
-      var transfer_id = req.params.transfer_id;
-      var user_id = req.params.uid;
-      userController.getUser(user_id).then(function (user) {
-        var stripe = require('stripe')(user.stripe.secretKey);
-        var params = {
-          description: req.body.description,
-          metadata: req.body.metadata
-        };
-        stripe.transfers.update(transfer_id, params, function(err, transfer) {
-            if(err) {
-              logger.error(err)
-              res.json({ error: err })                                        
-            } else {
-              res.json({ transfer: transfer })              
-            }
-            // asynchronously called
+      try {
+        var transfer_id = req.params.transfer_id;
+        var user_id = req.params.uid;
+        userController.getUser(user_id).then(function (user) {
+          var stripe = require('stripe')(user.stripe.secretKey);
+          var params = {
+            description: req.body.description,
+            metadata: req.body.metadata
+          };
+          stripe.transfers.update(transfer_id, params, function(err, transfer) {
+              if(err) {
+                logger.error(err)
+                res.json({ error: err })                                        
+              } else {
+                res.json({ transfer: transfer })              
+              }
+              // asynchronously called
+          });
         });
-      });
+      } catch(err) {
+          logger.error(err);
+          return res.json({ err: err })        
+      }      
   }); 
   // stripe.transfers.reverse(transferId[, params])
   // stripe.transfers.cancel(transferId) (Deprecated -- use reverse)
@@ -2141,32 +2292,36 @@ module.exports = function (app, options) {
         return res.json({ status: 401, msg: "Unauthorized" });
       }
 
-      var user_id = req.params.uid;
-
       if (req.body.amount > 150000) {
           return res.status(407).send({ message: 'Amount cannot be greater than $1,500' });
       }
 
-      // use our own stripe account for now as a workaround
-      var stripe = require("stripe")(options.apiKey);
-      userController.getUser(user_id).then(function (user) {
-        var params = {
-          amount: req.body.amount,
-          currency: "usd",
-          description: "Bitcoin reciever for user " + user.username,
-          email: user.email        
-        };
-        logger.debug(params);
-        stripe.bitcoinReceivers.create(params, function(err, receiver) {
-            if(err) {
-              logger.error(err)
-              res.json({ error: err })                                        
-            } else {
-              res.json({ receiver: receiver })              
-            }
-            // asynchronously called
+      try {
+        // use our own stripe account for now as a workaround
+        var user_id = req.params.uid;        
+        var stripe = require("stripe")(options.apiKey);
+        userController.getUser(user_id).then(function (user) {
+          var params = {
+            amount: req.body.amount,
+            currency: "usd",
+            description: "Bitcoin reciever for user " + user.username,
+            email: user.email        
+          };
+          logger.debug(params);
+          stripe.bitcoinReceivers.create(params, function(err, receiver) {
+              if(err) {
+                logger.error(err)
+                res.json({ error: err })                                        
+              } else {
+                res.json({ receiver: receiver })              
+              }
+              // asynchronously called
+          });
         });
-      });
+      } catch(err) {
+          logger.error(err);
+          return res.json({ err: err })        
+      }      
   });  
   // stripe.bitcoinReceivers.retrieve(receiverId)
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.bitcoin + "/:btc", userController.authorize, function(req, res, next) {
@@ -2176,50 +2331,55 @@ module.exports = function (app, options) {
         return res.json({ status: 401, msg: "Unauthorized" });
       }
 
-      logger.trace("requesting bitcoin receiver")
-      var user_id = req.params.uid;
-      var bitcoin_receiver_id = req.params.btc;
-      // use our own stripe account for now as a workaround
-      var stripe = require("stripe")(options.apiKey);
-      userController.getUser(user_id).then(function (user) {
-        stripe.bitcoinReceivers.retrieve(bitcoin_receiver_id, function(err, receiver) {
-            if(err) {
-              logger.error(err)
-              return res.json({ error: err })                                        
-            }          
-            logger.trace("is bitcoin receiver filled? ", receiver.filled)
-            // asynchronously called
-            if (receiver.filled) {
-              // create a bitcoin transfer on receiver filled
-              var amountInCents = receiver.amount;
-              var application_fee = Math.round((amountInCents*0.002));
-              var description = "New transfer in the amount of " + format.getCommaSeparatedFormat("USD", amountInCents/100);
-              logger.info("receiver amount in cents", receiver.amount);
-              logger.info("application fee", application_fee);
-              logger.info("description", description);
-              logger.info("source", receiver.id);
-              var params = {
-                amount: receiver.amount,
-                application_fee: application_fee,
-                currency: receiver.currency,
-                source: receiver.id,
-                description: description,
-                destination: user.stripe.accountId
+      try {
+        logger.trace("requesting bitcoin receiver")
+        var user_id = req.params.uid;
+        var bitcoin_receiver_id = req.params.btc;
+        // use our own stripe account for now as a workaround
+        var stripe = require("stripe")(options.apiKey);
+        userController.getUser(user_id).then(function (user) {
+          stripe.bitcoinReceivers.retrieve(bitcoin_receiver_id, function(err, receiver) {
+              if(err) {
+                logger.error(err)
+                return res.json({ error: err })                                        
+              }          
+              logger.trace("is bitcoin receiver filled? ", receiver.filled)
+              // asynchronously called
+              if (receiver.filled) {
+                // create a bitcoin transfer on receiver filled
+                var amountInCents = receiver.amount;
+                var application_fee = Math.round((amountInCents*0.002));
+                var description = "New transfer in the amount of " + format.getCommaSeparatedFormat("USD", amountInCents/100);
+                logger.info("receiver amount in cents", receiver.amount);
+                logger.info("application fee", application_fee);
+                logger.info("description", description);
+                logger.info("source", receiver.id);
+                var params = {
+                  amount: receiver.amount,
+                  application_fee: application_fee,
+                  currency: receiver.currency,
+                  source: receiver.id,
+                  description: description,
+                  destination: user.stripe.accountId
+                }
+                // use our own stripe account for now, transfer amount to destination acct
+                stripe.charges.create(params, function(err, charge) {
+                    if(err) {
+                      logger.error(err)
+                      return res.json({ error: err })                    
+                    } else {
+                      res.json({ receiver: receiver }).end();
+                    }                         
+                });
+              } else {
+                  res.json({ receiver: receiver })
               }
-              // use our own stripe account for now, transfer amount to destination acct
-              stripe.charges.create(params, function(err, charge) {
-                  if(err) {
-                    logger.error(err)
-                    return res.json({ error: err })                    
-                  } else {
-                    res.json({ receiver: receiver }).end();
-                  }                         
-              });
-            } else {
-                res.json({ receiver: receiver })
-            }
+          });
         });
-      });
+      } catch(err) {
+          logger.error(err);
+          return res.json({ err: err })        
+      }      
   });    
   // stripe.bitcoinReceivers.list([params])
   // stripe.bitcoinReceivers.getMetadata(receiverId)
@@ -2234,69 +2394,82 @@ module.exports = function (app, options) {
         return res.json({ status: 401, msg: "Unauthorized" });
       }
 
-      logger.info("uploading document")
-      var user_id = req.params.uid;
-      userController.getUser(user_id).then(function (user) {
-        var stripe = require('stripe')(user.stripe.secretKey);
-        var path = req.file.path;
-        var fp = fs.readFileSync(path);
-        var hat = require('hat');
-        var rack = hat.rack(); 
-        var file_name = req.file.filename + "_" + rack() + ".jpg";
-        stripe.fileUploads.create({
-          purpose: req.body.purpose,
-          file: {
-            data: fp,
-            name: file_name,
-            type: 'application/octet-stream'
-          }
-        }, function(err, fileUpload) {
-          if(err) {
-            logger.error(err);
-            res.json({ error: err });            
-          }
-          logger.info("document upload success");
-          var params = {
-            legal_entity: {
-              verification: {
-                document: fileUpload.id
+      try {
+        logger.info("uploading document")
+        var user_id = req.params.uid;
+        userController.getUser(user_id).then(function (user) {
+          var stripe = require('stripe')(user.stripe.secretKey);
+          var path = req.file.path;
+          var fp = fs.readFileSync(path);
+          var hat = require('hat');
+          var rack = hat.rack(); 
+          var file_name = req.file.filename + "_" + rack() + ".jpg";
+          stripe.fileUploads.create({
+            purpose: req.body.purpose,
+            file: {
+              data: fp,
+              name: file_name,
+              type: 'application/octet-stream'
+            }
+          }, function(err, fileUpload) {
+            if(err) {
+              logger.error(err);
+              res.json({ error: err });            
+            }
+            logger.info("document upload success");
+            var params = {
+              legal_entity: {
+                verification: {
+                  document: fileUpload.id
+                }
               }
             }
-          }
-          stripe.accounts.update(user.stripe.accountId, params, function(err, account) {
-              res.json({ account: account });
+            stripe.accounts.update(user.stripe.accountId, params, function(err, account) {
+                res.json({ account: account });
+            });
+            // asynchronously called
           });
-          // asynchronously called
         });
-      });
+      } catch(err) {
+          logger.error(err);
+          return res.json({ err: err })        
+      }      
   });
 
+  // @TODO
   // VERIFICATION
-  // app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.verify, userController.authorize, function(req, res, next) {
-  //     if(req.user._id !== req.params.uid) {
-  //       logger.info("unauthorized uid");
-  //       return res.json({ status: 401, msg: "Unauthorized" });
-  //     }
-  //     var user_id = req.params.uid;
-  //     userController.getUser(user_id).then(function (user) {
-  //       // Set your secret key: remember to change this to your live secret key in production
-  //       // See your keys here https://dashboard.stripe.com/account/apikeys
-  //       var stripe = require('stripe')(user.stripe.secretKey);
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.verify, userController.authorize, function(req, res, next) {
+      
+      if(req.user._id !== req.params.uid) {
+        logger.info("unauthorized uid");
+        return res.json({ status: 401, msg: "Unauthorized" });
+      }
 
-  //       var data = { amounts: [req.body.amount1, req.body.amount2] }
-  //       stripe.customers.verifySource(
-  //         'CUSTOMER_ID',
-  //         'BANK_TOKEN',
-  //         data,
-  //         function(err, bankAccount) {
-  //           if(err) {
-  //             logger.error(err);
-  //             return
-  //           } else {
-  //             res.json({bank: bankAccount});
-  //           }
-  //         });
-  //     });
-  // });  
+      try {
+        var user_id = req.params.uid;
+        userController.getUser(user_id).then(function (user) {
+          // Set your secret key: remember to change this to your live secret key in production
+          // See your keys here https://dashboard.stripe.com/account/apikeys
+          var stripe = require('stripe')(user.stripe.secretKey);
+
+          var data = { amounts: [req.body.amount1, req.body.amount2] }
+          stripe.customers.verifySource(
+            'CUSTOMER_ID',
+            'BANK_TOKEN',
+            data,
+            function(err, bankAccount) {
+              if(err) {
+                logger.error(err);
+                return
+              } else {
+                res.json({bank: bankAccount});
+              }
+            });
+        });
+      } catch(err) {
+          logger.error(err);
+          return res.json({ err: err })        
+      }      
+  });  
 
 }

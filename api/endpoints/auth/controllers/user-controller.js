@@ -68,14 +68,13 @@ UserController.prototype.register = function (req, res, next) {
             var tokenType = 'bearer';    
             var livemode = 'true';    
 
-            // logger.trace("body date", req.body.tos_acceptance.date);
             var _date = req.body.tos_acceptance.date;
+            
             var parsedDate;
+
             if( _date.indexOf('.') != -1 ) {
                 parsedDate = _date.substring(0, _date.indexOf('.'));
-                // logger.info("parsing date, " + parsedDate);
             } else {
-                // logger.info("in else ")
                 parsedDate = req.body.tos_acceptance.date
             }
 
