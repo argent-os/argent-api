@@ -802,8 +802,7 @@ UserController.prototype.postPlan = function(req, res, next){
 };
 
 UserController.prototype.searchUser = function (req, res, next) {
-  User.find({ $text: { $search: req.body.username } }, function(err, doc) {
-    //Do your action here..
+  User.find({ username: new RegExp(req.params.username, "i") }, function(err, doc) {
     if(err) {
       logger.error(err);
     }
@@ -829,7 +828,7 @@ UserController.prototype.listAllUsers = function (req, res, next) {
     var userMap = {};
     var usersArr = [];
     users.forEach(function(user) {
-      logger.info(user.business.name)
+      //logger.info(user.business.name)
       var user = {
           first_name: user.first_name,
           last_name: user.last_name,

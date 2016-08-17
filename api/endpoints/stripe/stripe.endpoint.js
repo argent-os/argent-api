@@ -139,9 +139,9 @@ module.exports = function (app, options) {
               // asynchronously called
               if(err) {
                 logger.error(err);
-                res.json({ error: err })            
+                return res.json({ error: err })            
               } else {
-                res.json({account: account})              
+                return res.json({account: account})              
               }
             }
           );   
@@ -169,10 +169,10 @@ module.exports = function (app, options) {
               // asynchronously called
               if(err) {
                 logger.error(err);
-                res.json({ error: err })                          
+                return res.status(404).json({ error: err })                          
               } else {
                 logger.info("updated stripe account")
-                res.json({ account: account })              
+                return res.json({ account: account })              
               }
             }
           );   
@@ -1450,23 +1450,21 @@ module.exports = function (app, options) {
   // });   
 
   // DELETE Delegated request to cancel subscription
-  app.delete(endpoint.version + endpoint.base + "/:tenant_id" + endpoint.subscriptions + "/:sub_id", userController.authorize, function(req, res, next) {
+  app.delete(endpoint.version + endpoint.base + "/:uid" + endpoint.subscriptions + "/:sub_id", userController.authorize, function(req, res, next) {
       
       logger.trace("cancel subscription req received")
 
       // Based on a retrieved Scribe data object
       // Perform a delegated cancellation of the subscription
-      // using the scribe.delegate_username and it's tenant_id
 
-      if(req.user.tenant_id !== req.params.tenant_id) {
-          logger.info("unauthorized tenant id");
+      if(req.user._id !== req.params.uid) {
+          logger.info("unauthorized uid");
           return res.json({ status: 401, msg: "Unauthorized" });
       }      
 
       try {
         var subscription_id = req.params.sub_id;
-        var tenant_id = req.params.tenant_id;    
-
+        logger.info("got sub id")
         /* Process | Delegated Subscription Cancellation
            1. Retrieve the delegated user's subscription list
            2. Retrieve a specific subscription based on the sub_id 
@@ -1476,10 +1474,17 @@ module.exports = function (app, options) {
         // Find's the specific Scribe object in the database
         Scribe.findOne({id: subscription_id}, function(err, scribe) {
 
+          if(scribe.status == "canceled" && req.query.type == "delete") {
+              Scribe.findById(scribe._id).remove().exec()          
+              return res.status(200).json({status: 200})                
+          }
+
+          logger.info(scribe);
             var legacy_scribe_delegate_username = scribe.delegate_username;
             var legacy_scribe_tenant_id = scribe.tenant_id;
             var legacy_scribe_id = scribe._id;
 
+            logger.info("passed legacy")
             if(err) {
               logger.error(err);
               return res.json({ err: err })
@@ -1497,6 +1502,7 @@ module.exports = function (app, options) {
                         return res.json({ error: err })                                        
                       } else {
                         if(req.query.type=="delete") {
+                          logger.info("got type")
                           Scribe.find({id: subscription_id}).remove().exec()                          
                         } else {
                           // Delete old scribe and save the confirmation object as a new scribe object
@@ -1510,6 +1516,7 @@ module.exports = function (app, options) {
                           })                            
                         }
 
+                        logger.info("subscription deletion confirmation")
                         return res.json({ confirmation: confirmation });                                                        
                       } 
                   });
@@ -1723,10 +1730,6 @@ module.exports = function (app, options) {
         userController.getUser(user_id).then(function (user) {
           var stripe = require('stripe')(user.stripe.secretKey);
           var statement_desc = req.body.statement_descriptor || ""
-          if(statement_desc.length > 22) {
-            logger.info("statement descriptor longer than 22")
-            statement_desc = statement_desc.subtring(0,22)
-          }
           var params = {
             id: req.body.id,          
             amount: req.body.amount,
@@ -1857,10 +1860,6 @@ module.exports = function (app, options) {
         userController.getUser(user_id).then(function (user) {
           var stripe = require('stripe')(user.stripe.secretKey);
           var statement_desc = req.body.statement_descriptor || ""
-          if(statement_desc.length > 22) {
-            logger.info("statement descriptor longer than 22")
-            statement_desc = statement_desc.subtring(0,22)
-          }
           var params = {
             name: req.body.name,
             statement_descriptor: req.body.statement_descriptor || ""

@@ -140,6 +140,6 @@ UserSchema.methods.comparePassword = function (candidatePassword, cb) {
   });
 };
 
-UserSchema.index({ email: 'text', username: 'text' });
+UserSchema.index({ username: 'text' });
 
 module.exports = mongoose.model('User', UserSchema);

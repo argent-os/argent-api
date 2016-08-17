@@ -41,8 +41,6 @@ module.exports = function (app, options) {
   	process.env.ENVIRONMENT == 'DEV' ? PLAID_ENV = plaid.environments.tartan : '';
   	process.env.ENVIRONMENT == 'PROD' ? PLAID_ENV = plaid.environments.production : '';
 
-  	logger.info("Running plaid on ", PLAID_ENV);
-
 	// Initialize client
 	var plaidClient = new plaid.Client(PLAID_CLIENT_ID, PLAID_SECRET, PLAID_ENV);
 

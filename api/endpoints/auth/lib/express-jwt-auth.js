@@ -64,7 +64,7 @@ module.exports = function (app, options) {
     remove:         '/v1/removeaccount',
     billing:        '/v1/billing',
     plan:           '/v1/plan',        
-    search:         '/v1/user/search',
+    search:         '/v1/search/:username',
     list:           '/v1/user/list'   
   };
 
@@ -100,7 +100,7 @@ module.exports = function (app, options) {
   app.get(urlStrings.profile,           userController.authorize, userController.getProfile);
   app.post(urlStrings.billing,          userController.authorize, userController.postBilling);
   app.post(urlStrings.plan,             userController.authorize, userController.postPlan);
-  app.post(urlStrings.search,           userController.searchUser);
+  app.get(urlStrings.search,            userController.searchUser);
   app.get(urlStrings.list,              userController.listAllUsers);
 
   // See full code example here: https://gist.github.com/7109113
