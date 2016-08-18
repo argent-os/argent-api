@@ -1717,8 +1717,13 @@ module.exports = function (app, options) {
       logger.info("creating new plan");
       var user_id = req.params.uid
 
-      if (req.body.amount > 150000) {
-        return res.status(407).send({ message: 'Amount cannot be greater than $1,500' });
+      if (req.body.amount > 500000) {
+        return res.send({ 
+          status: 407,
+          error: { 
+            message: 'Amount cannot be greater than $5,000' 
+          } 
+        });
       }
 
       if(req.user._id !== req.params.uid) {
