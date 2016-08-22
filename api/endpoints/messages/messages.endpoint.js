@@ -3,6 +3,7 @@ module.exports = function (app, options) {
 	var endpoint = {
 		version: '/v1',
 		base: '/message',	     
+		support: '/support',	     
 		user: '/user'	     
 	};
 
@@ -25,7 +26,8 @@ module.exports = function (app, options) {
 	  config = nconf.get('mailerSettings');
 	}
 
-	app.post(endpoint.version + endpoint.base + "/:uid", function(req, res, next) {
+	// /v1/message/support/:uid
+	app.post(endpoint.version + endpoint.base + endpoint.support + "/:uid", function(req, res, next) {
 		logger.trace('support req message received');
 		var user_id = req.params.uid;
 		var subject = req.body.subject;
@@ -37,7 +39,7 @@ module.exports = function (app, options) {
 
 			var helper = require('sendgrid').mail
 			var rack = hat.rack();
-			var msg = "Argent user @" + user.username + " | " + user.email + " sent a message.  Message: \n\n" + message
+			var msg = "Argent user @" + user.username + " sent a message.  Message: \n\n" + message
 			from_email = new helper.Email(user.email)
 			to_email = new helper.Email(process.env.SUPPORT_EMAIL)
 			subject = subject + " id_"+rack()
@@ -58,6 +60,7 @@ module.exports = function (app, options) {
 		});
 	});
 
+	// /v1/message/user/:username
 	app.post(endpoint.version + endpoint.base + endpoint.user + "/:username", function(req, res, next) {
 		logger.trace('send message received');
 		var username = req.params.username;
@@ -70,9 +73,9 @@ module.exports = function (app, options) {
 
 			var helper = require('sendgrid').mail
 			var email = req.body.email;
-			var msg = "@" + user.username + "messaged you! Message: \n\n" + message;
-			from_email = new helper.Email(process.env.SUPPORT_EMAIL)
-			to_email = new helper.Email(email)
+			var msg = "Argent user @" + user.username + "messaged you! Message: \n\n" + message;
+			from_email = new helper.Email(user.email)
+			to_email = new helper.Email(user.email)
 			subject = "Message from Argent User " + user.first_name + " #"+rack()
 			content = new helper.Content("text/plain", msg)
 			mail = new helper.Mail(from_email, subject, to_email, content)
@@ -83,9 +86,9 @@ module.exports = function (app, options) {
 			request.path = '/v3/mail/send'
 			request.body = requestBody
 			sg.API(request, function (response) {
-				// logger.info(response.statusCode)
-				// logger.info(response.body)
-				// logger.info(response.headers)
+				logger.info(response.statusCode)
+				logger.info(response.body)
+				logger.info(response.headers)
 				res.json({status: response.statusCode, info: response, msg: 'message_sent'});
 			})			
 		});
