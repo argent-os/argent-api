@@ -27,7 +27,7 @@ module.exports = function (app, options) {
 	}
 
 	// /v1/message/support/:uid
-	app.post(endpoint.version + endpoint.base + endpoint.support + "/:uid", userController.authorize, function(req, res, next) {
+	app.post(endpoint.version + endpoint.base + endpoint.support + "/:uid", function(req, res, next) {
 		logger.trace('support req message received');
 		var user_id = req.params.uid;
 		var subject = req.body.subject;
