@@ -26,12 +26,50 @@ module.exports = function (app, options) {
 	  config = nconf.get('mailerSettings');
 	}
 
+	// /v1/message/:uid DEPRECATED
+	app.post(endpoint.version + endpoint.base + "/:uid", function(req, res, next) {
+		logger.trace('support req message received');
+		var user_id = req.params.username;
+		var subject = req.body.subject;
+		var message = req.body.message;
+
+		logger.info('Endpoint is deprecated, use /v1/message/support/:uid instead');
+
+		userController.getUser(user_id).then(function (user, err) { 
+			if(err) {
+				return res.status(409).send({err: err})
+			}
+
+			var helper = require('sendgrid').mail
+			var rack = hat.rack();
+			var msg = "Argent user @" + user.username + " sent a message.  Message: \n\n" + message
+			from_email = new helper.Email(user.email)
+			to_email = new helper.Email(process.env.SUPPORT_EMAIL)
+			subject = subject + " id_"+rack()
+			content = new helper.Content("text/plain", msg)
+			mail = new helper.Mail(from_email, subject, to_email, content)
+
+			var requestBody = mail.toJSON()
+			var request = sg.emptyRequest()
+			request.method = 'POST'
+			request.path = '/v3/mail/send'
+			request.body = requestBody
+			sg.API(request, function (response) {
+				// logger.info(response.statusCode)
+				// logger.info(response.body)
+				// logger.info(response.headers)
+				res.json({status: response.statusCode, info: response, msg: 'message_sent'});
+			})	
+		});
+	});
+
 	// /v1/message/support/:uid
 	app.post(endpoint.version + endpoint.base + endpoint.support + "/:uid", function(req, res, next) {
 		logger.trace('support req message received');
 		var user_id = req.params.uid;
 		var subject = req.body.subject;
 		var message = req.body.message;
+
 		userController.getUser(user_id).then(function (user, err) { 
 			if(err) {
 				return res.status(409).send({err: err})

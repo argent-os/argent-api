@@ -28,6 +28,7 @@
     "cron-file-cleaner": "^1.1.0",
     "crypto": "0.0.3",
     "currency-symbol-map": "^3.0.0",
+    "deprecate": "^1.0.0",
     "ejs": "^2.3.3",
     "express": "^4.13.3",
     "express-limiter": "^1.6.0",
