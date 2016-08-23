@@ -27,7 +27,7 @@ module.exports = function (app, options) {
 	}
 
 	// /v1/message/support/:uid
-	app.post(endpoint.version + endpoint.base + endpoint.support + "/:uid", function(req, res, next) {
+	app.post(endpoint.version + endpoint.base + endpoint.support + "/:uid", userController.authorize, function(req, res, next) {
 		logger.trace('support req message received');
 		var user_id = req.params.uid;
 		var subject = req.body.subject;
@@ -61,7 +61,7 @@ module.exports = function (app, options) {
 	});
 
 	// /v1/message/user/:username
-	app.post(endpoint.version + endpoint.base + endpoint.user + "/:username", function(req, res, next) {
+	app.post(endpoint.version + endpoint.base + endpoint.user + "/:username", userController.authorize, function(req, res, next) {
 		logger.trace('send message received');
 		var username = req.params.username;
 		var message = req.body.message;
@@ -73,7 +73,7 @@ module.exports = function (app, options) {
 
 			var helper = require('sendgrid').mail
 			var email = req.body.email;
-			var msg = "Argent user @" + user.username + "messaged you! Message: \n\n" + message;
+			var msg = "Argent user @" + user.username + " messaged you! Message: \n\n" + message;
 			from_email = new helper.Email(user.email)
 			to_email = new helper.Email(user.email)
 			subject = "Message from Argent User " + user.first_name + " #"+rack()
