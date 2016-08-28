@@ -114,7 +114,7 @@ module.exports = function (app, options) {
 			var msg = "Argent user @" + user.username + " messaged you! Message: \n\n" + message;
 			from_email = new helper.Email(user.email)
 			to_email = new helper.Email(user.email)
-			subject = "Message from Argent User " + user.first_name + " #"+rack()
+			subject = "Message from Argent User " + user.first_name + " " + user.last_name + " #"+rack()
 			content = new helper.Content("text/plain", msg)
 			mail = new helper.Mail(from_email, subject, to_email, content)
 

@@ -4,7 +4,8 @@ module.exports = function (app, options) {
 		version: '/v1',
 		base: '/plaid',
 		exchange_token: '/exchange_token',     
-		auth: '/auth',      		     		     
+		auth: '/auth',  
+		upgrade: '/upgrade'    		     		     
 	};
 
 	// var endpoint = {
@@ -620,40 +621,40 @@ module.exports = function (app, options) {
 	// 		res.json({response: response})	  
 	// 	})
 	// });
-	// app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.upgrade, userController.authorize, function(req, res, next) {
-	// 	logger.trace('req upgrade plaid user received');
-	// 	// upgradeUser(String, String, Object?, Function)
-	// 	var user_id = req.params.uid;
-	// 	var upgrade_to = req.body.upgrade_to;
-	// 	var options = req.body.options || {};
-	// 	userController.getUser(user_id).then(function (user, err) { 
-	// 		var access_token = user.plaid.access_token			
-	// 		plaidClient.upgradeUser(access_token, upgrade_to, options, function callback(err, mfaResponse, response) {
-	// 			// err can be a network error or a Plaid API error (i.e. invalid credentials)
-	// 			// mfaResponse can be any type of Plaid MFA flow
-	// 			// logger.info(mfaResponse);
-	// 			// logger.info(response);		
+	app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.upgrade, userController.authorize, function(req, res, next) {
+		logger.trace('req upgrade plaid user received');
+		// upgradeUser(String, String, Object?, Function)
+		var user_id = req.params.uid;
+		var upgrade_to = req.body.upgrade_to;
+		var options = req.body.options || {};
+		userController.getUser(user_id).then(function (user, err) { 
+			var access_token = user.plaid.access_token			
+			plaidClient.upgradeUser(access_token, upgrade_to, options, function callback(err, mfaResponse, response) {
+				// err can be a network error or a Plaid API error (i.e. invalid credentials)
+				// mfaResponse can be any type of Plaid MFA flow
+				// logger.info(mfaResponse);
+				// logger.info(response);		
 
-	// 			if(err) {
-	// 				logger.error(err);					
-	// 				res.json({err: err})
-	// 			}
+				if(err) {
+					logger.error(err);					
+					res.json({err: err})
+				}
 
-	// 			if(mfaResponse) {
-	// 				res.json({mfa: mfaResponse, response: response})
-	// 			} else {
-	// 				var calcRiskArray = [];
-	// 				var totalRiskScore = 0;
-	// 				for(var i = 0; i<response.accounts.length; i++) {
-	// 					totalRiskScore += response.accounts[i].risk.score;
-	// 					calcRiskArray.push(response.accounts[i].risk.score)
-	// 				}
-	// 				var weightedAverageRiskScore = totalRiskScore/response.accounts.length;
-	// 				res.json({score: weightedAverageRiskScore})	  
-	// 			}  
-	// 		})
-	// 	})
-	// });
+				if(mfaResponse) {
+					res.json({mfa: mfaResponse, response: response})
+				} else {
+					var calcRiskArray = [];
+					var totalRiskScore = 0;
+					for(var i = 0; i<response.accounts.length; i++) {
+						totalRiskScore += response.accounts[i].risk.score;
+						calcRiskArray.push(response.accounts[i].risk.score)
+					}
+					var weightedAverageRiskScore = totalRiskScore/response.accounts.length;
+					res.json({score: weightedAverageRiskScore})	  
+				}  
+			})
+		})
+	});
 
 	// /v1/plaid/:uid/exchange_token/:acct_id
 	app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.exchange_token + "/:public_token" /*+ "/:acct_id"*/, function(req, res, next) {

@@ -123,11 +123,13 @@ UserController.prototype.register = function (req, res, next) {
               phone_number = ""
             }
 
+            var username = req.body.username.replace(/ /g,"_");
+
             var user = new User({
               tenant_id: tenantId,
               first_name: first_name,
               last_name: last_name,
-              username: req.body.username,
+              username: username,
               email: req.body.email,
               phone_number: phone_number,
               password: req.body.password,
