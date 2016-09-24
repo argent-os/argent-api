@@ -15,7 +15,8 @@ module.exports = function (app, options) {
     balance: '/balance', 
     transactions: '/transactions',             
     subscriptions: '/subscriptions',             
-    charge: '/charge',                         
+    charge: '/charge', 
+    ach: '/ach',                        
     history: '/history',                         
     cards: '/cards',                         
     coupons: '/coupons',                         
@@ -148,7 +149,12 @@ module.exports = function (app, options) {
         });
       } catch(err) {
           logger.error(err);
-          return res.json({ err: err })        
+          return res.send({ 
+          	status: 407,
+          	error: { 
+          	  message: err
+          	} 
+          });        
       }      
   });
   app.put(endpoint.version + endpoint.base + "/:uid" + endpoint.account, userController.authorize, function(req, res, next) {
@@ -179,7 +185,12 @@ module.exports = function (app, options) {
         });
       } catch(err) {
           logger.error(err);
-          return res.json({ err: err })        
+          return res.send({ 
+          	status: 407,
+          	error: { 
+          	  message: err
+          	} 
+          });        
       }      
   });
   
@@ -236,7 +247,7 @@ module.exports = function (app, options) {
                 );          
             });          
           } else {
-            logger.info("adding external account plaid bank")
+            logger.info("adding external account bank")
             logger.info("token is ", token)
             stripe.accounts.createExternalAccount(user.stripe.accountId, { external_account: token }, function(err, externalAccount) {
                 // asynchronously called
@@ -253,7 +264,12 @@ module.exports = function (app, options) {
         });
       } catch(err) {
           logger.error(err);
-          return res.json({ err: err })        
+          return res.send({ 
+          	status: 407,
+          	error: { 
+          	  message: err
+          	} 
+          });        
       }      
   });   
 
@@ -283,7 +299,12 @@ module.exports = function (app, options) {
         });
       } catch(err) {
           logger.error(err);
-          return res.json({ err: err })        
+          return res.send({ 
+          	status: 407,
+          	error: { 
+          	  message: err
+          	} 
+          });        
       }      
   });   
 
@@ -315,7 +336,12 @@ module.exports = function (app, options) {
         });
       } catch(err) {
           logger.error(err);
-          return res.json({ err: err })        
+          return res.send({ 
+          	status: 407,
+          	error: { 
+          	  message: err
+          	} 
+          });        
       }      
   });   
 
@@ -343,7 +369,12 @@ module.exports = function (app, options) {
         })  
       } catch(err) {
           logger.error(err);
-          return res.json({ err: err })        
+          return res.send({ 
+          	status: 407,
+          	error: { 
+          	  message: err
+          	} 
+          });        
       }       
   });  
 
@@ -382,7 +413,12 @@ module.exports = function (app, options) {
         })   
       } catch(err) {
           logger.error(err);
-          return res.json({ err: err })        
+          return res.send({ 
+          	status: 407,
+          	error: { 
+          	  message: err
+          	} 
+          });        
       }          
   });     
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.transactions, userController.authorize, function(req, res, next) {
@@ -524,7 +560,12 @@ module.exports = function (app, options) {
         })
       } catch(err) {
           logger.error(err);
-          return res.json({ err: err })        
+          return res.send({ 
+          	status: 407,
+          	error: { 
+          	  message: err
+          	} 
+          });        
       }
   })
 
@@ -611,7 +652,12 @@ module.exports = function (app, options) {
         })   
       } catch(err) {
           logger.error(err);
-          return res.json({ err: err })          
+          return res.send({ 
+          	status: 407,
+          	error: { 
+          	  message: err
+          	} 
+          });          
       }
   })
 
@@ -684,7 +730,12 @@ module.exports = function (app, options) {
         }) 
       } catch(err) {
           logger.error(err);
-          return res.json({ err: err })          
+          return res.send({ 
+          	status: 407,
+          	error: { 
+          	  message: err
+          	} 
+          });          
       }        
   });
 
@@ -703,8 +754,8 @@ module.exports = function (app, options) {
     }
 
     if(req.user._id !== req.params.uid) {
-        logger.info("unauthorized uid");
-        return res.json({ status: 401, msg: "Unauthorized" });
+      logger.info("unauthorized uid");
+      return res.json({ status: 401, msg: "Unauthorized" });
     }    
 
     try {
@@ -729,6 +780,7 @@ module.exports = function (app, options) {
           // e.g. request is /v1/stripe/5a6s6g87as888s/charge/johndoe?type=bank
           if(req.query.type == "bank") {
             userController.getUser(user_id).then(function (user) {
+              logger.info("bank charge: one time");
               // get requesting user
               var requestingUser = user
               logger.info(requestingUser.username);
@@ -792,7 +844,7 @@ module.exports = function (app, options) {
                     logger.info("Customers exist for this user, checking if requesting user is one of them")   
                     for (var i = 0; i < customers.data.length; i++) {
                       if(customers.data[i].email == requestingUser.email) {
-                        logger.info("Customer email already exists in database! Adding plan to existing customer")
+                        logger.info("Customer email already exists in database! Creating charge to existing customer")
                         stripe.charges.create({
                           currency: "usd",
                           customer: customers.data[i].id, 
@@ -856,7 +908,12 @@ module.exports = function (app, options) {
       }) 
     } catch(err) {
         logger.error(err);
-        return res.json({ err: err })        
+        return res.send({ 
+        	status: 407,
+        	error: { 
+        	  message: err
+        	} 
+        });        
     }
   })
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.charge, userController.authorize, function(req, res, next) {
@@ -887,7 +944,12 @@ module.exports = function (app, options) {
         });     
       } catch(err) {
           logger.error(err);
-          return res.json({ err: err })          
+          return res.send({ 
+          	status: 407,
+          	error: { 
+          	  message: err
+          	} 
+          });          
       }        
   });
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/:charge_id", userController.authorize, function(req, res, next) {
@@ -914,7 +976,12 @@ module.exports = function (app, options) {
         });
       } catch(err) {
           logger.error(err);
-          return res.json({ err: err })          
+          return res.send({ 
+          	status: 407,
+          	error: { 
+          	  message: err
+          	} 
+          });          
       }      
   });
   app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/:charge_id", userController.authorize, function(req, res, next) {
@@ -941,7 +1008,12 @@ module.exports = function (app, options) {
         }); 
       } catch(err) {
           logger.error(err);
-          return res.json({ err: err })          
+          return res.send({ 
+          	status: 407,
+          	error: { 
+          	  message: err
+          	} 
+          });          
       }           
   });
   app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/:charge_id", userController.authorize, function(req, res, next) {
@@ -968,7 +1040,12 @@ module.exports = function (app, options) {
         });  
       } catch(err) {
           logger.error(err);
-          return res.json({ err: err })          
+          return res.send({ 
+          	status: 407,
+          	error: { 
+          	  message: err
+          	} 
+          });          
       }            
   });
   // app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.charge + "/close/dispute", userController.authorize, function(req, res, next) {
@@ -1074,7 +1151,12 @@ module.exports = function (app, options) {
         });
       } catch(err) {
           logger.error(err);
-          return res.json({ err: err })          
+          return res.send({ 
+          	status: 407,
+          	error: { 
+          	  message: err
+          	} 
+          });          
       }      
   });  
   // List customers /v1/stripe/:uid/customers/
@@ -1108,7 +1190,12 @@ module.exports = function (app, options) {
         });
       } catch(err) {
           logger.error(err);
-          return res.json({ err: err })          
+          return res.send({ 
+          	status: 407,
+          	error: { 
+          	  message: err
+          	} 
+          });          
       }      
   });   
 
@@ -1139,7 +1226,12 @@ module.exports = function (app, options) {
         });    
       } catch(err) {
           logger.error(err);
-          return res.json({ err: err })          
+          return res.send({ 
+          	status: 407,
+          	error: { 
+          	  message: err
+          	} 
+          });          
       }      
   });  
   // Retrieve single customer
@@ -1167,7 +1259,12 @@ module.exports = function (app, options) {
         }); 
       } catch(err) {
           logger.error(err);
-          return res.json({ err: err })          
+          return res.send({ 
+          	status: 407,
+          	error: { 
+          	  message: err
+          	} 
+          });          
       }            
   });   
   // Delete customer
@@ -1195,7 +1292,12 @@ module.exports = function (app, options) {
         });   
       } catch(err) {
           logger.error(err);
-          return res.json({ err: err })          
+          return res.send({ 
+          	status: 407,
+          	error: { 
+          	  message: err
+          	} 
+          });          
       }        
   });    
   // Set customer metadata      
@@ -1225,7 +1327,12 @@ module.exports = function (app, options) {
         }); 
       } catch(err) {
           logger.error(err);
-          return res.json({ err: err })          
+          return res.send({ 
+          	status: 407,
+          	error: { 
+          	  message: err
+          	} 
+          });          
       }      
   });    
   // Get customer metadata     
@@ -1254,7 +1361,12 @@ module.exports = function (app, options) {
         }); 
       } catch(err) {
           logger.error(err);
-          return res.json({ err: err })          
+          return res.send({ 
+          	status: 407,
+          	error: { 
+          	  message: err
+          	} 
+          });          
       }      
   });        
 
@@ -1430,7 +1542,12 @@ module.exports = function (app, options) {
       }) 
     } catch(err) {
         logger.error(err);
-        return res.json({ err: err })        
+        return res.send({ 
+        	status: 407,
+        	error: { 
+        	  message: err
+        	} 
+        });        
     }
   })
 
@@ -1487,7 +1604,12 @@ module.exports = function (app, options) {
             logger.info("passed legacy")
             if(err) {
               logger.error(err);
-              return res.json({ err: err })
+              return res.send({ 
+              	status: 407,
+              	error: { 
+              	  message: err
+              	} 
+              });
             } 
 
             try {
@@ -1523,12 +1645,22 @@ module.exports = function (app, options) {
               })
             } catch(err) {
               logger.error(err)
-              return res.json({ err: err })
+              return res.send({ 
+              	status: 407,
+              	error: { 
+              	  message: err
+              	} 
+              });
             }
         })
       } catch(err) {
           logger.error(err);
-          return res.json({ err: err })          
+          return res.send({ 
+          	status: 407,
+          	error: { 
+          	  message: err
+          	} 
+          });          
       }      
   });   
 
@@ -1586,7 +1718,12 @@ module.exports = function (app, options) {
         });     
       } catch(err) {
           logger.error(err);
-          return res.json({ err: err })          
+          return res.send({ 
+          	status: 407,
+          	error: { 
+          	  message: err
+          	} 
+          });          
       }       
   });   
   // app.get(endpoint.version + endpoint.base + "/:uid" + endpoint.subscriptions, userController.authorize, function(req, res, next) {
@@ -1677,7 +1814,12 @@ module.exports = function (app, options) {
         })  
       } catch(err) {
           logger.error(err);
-          return res.json({ err: err })          
+          return res.send({ 
+          	status: 407,
+          	error: { 
+          	  message: err
+          	} 
+          });          
       }           
   });
 
@@ -1759,7 +1901,12 @@ module.exports = function (app, options) {
         });
       } catch(err) {
           logger.error(err);
-          return res.json({ err: err })          
+          return res.send({ 
+          	status: 407,
+          	error: { 
+          	  message: err
+          	} 
+          });          
       }      
   });  
 
@@ -1806,7 +1953,12 @@ module.exports = function (app, options) {
         });
       } catch(err) {
           logger.error(err);
-          return res.json({ err: err })        
+          return res.send({ 
+          	status: 407,
+          	error: { 
+          	  message: err
+          	} 
+          });        
       }      
   });  
 
@@ -1837,7 +1989,12 @@ module.exports = function (app, options) {
         });
       } catch(err) {
           logger.error(err);
-          return res.json({ err: err })        
+          return res.send({ 
+          	status: 407,
+          	error: { 
+          	  message: err
+          	} 
+          });        
       }      
   });  
 
@@ -1881,7 +2038,12 @@ module.exports = function (app, options) {
         });
       } catch(err) {
           logger.error(err);
-          return res.json({ err: err })        
+          return res.send({ 
+          	status: 407,
+          	error: { 
+          	  message: err
+          	} 
+          });        
       }      
   }); 
 
@@ -1912,7 +2074,12 @@ module.exports = function (app, options) {
         });
       } catch(err) {
           logger.error(err);
-          return res.json({ err: err })        
+          return res.send({ 
+          	status: 407,
+          	error: { 
+          	  message: err
+          	} 
+          });        
       }      
   }); 
 
@@ -1942,7 +2109,12 @@ module.exports = function (app, options) {
         });
       } catch(err) {
           logger.error(err);
-          return res.json({ err: err })        
+          return res.send({ 
+          	status: 407,
+          	error: { 
+          	  message: err
+          	} 
+          });        
       }      
   }); 
 
@@ -1979,7 +2151,12 @@ module.exports = function (app, options) {
         });
       } catch(err) {
           logger.error(err);
-          return res.json({ err: err })        
+          return res.send({ 
+          	status: 407,
+          	error: { 
+          	  message: err
+          	} 
+          });        
       }      
   }); 
   // stripe.products.list([params])
@@ -2014,7 +2191,12 @@ module.exports = function (app, options) {
         });
       } catch(err) {
           logger.error(err);
-          return res.json({ err: err })        
+          return res.send({ 
+          	status: 407,
+          	error: { 
+          	  message: err
+          	} 
+          });        
       }      
   });  
   // stripe.products.update(productId[, params])
@@ -2051,7 +2233,12 @@ module.exports = function (app, options) {
         });
       } catch(err) {
           logger.error(err);
-          return res.json({ err: err })        
+          return res.send({ 
+          	status: 407,
+          	error: { 
+          	  message: err
+          	} 
+          });        
       }      
   }); 
 
@@ -2080,7 +2267,12 @@ module.exports = function (app, options) {
         });
       } catch(err) {
           logger.error(err);
-          return res.json({ err: err })        
+          return res.send({ 
+          	status: 407,
+          	error: { 
+          	  message: err
+          	} 
+          });        
       }      
   });
 
@@ -2115,7 +2307,12 @@ module.exports = function (app, options) {
         });
       } catch(err) {
           logger.error(err);
-          return res.json({ err: err })        
+          return res.send({ 
+          	status: 407,
+          	error: { 
+          	  message: err
+          	} 
+          });        
       }      
   }); 
 
@@ -2178,7 +2375,12 @@ module.exports = function (app, options) {
         });
       } catch(err) {
           logger.error(err);
-          return res.json({ err: err })        
+          return res.send({ 
+          	status: 407,
+          	error: { 
+          	  message: err
+          	} 
+          });        
       }      
   }); 
   // stripe.transfers.list([params])
@@ -2213,7 +2415,12 @@ module.exports = function (app, options) {
         });
       } catch(err) {
           logger.error(err);
-          return res.json({ err: err })        
+          return res.send({ 
+          	status: 407,
+          	error: { 
+          	  message: err
+          	} 
+          });        
       }      
   });  
 
@@ -2243,7 +2450,12 @@ module.exports = function (app, options) {
         });
       } catch(err) {
           logger.error(err);
-          return res.json({ err: err })        
+          return res.send({ 
+          	status: 407,
+          	error: { 
+          	  message: err
+          	} 
+          });        
       }      
   });
   
@@ -2276,7 +2488,12 @@ module.exports = function (app, options) {
         });
       } catch(err) {
           logger.error(err);
-          return res.json({ err: err })        
+          return res.send({ 
+          	status: 407,
+          	error: { 
+          	  message: err
+          	} 
+          });        
       }      
   }); 
   // stripe.transfers.reverse(transferId[, params])
@@ -2285,6 +2502,64 @@ module.exports = function (app, options) {
   // stripe.transfers.setMetadata(transferId, metadataObject) (metadata info)
   // stripe.transfers.setMetadata(transferId, key, value)
   // stripe.transfers.getMetadata(transferId)
+
+  // ACH
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.ach, userController.authorize, function(req, res, next) {
+      
+      if(req.user._id !== req.params.uid) {
+        logger.info("unauthorized uid");
+        return res.json({ status: 401, msg: "Unauthorized" });
+      }
+
+      try {
+        logger.trace("requesting ach")
+        var user_id = req.params.uid;
+        // use our own stripe account, transfer to destination as a charge
+        var stripe = require("stripe")(options.apiKey);
+        userController.getUser(user_id).then(function (user) {
+            // create a ach transfer on charge
+            var amountInCents = req.body.amount;
+            var customer_id = req.body.customer_id;
+            var application_fee = Math.round((amountInCents*0.002));
+            var description = "New transfer in the amount of " + format.getCommaSeparatedFormat("USD", amountInCents/100);
+            logger.info("amount in cents", amountInCents);
+            logger.info("application fee", application_fee);
+            logger.info("description", description);
+            logger.info("customer", customer_id);
+            var params = {
+              amount: amountInCents,
+              application_fee: application_fee,
+              currency: "usd",
+              customer: customer_id,
+              description: description,
+              destination: user.stripe.accountId
+            }
+            // use our own stripe account for now, transfer amount to destination acct
+            stripe.charges.create(params, function(err, charge) {
+                if(err) {
+                  logger.error(err)
+                  return res.send({ 
+                    status: 407,
+                    error: { 
+                      message: err
+                    } 
+                  });
+                } else {
+                  res.json({ charge: charge }).end();
+                }                         
+            });
+        });
+      } catch(err) {
+          logger.error(err);
+          return res.send({ 
+          	status: 407,
+          	error: { 
+          	  message: err
+          	} 
+          });        
+      }      
+  });    
+
 
   // BITCOIN (resource bitcoinReceivers)
   // stripe.bitcoinReceivers.create(params)
@@ -2324,7 +2599,12 @@ module.exports = function (app, options) {
         });
       } catch(err) {
           logger.error(err);
-          return res.json({ err: err })        
+          return res.send({ 
+          	status: 407,
+          	error: { 
+          	  message: err
+          	} 
+          });        
       }      
   });  
   // stripe.bitcoinReceivers.retrieve(receiverId)
@@ -2382,7 +2662,12 @@ module.exports = function (app, options) {
         });
       } catch(err) {
           logger.error(err);
-          return res.json({ err: err })        
+          return res.send({ 
+          	status: 407,
+          	error: { 
+          	  message: err
+          	} 
+          });        
       }      
   });    
   // stripe.bitcoinReceivers.list([params])
@@ -2436,7 +2721,12 @@ module.exports = function (app, options) {
         });
       } catch(err) {
           logger.error(err);
-          return res.json({ err: err })        
+          return res.send({ 
+          	status: 407,
+          	error: { 
+          	  message: err
+          	} 
+          });        
       }      
   });
 
@@ -2472,7 +2762,12 @@ module.exports = function (app, options) {
         });
       } catch(err) {
           logger.error(err);
-          return res.json({ err: err })        
+          return res.send({ 
+          	status: 407,
+          	error: { 
+          	  message: err
+          	} 
+          });        
       }      
   });  
 

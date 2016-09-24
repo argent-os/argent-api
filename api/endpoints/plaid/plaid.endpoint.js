@@ -5,7 +5,9 @@ module.exports = function (app, options) {
 		base: '/plaid',
 		exchange_token: '/exchange_token',     
 		auth: '/auth',  
-		upgrade: '/upgrade'    		     		     
+		upgrade: '/upgrade',
+		risk: '/risk',
+		link: '/link'	     		     
 	};
 
 	// var endpoint = {
@@ -548,22 +550,68 @@ module.exports = function (app, options) {
 	// 		}  
 	// 	})
 	// });
-	// app.get(endpoint.version + endpoint.base + endpoint.risk, userController.authorize, function(req, res, next) {
-	// 	logger.trace('req getRiskUser received');
-	// 	// getRiskUser(String, Object?, Function)
-	// 	var access_token = req.body.access_token || req.query.access_token || req.params.access_token;
-	// 	var options = req.body.options;		
-	// 	plaidClient.getRiskUser(access_token, options, function callback(err, response) {
-	// 	  // err can be a network error or a Plaid API error (i.e. invalid credentials)
-	// 		logger.error(err);
-	// 		logger.info(response);	
 
-	// 		if(err) {
-	// 			res.json({err: err})
-	// 		}
-	// 		res.json({response: response})	  
-	// 	})
-	// });
+	// LINK AUTHENTICATION WEB
+	app.post(endpoint.version + endpoint.base + endpoint.link, function(req, res, next) {
+		logger.trace('req link received');
+
+		var public_token = req.body.public_token;
+		var account_id = req.body.account_id;
+
+		// Exchange a public_token and account_id for a Plaid access_token
+		// and a Stripe bank account token
+		plaidClient.exchangeToken(public_token, account_id, function(err, data) {
+			if (err != null) {
+			  // Handle error!
+			  return res.json({ err: err })
+			} else {
+				// This is your Plaid access token - store somewhere persistent
+				// The access_token can be used to make Plaid API calls to
+				// retrieve accounts and transactions
+				var access_token = data.access_token;
+
+				// This is your Stripe bank account token - store somewhere
+				// persistent. The token can b12e used to move money via
+				// Stripe's ACH API.
+				var bank_account_token = data.stripe_bank_account_token;
+				
+				logger.trace('success plaid linking bank!')
+				
+				return res.json({
+					access_token: access_token,
+					stripe_bank_account_token: bank_account_token
+				})
+			}
+		});
+	});	
+
+	// RISK ENDPOINT
+	app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.risk, userController.authorize, function(req, res, next) {
+		logger.trace('req getRiskUser received');
+		// getRiskUser(String, Object?, Function)
+
+		if(req.user._id !== req.params.uid) {
+			logger.info("unauthorized uid");
+			return res.json({ status: 401, msg: "Unauthorized" });
+		}
+
+		// var options = req.body.options || {};
+		var user_id = req.params.uid;				
+		userController.getUser(user_id).then(function (user, err) {
+			var access_token = user.plaid.access_token; 
+			logger.info(access_token);
+			plaidClient.getRiskUser(access_token, {}, function(err, response) {
+			  // err can be a network error or a Plaid API error (i.e. invalid credentials)
+				logger.error(err);
+				logger.info(response);	
+
+				if(err) {
+					return res.json({err: err})
+				}
+				return res.json({response: response})	  
+			})
+		})
+	});
 	// app.patch(endpoint.version + endpoint.base + endpoint.risk, userController.authorize, function(req, res, next) {
 	// 	logger.trace('req patchRiskUser received');
 	// 	// patchRiskUser(String, Object, Object?, Function)
@@ -624,6 +672,14 @@ module.exports = function (app, options) {
 	app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.upgrade, userController.authorize, function(req, res, next) {
 		logger.trace('req upgrade plaid user received');
 		// upgradeUser(String, String, Object?, Function)
+
+		if(req.user._id !== req.params.uid) {
+			logger.info("unauthorized uid");
+			return res.json({ status: 401, msg: "Unauthorized" });
+		}
+
+		logger.info("this endpoint is deprecated, use /v1/plaid/link instead")
+
 		var user_id = req.params.uid;
 		var upgrade_to = req.body.upgrade_to;
 		var options = req.body.options || {};
@@ -632,17 +688,17 @@ module.exports = function (app, options) {
 			plaidClient.upgradeUser(access_token, upgrade_to, options, function callback(err, mfaResponse, response) {
 				// err can be a network error or a Plaid API error (i.e. invalid credentials)
 				// mfaResponse can be any type of Plaid MFA flow
-				// logger.info(mfaResponse);
-				// logger.info(response);		
+				logger.info(mfaResponse);
+				logger.info(response);		
 
 				if(err) {
 					logger.error(err);					
-					res.json({err: err})
+					return res.json({err: err})
 				}
 
 				if(mfaResponse) {
-					res.json({mfa: mfaResponse, response: response})
-				} else {
+					return res.json({mfa: mfaResponse, response: response})
+				} else if(response) {
 					var calcRiskArray = [];
 					var totalRiskScore = 0;
 					for(var i = 0; i<response.accounts.length; i++) {
@@ -650,8 +706,10 @@ module.exports = function (app, options) {
 						calcRiskArray.push(response.accounts[i].risk.score)
 					}
 					var weightedAverageRiskScore = totalRiskScore/response.accounts.length;
-					res.json({score: weightedAverageRiskScore})	  
-				}  
+					return res.json({score: weightedAverageRiskScore})	  
+				} else {
+					return res.json({message: "Could not retrieve risk score"})	  
+				}
 			})
 		})
 	});
@@ -662,6 +720,12 @@ module.exports = function (app, options) {
 		logger.debug(req.body);
 		// Used for Plaid Link
 		// The public_token is the access token returned by plaid link
+
+		// @todo perform middleware auth check
+		// if(req.user._id !== req.params.uid) {
+		// 	logger.info("unauthorized uid");
+		// 	return res.json({ status: 401, msg: "Unauthorized" });
+		// }
 
 		try {
 			var user_id = req.params.uid;
