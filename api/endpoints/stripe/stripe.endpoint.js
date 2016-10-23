@@ -706,7 +706,7 @@ module.exports = function (app, options) {
         userController.getUser(user_id).then(function (user) {
             var stripe = require('stripe')(user.stripe.secretKey);
             var amountInCents = req.body.amount;
-            var application_fee = Math.round((amountInCents*0.001));
+            var application_fee = Math.round((amountInCents*0.006));
             var description = "POS charge in the amount of " + format.getCommaSeparatedFormat("USD", amountInCents);
             logger.info(amountInCents);
             logger.info(application_fee);
@@ -763,7 +763,7 @@ module.exports = function (app, options) {
       userController.getDelegatedUserByUsername(delegate_user).then(function (delegateUser) {
           var stripe = require('stripe')(delegateUser.stripe.secretKey);
           var amountInCents = req.body.amount;
-          var application_fee = Math.round((amountInCents*0.001));
+          var application_fee = Math.round((amountInCents*0.006));
           var description = "New charge in the amount of " + format.getCommaSeparatedFormat("USD", amountInCents/100);
           // logger.info(amountInCents);
           // logger.info(application_fee);
