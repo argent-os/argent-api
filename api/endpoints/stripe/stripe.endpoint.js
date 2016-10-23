@@ -168,7 +168,6 @@ module.exports = function (app, options) {
         logger.trace("request received | update stripe account")
         var user_id = req.params.uid;
         var parameters = req.body;
-        logger.info(parameters)
         userController.getUser(user_id).then(function (user) {
           var stripe = require('stripe')(user.stripe.secretKey); 
           stripe.account.update(user.stripe.accountId, parameters, function(err, account) {
@@ -707,7 +706,7 @@ module.exports = function (app, options) {
         userController.getUser(user_id).then(function (user) {
             var stripe = require('stripe')(user.stripe.secretKey);
             var amountInCents = req.body.amount;
-            var application_fee = Math.round((amountInCents*0.006));
+            var application_fee = Math.round((amountInCents*0.001));
             var description = "POS charge in the amount of " + format.getCommaSeparatedFormat("USD", amountInCents);
             logger.info(amountInCents);
             logger.info(application_fee);
@@ -764,8 +763,8 @@ module.exports = function (app, options) {
       userController.getDelegatedUserByUsername(delegate_user).then(function (delegateUser) {
           var stripe = require('stripe')(delegateUser.stripe.secretKey);
           var amountInCents = req.body.amount;
-          var application_fee = Math.round((amountInCents*0.006));
-          var description = "New charge in the amount of " + format.getCommaSeparatedFormat("USD", amountInCents/10000);
+          var application_fee = Math.round((amountInCents*0.001));
+          var description = "New charge in the amount of " + format.getCommaSeparatedFormat("USD", amountInCents/100);
           // logger.info(amountInCents);
           // logger.info(application_fee);
           // logger.info(description);
@@ -844,7 +843,12 @@ module.exports = function (app, options) {
                     logger.info("Customers exist for this user, checking if requesting user is one of them")   
                     for (var i = 0; i < customers.data.length; i++) {
                       if(customers.data[i].email == requestingUser.email) {
-                        logger.info("Customer email already exists in database! Creating charge to existing customer")
+                        logger.info("Customer email already exists in database! Creating charge to existing customer");
+
+                        // Perform a check for the source (i.e. a card or bank) existance
+                        // if it does not exist then make sure to create a new
+                        // source and add it to the customer
+
                         stripe.charges.create({
                           currency: "usd",
                           customer: customers.data[i].id, 
@@ -852,11 +856,12 @@ module.exports = function (app, options) {
                           application_fee: Math.round((amountInCents*0.002))                     
                         }).then(function(charge) {
                             // logger.info(res)
-                            res.json({status: 200, charge: charge})
+                            return res.json({status: 200, charge: charge})
                         }, function(err) {
                             logger.error(err)
-                            res.json({ error: err })                          
-                        });   
+                            return res.json({ error: err })                          
+                        });  
+
                         break;
                       }
                       // At the end of the data array if we still haven't found an existing customer add a new one with subscription
@@ -871,7 +876,7 @@ module.exports = function (app, options) {
                             // asynchronously called
                             if(err) {
                               logger.error(err)
-                              res.json({ error: err })                                                  
+                              return res.json({ error: err })                                                  
                             }
                             //logger.info(customer);
                             // Create a customer, then create a plan for that customer
@@ -882,10 +887,10 @@ module.exports = function (app, options) {
                               application_fee: Math.round((amountInCents*0.002))                     
                             }).then(function(charge) {
                                 // logger.info(res)
-                                res.json({status: 200, charge: charge})
+                                return res.json({status: 200, charge: charge})
                             }, function(err) {
                                 logger.error(err)
-                                res.json({ error: err })                          
+                                return res.json({ error: err })                          
                             });   
                           }
                         )    
@@ -897,6 +902,7 @@ module.exports = function (app, options) {
             })      
           } else {
             // Charge a card based on customer ID, the customer must have a linked credit card
+            // This avoids creating a bank charge
             stripe.charges.create(params).then(function(charge) {
                 // logger.info(res)
                 res.json({status: 200, charge: charge})
@@ -2503,63 +2509,6 @@ module.exports = function (app, options) {
   // stripe.transfers.setMetadata(transferId, key, value)
   // stripe.transfers.getMetadata(transferId)
 
-  // ACH
-  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.ach, userController.authorize, function(req, res, next) {
-      
-      if(req.user._id !== req.params.uid) {
-        logger.info("unauthorized uid");
-        return res.json({ status: 401, msg: "Unauthorized" });
-      }
-
-      try {
-        logger.trace("requesting ach")
-        var user_id = req.params.uid;
-        // use our own stripe account, transfer to destination as a charge
-        var stripe = require("stripe")(options.apiKey);
-        userController.getUser(user_id).then(function (user) {
-            // create a ach transfer on charge
-            var amountInCents = req.body.amount;
-            var customer_id = req.body.customer_id;
-            var application_fee = Math.round((amountInCents*0.002));
-            var description = "New transfer in the amount of " + format.getCommaSeparatedFormat("USD", amountInCents/100);
-            logger.info("amount in cents", amountInCents);
-            logger.info("application fee", application_fee);
-            logger.info("description", description);
-            logger.info("customer", customer_id);
-            var params = {
-              amount: amountInCents,
-              application_fee: application_fee,
-              currency: "usd",
-              customer: customer_id,
-              description: description,
-              destination: user.stripe.accountId
-            }
-            // use our own stripe account for now, transfer amount to destination acct
-            stripe.charges.create(params, function(err, charge) {
-                if(err) {
-                  logger.error(err)
-                  return res.send({ 
-                    status: 407,
-                    error: { 
-                      message: err
-                    } 
-                  });
-                } else {
-                  res.json({ charge: charge }).end();
-                }                         
-            });
-        });
-      } catch(err) {
-          logger.error(err);
-          return res.send({ 
-          	status: 407,
-          	error: { 
-          	  message: err
-          	} 
-          });        
-      }      
-  });    
-
 
   // BITCOIN (resource bitcoinReceivers)
   // stripe.bitcoinReceivers.create(params)
@@ -2673,6 +2622,67 @@ module.exports = function (app, options) {
   // stripe.bitcoinReceivers.list([params])
   // stripe.bitcoinReceivers.getMetadata(receiverId)
 
+  // ACH With Destination Paramters
+  app.post(endpoint.version + endpoint.base + "/:uid" + endpoint.ach  + "/:delegate_username", userController.authorize, function(req, res, next) {
+      
+      logger.info("hit ach endpoint");
+
+      if(req.user._id !== req.params.uid) {
+        logger.info("unauthorized uid");
+        return res.json({ status: 401, msg: "Unauthorized" });
+      }
+
+      try {
+        logger.trace("requesting ach")
+        var user_id = req.params.uid;
+        var delegate_user = req.params.delegate_username;
+        // use our own stripe account, transfer to destination as a charge
+        var stripe = require("stripe")(options.apiKey);
+        userController.getUser(user_id).then(function (user) {
+            // create a ach transfer on charge
+            var amountInCents = req.body.amount;
+            var customer_id = req.body.customer_id;
+            var application_fee = Math.round((amountInCents*0.002));
+            var description = "New transfer in the amount of " + format.getCommaSeparatedFormat("USD", amountInCents/100);
+            logger.info("amount in cents", amountInCents);
+            logger.info("application fee", application_fee);
+            logger.info("description", description);
+            logger.info("customer", customer_id);
+            var params = {
+              amount: amountInCents,
+              application_fee: application_fee,
+              currency: "usd",
+              // customer: customer_id,
+              source: req.body.token,
+              description: description,
+              destination: user.stripe.accountId
+            }
+            // use our own stripe account for now, transfer amount to destination acct
+            stripe.charges.create(params, function(err, charge) {
+                if(err) {
+                  logger.error(err)
+                  return res.send({ 
+                    status: 407,
+                    error: { 
+                      message: err
+                    } 
+                  });
+                } else {
+                  res.json({ charge: charge }).end();
+                }                         
+            });
+        });
+      } catch(err) {
+          logger.error(err);
+          return res.send({ 
+            status: 407,
+            error: { 
+              message: err
+            } 
+          });        
+      }      
+  });    
+
   // stripe.fileUploads // upload and multer imported above
   // /v1/stripe/5asdg98a09sdf/upload/
   // note the file multipart name must be 'document' aka post with multi-part form data { document: "/path/to/file", purpose: identity_document }
@@ -2744,12 +2754,13 @@ module.exports = function (app, options) {
         userController.getUser(user_id).then(function (user) {
           // Set your secret key: remember to change this to your live secret key in production
           // See your keys here https://dashboard.stripe.com/account/apikeys
+          // 32, 45 amounts for testing
           var stripe = require('stripe')(user.stripe.secretKey);
 
           var data = { amounts: [req.body.amount1, req.body.amount2] }
           stripe.customers.verifySource(
-            'CUSTOMER_ID',
-            'BANK_TOKEN',
+            req.body.customer_id,
+            req.body.bank_token,
             data,
             function(err, bankAccount) {
               if(err) {
