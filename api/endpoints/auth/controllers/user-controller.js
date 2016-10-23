@@ -172,8 +172,6 @@ UserController.prototype.register = function (req, res, next) {
                     distinct_id: 'id_'+rack(),
                     type: 'user_save'
                   });
-                  return res.send({ message: "Welcome to Argent" });   
-
                   //return res.status(403).send({ message: err });                                
               }
 
